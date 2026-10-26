@@ -75,6 +75,13 @@ def match(index: list[dict[str, Any]], name: str, company: str) -> dict[str, Any
     for entry in index:
         if slug(entry["name"]) == n and (not slug(company) or not slug(entry["company"])):
             return entry
+    # Surnames are what transcribers get wrong ("Ragoo Nathan" for Raghunathan): first name plus company
+    # is the same person.
+    first, co = n.split("-")[0], slug(company)
+    if co:
+        for entry in index:
+            if slug(entry["name"]).split("-")[0] == first and slug(entry["company"]) == co:
+                return entry
     return None
 
 

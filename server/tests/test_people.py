@@ -50,3 +50,12 @@ def test_history_counts_only_earlier_evenings(tmp_path):
     entry = match(people_index(tmp_path, exclude="mid"), "Kenji Watanabe", "Hoshizora")
     h = history_event(entry, "k", exclude="mid", before=now - 86400)
     assert [e["event"] for e in h["encounters"]] == ["Dinner"]
+
+
+def test_match_forgives_a_misheard_surname_when_the_company_matches(tmp_path):
+    now = time.time()
+    write_recording(tmp_path, "a", "Afterparty", now - 86400,
+                    [{"key": "sid", "name": "Siddharth Raghunathan", "company": "Quill Mesh", "role": "", "preferred_language": ""}])
+    known = people_index(tmp_path)
+    assert match(known, "Siddharth Ragoo Nathan", "Quill Mesh")["name"] == "Siddharth Raghunathan"
+    assert match(known, "Siddharth Ragoo Nathan", "Other Co") is None

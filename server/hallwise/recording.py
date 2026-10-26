@@ -94,6 +94,7 @@ class Recording:
         self.id = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]
         self.dir = root / "recordings" / self.id
         self.dir.mkdir(parents=True)
+        self.known = people_index(root, exclude=self.id)  # everyone met at earlier recordings
         self.hello = hello
         meta = {k: v for k, v in hello.__dict__.items() if k != "fake_script"}
         self.started = time.time()
@@ -110,13 +111,15 @@ class Recording:
         self._pending = b""
         self.direction = DirectionTracker(hello.sample_rate, hello.layout)
         self.speaker_positions = SpeakerPositions()
+        # Names from earlier evenings go to the transcriber as hints, so a hard surname is heard the way
+        # it was spelled before.
+        names = [e["name"] for e in self.known[:40] if e.get("name")]
+        hello.keywords = list(dict.fromkeys((hello.keywords or []) + names))
         self.asr = make_asr(self._on_asr, rate=ASR_RATE, hello=hello)
         self._make_asr = make_asr
         self._ask_asr: Asr | None = None  # while the owner holds to talk, audio goes here instead
         self._ask_turns: list[str] = []
         self.extractor = make_extractor(hello) if make_extractor else None
-        # Everyone met at earlier recordings, so a familiar name is recognised and spelled the same way.
-        self.known = people_index(root, exclude=self.id)
         self._history_sent: set[str] = set()
         if self.extractor is not None:
             self.extractor.known = [

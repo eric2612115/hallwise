@@ -245,8 +245,8 @@ End card (2:50–2:56).
   shaping; check in rehearsal that diarization keeps him and Margaux apart.
 - A Wednesday 14:00–15:30 "Board call" on the badge phone's calendar, so the invite has something to dodge.
 - Deck and one-pager links set in the menu, so the drafts attach them.
-- Kenji's line must say his name and company the way the earlier recordings spell them, or the badge will not
-  match him.
+- Nobody has to pronounce a surname right. Names from earlier evenings go to the transcriber as hints, and the
+  badge matches a person by first name and company, so "Ragoo Nathan, Quill Mesh" is still Siddharth.
 
 ## Before the take
 
@@ -269,8 +269,8 @@ End card (2:50–2:56).
 - Margaux and Julien share a spot and a base voice. If diarization merges them, move Julien to Mac-3 and Wei
   Ling to iPhone-K beside Kenji, and re-time the window scene.
 - Margaux's line must not start over Siddharth's introduction, or both may land on one speaker label.
-- Kenji must be recognised live: it depends on Spark spelling his name as before. If the ring does not appear,
-  the insert of his card still shows the history after the first extraction run.
+- Recognition is live but arrives with the first extraction run after the introduction, a few seconds later.
+  Hold on Kenji until the ring appears before the "It remembered" line.
 - The drafts take five to ten seconds after Stop; hold the shot on Eric until the first chip lands.
 - The calendar editor must be prefilled on the follow phone, not the badge phone: for the take, tap Add to
   calendar on the follow phone (same server, same drafts).
