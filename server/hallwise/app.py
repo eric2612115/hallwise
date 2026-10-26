@@ -4,6 +4,8 @@
     /events/{recording}         watch a recording: everything so far, then live events until it ends
     /api/recordings             recordings, newest first
     /api/recordings/{id}/events one recording's event log
+    /api/recordings/{id}/ask    a typed question about the recording, answered by Muse Spark
+    /ask/{recording}            a spoken question: PCM in, Muse Voice Transcribe, then the same answer
 
 Run: ./run.sh (reads ../.env; HALLWISE_ASR=fake runs offline). Port 8790.
 """
@@ -17,11 +19,19 @@ from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
-from .asr import make_asr_factory
-from .events import read_events
+from .ask import answer, latest_moves
+from .asr import MetaRealtimeAsr, make_asr_factory
+from .events import fold_record, read_events
 from .extract import Extractor, SparkClient
 from .recording import Hello, Recording
+
+
+class Question(BaseModel):
+    question: str
+    history: list[dict[str, str]] = []
+    keywords: list[str] = []
 
 
 def spark_extractor_factory() -> Callable[[Hello], Extractor | None] | None:
@@ -57,6 +67,34 @@ def create_app(
         make_extractor = spark_extractor_factory()
     app = FastAPI(title="Hallwise")
     live: dict[str, Recording] = {}
+    key = os.environ.get("MODEL_API_KEY")
+    spark = SparkClient(key, model=os.environ.get("HALLWISE_SPARK_MODEL", "muse-spark-1.3")) if key else None
+
+    def record_of(rid: str) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+        """The record, the drafted moves and the meta of a recording, live or finished."""
+        rec = live.get(rid)
+        if rec is not None:
+            events = rec.log.events()
+            meta = json.loads((data / "recordings" / rid / "meta.json").read_text())
+        else:
+            path = data / "recordings" / rid / "events.jsonl"
+            if not path.exists():
+                raise HTTPException(404, "no such recording")
+            events = read_events(path)
+            meta = json.loads((data / "recordings" / rid / "meta.json").read_text())
+        return fold_record(events), latest_moves(events), meta
+
+    async def ask(rid: str, question: str, history: list[dict[str, str]], keywords: list[str]) -> dict[str, Any]:
+        if spark is None:
+            raise HTTPException(503, "MODEL_API_KEY is not set")
+        record, moves, meta = record_of(rid)
+        result = await answer(
+            spark, record, moves,
+            owner_name=meta.get("owner_name", ""), owner_company=meta.get("owner_company", ""),
+            event=meta.get("event", ""), venue=meta.get("venue", ""),
+            keywords=keywords or meta.get("keywords") or [], history=history, question=question,
+        )
+        return {"question": question, **result}
 
     @app.websocket("/ingest")
     async def ingest(ws: WebSocket) -> None:
@@ -81,6 +119,19 @@ def create_app(
                     control = json.loads(msg["text"])
                     if control.get("type") == "pose":
                         rec.on_pose(control)
+                    elif control.get("type") == "ask_start":
+                        await rec.start_ask()
+                    elif control.get("type") == "ask_end":
+                        question = await rec.end_ask()
+                        if not question:
+                            result: dict[str, Any] = {"question": "", "answer": "", "actions": [], "error": "nothing heard"}
+                        else:
+                            try:
+                                result = await ask(rec.id, question, control.get("history") or [], hello.keywords or [])
+                            except HTTPException as err:
+                                result = {"question": question, "answer": "", "actions": [], "error": str(err.detail)}
+                        rec.log.emit("ask_answer", rec.now_ms, question=question, answer=result.get("answer", ""))
+                        await ws.send_json({"type": "ask_answer", **result})
                     elif control.get("type") == "end":
                         break
         except WebSocketDisconnect:
@@ -131,6 +182,63 @@ def create_app(
         if not path.exists():
             raise HTTPException(404, "no such recording")
         return read_events(path)
+
+    @app.post("/api/recordings/{rid}/ask")
+    async def ask_typed(rid: str, q: Question) -> dict[str, Any]:
+        return await ask(rid, q.question, q.history, q.keywords)
+
+    @app.websocket("/ask/{rid}")
+    async def ask_spoken(ws: WebSocket, rid: str) -> None:
+        """A spoken question: JSON hello {sample_rate, language_bias?, keywords?, history?}, then 16-bit mono PCM
+        frames, then {"type": "end"}. Partials come back as they are heard, then the question and the answer."""
+        await ws.accept()
+        if key is None:
+            await ws.close(code=1011, reason="MODEL_API_KEY is not set")
+            return
+        try:
+            hello = json.loads(await ws.receive_text())
+        except (json.JSONDecodeError, WebSocketDisconnect):
+            return
+        turns: list[str] = []
+        pending: list[str] = []
+
+        def sink(type: str, t_ms: int, **d: Any) -> None:
+            if type == "partial":
+                pending.append(d.get("text", ""))
+            elif type == "turn" and d.get("text"):
+                turns.append(d["text"])
+
+        asr = MetaRealtimeAsr(
+            key, sink, rate=int(hello.get("sample_rate", 16_000)),
+            language_bias=hello.get("language_bias"), keywords=hello.get("keywords") or None,
+        )
+        try:
+            await asr.start()
+            while True:
+                msg = await ws.receive()
+                if msg["type"] == "websocket.disconnect":
+                    return
+                if msg.get("bytes"):
+                    await asr.send(msg["bytes"])
+                    if pending:
+                        await ws.send_json({"type": "partial", "text": pending[-1]})
+                        pending.clear()
+                elif msg.get("text") and json.loads(msg["text"]).get("type") == "end":
+                    break
+            await asr.finish()
+            question = " ".join(turns).strip()
+            await ws.send_json({"type": "question", "text": question})
+            if not question:
+                await ws.send_json({"type": "answer", "answer": "", "actions": [], "error": "nothing heard"})
+            else:
+                try:
+                    result = await ask(rid, question, hello.get("history") or [], hello.get("keywords") or [])
+                except HTTPException as err:
+                    result = {"answer": "", "actions": [], "error": err.detail}
+                await ws.send_json({"type": "answer", **result})
+            await ws.close()
+        except WebSocketDisconnect:
+            pass
 
     # The built dashboard (apps/web/dist), when it exists, so one server gives judges one URL.
     dist = Path(__file__).resolve().parents[2] / "apps" / "web" / "dist"

@@ -134,3 +134,28 @@ def test_ingest_streams_a_recording_and_replays_its_events(tmp_path):
     with client.websocket_connect(f"/events/{recording}") as ws:
         replayed = [ws.receive_json() for _ in events]
     assert replayed == events
+
+
+def test_holding_to_talk_diverts_audio_to_a_question(tmp_path):
+    """ask_start / ask_end on the ingest socket: the audio in between is not a conversation turn, and the
+    owner gets an ask_answer back (here with no Spark key and a scriptless fake, so an error, not a crash)."""
+    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None))
+    rate = 24_000
+    audio = silence(1.0, rate).tobytes()
+    script = [{"start_ms": 200, "end_ms": 900, "speaker": "A", "text": "Hi, I'm Sarah from Acme."}]
+    with client.websocket_connect("/ingest") as ws:
+        ws.send_text(json.dumps({"sample_rate": rate, "channels": 1, "layout": "mono", "fake_script": script}))
+        recording = ws.receive_json()["recording"]
+        ws.send_bytes(audio)
+        ws.send_text(json.dumps({"type": "ask_start"}))
+        ws.send_bytes(audio)
+        ws.send_text(json.dumps({"type": "ask_end", "history": []}))
+        reply = ws.receive_json()
+        assert reply["type"] == "ask_answer"
+        assert reply["answer"] == "" and "error" in reply
+        ws.send_bytes(audio)
+        ws.send_text(json.dumps({"type": "end"}))
+        assert ws.receive_json() == {"type": "closed", "recording": recording}
+    events = client.get(f"/api/recordings/{recording}/events").json()
+    assert [e["text"] for e in events if e["type"] == "turn"] == ["Hi, I'm Sarah from Acme."]
+    assert [e["type"] for e in events if e["type"] in ("ask", "ask_answer")] == ["ask", "ask_answer"]

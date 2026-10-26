@@ -33,6 +33,7 @@ final class AppModel: ObservableObject {
     let link = ServerLink()
     private let capture = BadgeCapture()
     private var badgeActivity: Activity<BadgeActivityAttributes>?
+    private let whereabouts = Whereabouts()
 
     init() {
         link.onEvent = { [weak self] event in self?.live.apply(event) }
@@ -79,6 +80,9 @@ final class AppModel: ObservableObject {
             return
         }
         Task { @MainActor in
+            // Tonight names itself: the calendar event happening now, and the place the phone is.
+            if settings.eventName.isEmpty, let title = await OwnerCalendar.currentEventTitle() { settings.eventName = title }
+            if settings.venue.isEmpty, let venue = await whereabouts.venue() { settings.venue = venue }
             // The week's busy windows ride along, so the times Hallwise proposes afterwards are free ones.
             let busy = await OwnerCalendar.busyWindows()
             let iso = ISO8601DateFormatter()

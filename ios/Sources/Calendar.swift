@@ -16,6 +16,18 @@ enum OwnerCalendar {
         return events.filter { !$0.isAllDay }.map { [f.string(from: $0.startDate), f.string(from: $0.endDate)] }
     }
 
+    /// The calendar event happening now (or starting within the hour): tonight's name, without typing it.
+    static func currentEventTitle() async -> String? {
+        let store = EKEventStore()
+        guard (try? await store.requestFullAccessToEvents()) == true else { return nil }
+        let now = Date()
+        let window = store.predicateForEvents(withStart: now.addingTimeInterval(-3 * 3600), end: now.addingTimeInterval(3600), calendars: nil)
+        return store.events(matching: window)
+            .filter { !$0.isAllDay && $0.endDate > now }
+            .sorted { $0.startDate < $1.startDate }
+            .first?.title
+    }
+
     /// "2026-10-31T15:00:00+08:00", "2026-10-31T15:00:00" or "2026-10-31T15:00" → a date, local when no offset.
     static func parse(_ text: String) -> Date? {
         let iso = ISO8601DateFormatter()

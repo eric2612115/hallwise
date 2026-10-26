@@ -7,6 +7,7 @@ struct MainView: View {
     @Binding var showBadge: Bool
     @State private var tab: Page = .room
     @State private var showMenu = false
+    @State private var showTranscript = false
 
     var body: some View {
         ZStack {
@@ -17,6 +18,7 @@ struct MainView: View {
                     switch tab {
                     case .room: RoomPage(app: app, live: app.live, settings: app.settings, showBadge: $showBadge)
                     case .people: PeoplePage(live: app.live, settings: app.settings)
+                    case .ask: AskPage(app: app, live: app.live, settings: app.settings)
                     case .owe: OwePage(live: app.live, settings: app.settings)
                     case .words: WordsPage(live: app.live, settings: app.settings)
                     default: TranscriptPage(live: app.live)
@@ -27,9 +29,24 @@ struct MainView: View {
             }
         }
         .sheet(isPresented: $showMenu) {
-            MenuSheet(settings: app.settings, showBadge: $showBadge)
+            MenuSheet(settings: app.settings, showBadge: $showBadge, showTranscript: $showTranscript)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showTranscript) {
+            ZStack {
+                PaperBackground()
+                VStack(spacing: 0) {
+                    Text("Transcript")
+                        .font(.system(size: 20, weight: .semibold, design: .serif))
+                        .foregroundStyle(Theme.ink)
+                        .padding(.top, 18).padding(.bottom, 8)
+                    TranscriptPage(live: app.live)
+                }
+            }
+            .preferredColorScheme(app.settings.colorScheme)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -100,14 +117,17 @@ struct BigTabBar: View {
     private let tabs: [(Page, String)] = [
         (.room, "scope"),
         (.people, "person.2"),
+        (.ask, "sparkles"),
         (.owe, "checklist"),
         (.words, "textformat.abc"),
-        (.transcript, "text.bubble"),
     ]
 
     var body: some View {
         HStack(spacing: 4) {
             ForEach(tabs, id: \.0) { page, icon in
+                if page == .ask {
+                    askButton
+                } else {
                 Button { withAnimation(.easeInOut(duration: 0.15)) { selected = page } } label: {
                     VStack(spacing: 5) {
                         ZStack(alignment: .topTrailing) {
@@ -134,6 +154,7 @@ struct BigTabBar: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                }
             }
         }
         .padding(.horizontal, 8)
@@ -144,11 +165,35 @@ struct BigTabBar: View {
     }
 }
 
+extension BigTabBar {
+    /// The middle of the bar is the point of the app: ask. Bigger, raised, ink on paper.
+    var askButton: some View {
+        Button { withAnimation(.easeInOut(duration: 0.15)) { selected = .ask } } label: {
+            VStack(spacing: 4) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(selected == .ask ? Theme.paper : Theme.paper)
+                    .frame(width: 60, height: 60)
+                    .background(Circle().fill(selected == .ask ? Theme.accent : Theme.ink))
+                    .shadow(color: Theme.ink.opacity(0.25), radius: 8, y: 3)
+                Text("Ask")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(selected == .ask ? Theme.accent : Theme.ink)
+            }
+            .frame(maxWidth: .infinity)
+            .offset(y: -14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 /// The menu is one page: everything you can change sits right here, nothing hides behind a second screen.
 /// Appearance first, because it is the one people reach for; then the badge, then tonight, then the plumbing.
 struct MenuSheet: View {
     @ObservedObject var settings: BadgeSettings
     @Binding var showBadge: Bool
+    @Binding var showTranscript: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var share: ShareItems?
     @State private var copiedBlurb = false
@@ -160,6 +205,7 @@ struct MenuSheet: View {
                 VStack(spacing: 18) {
                     appearance
                     badgeButton
+                    transcriptButton
                     group("Your links", "What people ask for; the follow-ups attach them") {
                         field("Deck", text: $settings.deckURL, placeholder: "https://…", keyboard: .URL)
                         field("One-pager", text: $settings.onePagerURL, placeholder: "https://…", keyboard: .URL)
@@ -191,6 +237,7 @@ struct MenuSheet: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
+        .preferredColorScheme(settings.colorScheme)
     }
 
     /// One tap hands someone the deck, the one-pager or the blurb, through whatever app they use.
@@ -274,6 +321,29 @@ struct MenuSheet: View {
             .padding(16)
             .frame(maxWidth: .infinity, minHeight: 64)
             .background(RoundedRectangle(cornerRadius: 14).fill(Theme.accent))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Everything that was said, for the rare evening you need to check a line, edit or delete.
+    private var transcriptButton: some View {
+        Button {
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showTranscript = true }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "text.bubble").font(.system(size: 22)).foregroundStyle(Theme.accent).frame(width: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Transcript").font(.system(size: 19, weight: .semibold, design: .serif)).foregroundStyle(Theme.ink)
+                    Text("Every line, who said it, translations").font(.subheadline).foregroundStyle(Theme.inkSoft)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 17)).foregroundStyle(Theme.inkSoft)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 64)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.paperDeep))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.rule, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
     }

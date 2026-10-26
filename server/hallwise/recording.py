@@ -11,7 +11,7 @@ import json
 import time
 import uuid
 import wave
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -109,6 +109,9 @@ class Recording:
         self.direction = DirectionTracker(hello.sample_rate, hello.layout)
         self.speaker_positions = SpeakerPositions()
         self.asr = make_asr(self._on_asr, rate=ASR_RATE, hello=hello)
+        self._make_asr = make_asr
+        self._ask_asr: Asr | None = None  # while the owner holds to talk, audio goes here instead
+        self._ask_turns: list[str] = []
         self.extractor = make_extractor(hello) if make_extractor else None
         self._extract_task: asyncio.Task[None] | None = None
         self._extracted_upto = 0  # how many turns the latest finished run had seen
@@ -147,7 +150,11 @@ class Recording:
         if self._resampler is not None:
             mono = self._resampler.resample_chunk(mono)
         if len(mono):
-            await self.asr.send(mono.astype("<i2").tobytes())
+            pcm = mono.astype("<i2").tobytes()
+            if self._ask_asr is not None:
+                await self._ask_asr.send(pcm)  # the question is not part of the conversation
+            else:
+                await self.asr.send(pcm)
 
     def on_pose(self, msg: dict[str, Any]) -> None:
         t_ms = int(msg.get("t_ms", self.now_ms))
@@ -209,6 +216,28 @@ class Recording:
         self._wav.close()
         self.log.emit("recording_end", self.now_ms)
         self.log.close()
+
+    async def start_ask(self) -> None:
+        """Hold to talk: from now until end_ask the badge's audio is a question, transcribed on its own."""
+        if self._ask_asr is not None:
+            return
+        self._ask_turns = []
+
+        def sink(type: str, t_ms: int, **d: Any) -> None:
+            if type == "turn" and d.get("text"):
+                self._ask_turns.append(str(d["text"]))
+
+        self._ask_asr = self._make_asr(sink, rate=ASR_RATE, hello=replace(self.hello, fake_script=None))
+        await self._ask_asr.start()
+
+    async def end_ask(self) -> str:
+        asr, self._ask_asr = self._ask_asr, None
+        if asr is None:
+            return ""
+        await asr.finish()
+        question = " ".join(self._ask_turns).strip()
+        self.log.emit("ask", self.now_ms, question=question)
+        return question
 
     async def _next_moves(self) -> None:
         """After the last extraction: one ready-to-send follow-up per promise, before the log closes, so a

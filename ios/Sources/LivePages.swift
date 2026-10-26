@@ -4,16 +4,17 @@ import UIKit
 /// The pages after the badge, one screen each: Room (the radar and who you met), People, Owe (promises),
 /// Words (misheard words to settle), Talk (the transcript).
 enum Page: Int, CaseIterable, Identifiable {
-    case badge, room, people, owe, words, transcript
+    case badge, room, people, ask, owe, words, transcript
     var id: Int { rawValue }
     var title: String {
         switch self {
         case .badge: return "Badge"
         case .room: return "Room"
         case .people: return "People"
+        case .ask: return "Ask"
         case .owe: return "Owe"
         case .words: return "Words"
-        case .transcript: return "Talk"
+        case .transcript: return "Transcript"
         }
     }
 }
@@ -259,6 +260,7 @@ struct PersonDetail: View {
             }
             .scrollContentBackground(.hidden)
         }
+        .preferredColorScheme(settings.colorScheme)
     }
 }
 
@@ -460,6 +462,7 @@ struct MoveSheet: View {
                 .padding(.top, 10)
             }
         }
+        .preferredColorScheme(settings.colorScheme)
         .sheet(item: $share) { ShareSheet(items: $0.items) }
         .sheet(isPresented: $calendar) {
             if let when {
