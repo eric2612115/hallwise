@@ -205,3 +205,60 @@ def test_next_moves_normalises_keys_and_limits_attachments():
     assert [m["promise_key"] for m in moves] == ["deck-to-sarah-acme"]
     assert moves[0]["attach"] == ""  # one_pager is not something the owner has
     assert moves[0]["duration_minutes"] == 30
+
+
+def _history(key: str, name: str, *events: tuple[str, float]) -> dict:
+    return {"type": "person_history", "key": key, "name": name, "company": "",
+            "encounters": [{"event": e, "started": t} for e, t in events], "promises": []}
+
+
+def test_next_prompt_gives_each_person_only_their_own_earlier_meetings():
+    from hallwise.extract import NEXT_SYSTEM, build_next_prompt
+
+    oct20, oct22, oct23 = 1792499400.0, 1792668600.0, 1792756800.0
+    record = {
+        "people": [
+            {"key": "siddharth-raghunathan-quill-mesh", "name": "Siddharth Raghunathan", "company": "Quill Mesh"},
+            {"key": "kenji-watanabe-hoshizora-robotics", "name": "Kenji Watanabe", "company": "Hoshizora Robotics"},
+            {"key": "margaux-lefevre-corvane-capital", "name": "Margaux Lefèvre", "company": "Corvane Capital"},
+        ],
+        "promises": [{"key": "coffee-to-kenji", "owed_by": "owner", "owed_to": "kenji-watanabe-hoshizora-robotics",
+                      "what": "coffee", "due": "Friday", "evidence_turns": [25]}],
+        "turns": [
+            {"turn": 23, "speaker": "1:F", "text": "Eric! Siddharth Raghunathan, Quill Mesh, we met at Blockchain Week. You know Kenji."},
+            {"turn": 24, "speaker": "1:G", "text": "Kenji Watanabe, Hoshizora Robotics. We keep running into each other."},
+        ],
+        "turn_kinds": {}, "translations": {},
+        "history": {
+            "siddharth-raghunathan-quill-mesh": _history("siddharth-raghunathan-quill-mesh", "Siddharth Raghunathan",
+                                                         ("Blockchain Week side event", oct23), ("ETH Taipei afterparty", oct20)),
+            "kenji-watanabe-hoshizora-robotics": _history("kenji-watanabe-hoshizora-robotics", "Kenji Watanabe",
+                                                          ("Hardware meetup", oct22), ("ETH Taipei afterparty", oct20)),
+        },
+    }
+    prompt = build_next_prompt(record, owner_name="Eric", owner_company="Hallwise", now="2026-10-27T06:40:36+08:00")
+    people = {line.split(" | ")[0][2:]: line for line in prompt.splitlines() if line.startswith("- ") and " | met before: " in line}
+    kenji = people["kenji-watanabe-hoshizora-robotics"]
+    assert "met before: Hardware meetup" in kenji and "ETH Taipei afterparty" in kenji
+    assert "Blockchain" not in kenji  # Siddharth's evening, and Siddharth's words, are not Kenji's
+    assert "met before: Blockchain Week side event" in people["siddharth-raghunathan-quill-mesh"]
+    assert people["margaux-lefevre-corvane-capital"].endswith("met before: none")
+    assert "- kenji-watanabe-hoshizora-robotics (Kenji Watanabe): Hardware meetup" in prompt
+    # The rule the drafts follow: that same person's own lines, never someone else's, none when none.
+    rule = " ".join(NEXT_SYSTEM.split())
+    assert "mention one only when it is listed for that same person" in rule
+    assert "Never borrow another person's earlier meetings" in rule
+    assert "never take one from what someone else said in the transcript" in rule
+    assert '"met before: none" gets no mention of any earlier meeting' in rule
+
+
+def test_next_prompt_spells_out_the_days_ahead_and_where_next_week_starts():
+    from hallwise.extract import NEXT_SYSTEM, build_next_prompt
+
+    record = {"people": [], "promises": [], "turns": [], "turn_kinds": {}, "translations": {}}
+    prompt = build_next_prompt(record, owner_name="Eric", owner_company="", now="2026-10-27T06:40:36+08:00", tz="Asia/Taipei")
+    (days,) = [line for line in prompt.splitlines() if line.startswith("Days ahead: ")]
+    assert days.startswith("Days ahead: Tue 2026-10-27 (today), Wed 2026-10-28,")
+    assert "Fri 2026-10-30," in days and "Mon 2026-11-02 (next week starts)" in days and "Wed 2026-11-04" in days
+    assert '"next week, Wednesday" is the Wednesday of that week' in " ".join(NEXT_SYSTEM.split())
+    assert not [line for line in build_next_prompt(record, owner_name="", owner_company="").splitlines() if line.startswith("Days")]

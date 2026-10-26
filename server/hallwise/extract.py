@@ -13,6 +13,7 @@ import json
 import re
 import time
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Any, Awaitable, Callable
 
 import httpx
@@ -115,12 +116,19 @@ Write exactly one move per promise:
 - A promise the owner owes becomes a message to that person, ready to send: 2-4 sentences, warm and specific.
   Name the thing promised and one concrete detail from what was said. No padding ("I hope this finds you well").
   When a due date was agreed ("by Friday"), say so. Never invent facts, prices, names or dates.
+- Earlier meetings: mention one only when it is listed for that same person, under their own key in "Met before"
+  (their People line repeats it), and name it as listed. Never borrow another person's earlier meetings, and never
+  take one from what someone else said in the transcript: when one guest says "we met at Blockchain Week", that is
+  where the owner met that guest, not the person standing next to him. A person whose line says "met before: none"
+  gets no mention of any earlier meeting.
 - A promise owed to the owner becomes kind "nudge": a short, friendly reminder the owner can send a few days later.
 - body is in the person's preferred_language when one is set, else English. body_english is the same message in
   English, empty when body is already English. language names the language of body.
 - kind "calendar" when the promise is to meet, call, visit or demo. Pick a specific start from the owner's free
   time: never inside a busy window, weekdays 10:00-18:00 in the owner's zone unless the conversation said
-  otherwise, at least one day after now, on the agreed day when one was agreed. 30 minutes unless stated. Put it
+  otherwise, at least one day after now, on the agreed day when one was agreed. Read days from "Days ahead":
+  "Friday" is the first Friday after today; "next week" is the week that starts on the Monday marked there, so
+  "next week, Wednesday" is the Wednesday of that week, not this one. 30 minutes unless stated. Put it
   in `when` as ISO 8601 with the owner's offset; body is the invitation message; why says what the slot avoids.
 - kind "email" when the promise is to send a document, deck, link or introduction; fill subject.
 - attach: "deck" when the promise is about slides, a deck or a pitch; "one_pager" for a one-pager, overview or
@@ -212,20 +220,26 @@ def build_next_prompt(
 ) -> str:
     translations = record.get("translations", {})
     kinds = record.get("turn_kinds", {})
-    met_lines = [
-        f"- {key}: " + "; ".join(
+    history = record.get("history", {})
+
+    def met(h: dict[str, Any]) -> str:
+        return "; ".join(
             (e.get("event") or "an earlier evening") + (f" ({_day(e.get('started'))})" if e.get("started") else "")
             for e in h.get("encounters", [])
-        ) + (
+        )
+
+    met_lines = [
+        f"- {key}" + (f" ({h['name']})" if h.get("name") else "") + ": " + met(h) + (
             " | earlier promises: " + "; ".join(
                 f"{q.get('what', '')}" + (f" ({q.get('due')})" if q.get("due") else "") for q in h.get("promises", [])
             ) if h.get("promises") else ""
         )
-        for key, h in record.get("history", {}).items()
+        for key, h in history.items()
     ] or ["- none"]
     lines = [
         f"Owner: {owner_name or 'unknown'}" + (f", from {owner_company}" if owner_company else ""),
         f"Now: {now or 'unknown'}" + (f" ({tz})" if tz else ""),
+        *_days_ahead(now),
         "Event: " + (", ".join(x for x in (event, venue) if x) or "unknown"),
         "Owner busy (ISO ranges): " + ("; ".join(f"{a} to {b}" for a, b in (busy or [])) or "none"),
         "Owner can share: " + (", ".join(sorted(k for k, v in (links or {}).items() if v)) or "nothing"),
@@ -235,6 +249,7 @@ def build_next_prompt(
             f"- {p['key']} | {p.get('name', '')}, {p.get('company', '')}"
             + (f", {p['role']}" if p.get("role") else "")
             + f" | preferred_language: {p.get('preferred_language') or 'not set'}"
+            + f" | met before: {met(history[p['key']]) if p['key'] in history and history[p['key']].get('encounters') else 'none'}"
             for p in record.get("people", [])
         ),
         "",
@@ -247,7 +262,7 @@ def build_next_prompt(
             for q in record.get("promises", [])
         ),
         "",
-        "Met before (earlier evenings with the same person; a follow-up may refer to them naturally):",
+        "Met before (earlier evenings with the owner, per person; a follow-up may refer to that person's own, and only those):",
         *met_lines,
         "",
         "Transcript (conversation turns):",
@@ -261,6 +276,22 @@ def build_next_prompt(
             line += f"  (English: {tr.get('english', '')})"
         lines.append(line)
     return "\n".join(lines)
+
+
+def _days_ahead(now: str) -> list[str]:
+    """Today and the next 13 days with their weekdays, and where next week starts: models miscount weekdays."""
+    try:
+        today = datetime.fromisoformat(now).date()
+    except (TypeError, ValueError):
+        return []
+    days = [today + timedelta(days=i) for i in range(14)]
+    monday = today + timedelta(days=7 - today.weekday())
+    return [
+        "Days ahead: " + ", ".join(
+            d.strftime("%a %Y-%m-%d") + (" (today)" if d == today else "") + (" (next week starts)" if d == monday else "")
+            for d in days
+        )
+    ]
 
 
 def _day(started: Any) -> str:
