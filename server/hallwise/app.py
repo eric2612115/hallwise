@@ -5,7 +5,7 @@
     /api/recordings             recordings, newest first
     /api/recordings/{id}/events one recording's event log
 
-Run: HALLWISE_ASR=fake|meta uv run uvicorn hallwise.app:app --port 8787
+Run: ./run.sh (reads ../.env; HALLWISE_ASR=fake runs offline). Port 8790.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 
 from .asr import make_asr_factory
 from .events import read_events
@@ -130,6 +131,11 @@ def create_app(
         if not path.exists():
             raise HTTPException(404, "no such recording")
         return read_events(path)
+
+    # The built dashboard (apps/web/dist), when it exists, so one server gives judges one URL.
+    dist = Path(__file__).resolve().parents[2] / "apps" / "web" / "dist"
+    if dist.is_dir():
+        app.mount("/", StaticFiles(directory=dist, html=True), name="web")
 
     return app
 

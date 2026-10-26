@@ -2,13 +2,16 @@ import SwiftUI
 
 /// What the badge shows and where it streams. Stored on the phone.
 final class BadgeSettings: ObservableObject {
-    @AppStorage("serverURL") var serverURL = "ws://192.168.0.142:8787"
+    @AppStorage("serverURL") var serverURL = "ws://192.168.0.142:8790"
     @AppStorage("ownerName") var ownerName = "Eric"
     @AppStorage("ownerCompany") var ownerCompany = "Vexi"
     @AppStorage("ownerTitle") var ownerTitle = ""
     @AppStorage("contact") var contact = ""          // email or handle, goes into the QR card
     @AppStorage("keywords") var keywords = "Vexi"    // comma-separated recognition hints
     @AppStorage("yawOffset") var yawOffset = 0.0     // degrees, calibrates the badge's forward direction
+    @AppStorage("appearance") var appearance = Theme.Appearance.system.rawValue
+
+    var colorScheme: ColorScheme? { Theme.Appearance(rawValue: appearance)?.colorScheme }
 
     var keywordList: [String] {
         keywords.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
@@ -47,7 +50,18 @@ struct SettingsView: View {
                         Text("Forward offset \(Int(settings.yawOffset))°")
                     }
                 }
+                Section("Appearance") {
+                    Picker("Paper", selection: $settings.appearance) {
+                        Text("System").tag(Theme.Appearance.system.rawValue)
+                        Text("Light").tag(Theme.Appearance.light.rawValue)
+                        Text("Dark").tag(Theme.Appearance.dark.rawValue)
+                    }
+                    .pickerStyle(.segmented)
+                }
             }
+            .scrollContentBackground(.hidden)
+            .background(PaperBackground())
+            .tint(Theme.accent)
             .navigationTitle("Settings")
             .toolbar { Button("Done") { dismiss() } }
         }

@@ -1,6 +1,6 @@
 """Stream a WAV file to a Hallwise server as if it were the badge, at real-time speed, and print what comes back.
 
-    uv run python scripts/stream_wav.py path.wav [--server ws://127.0.0.1:8787] [--layout auto]
+    uv run python scripts/stream_wav.py path.wav [--server ws://127.0.0.1:8790] [--layout auto]
                                         [--script turns.json] [--keywords "Vexi,Raghunathan"] [--speed 1]
 
 The WAV must be 16-bit PCM: 1 channel (mono), 2 (stereo) or 4 (first-order ambisonics, ACN/SN3D).
@@ -37,7 +37,14 @@ async def main(args: argparse.Namespace) -> None:
     if width != 2:
         raise SystemExit("the WAV must be 16-bit PCM")
     layout = LAYOUTS[channels] if args.layout == "auto" else args.layout
-    hello: dict = {"sample_rate": rate, "channels": channels, "layout": layout, "device": "simulator"}
+    hello: dict = {
+        "sample_rate": rate,
+        "channels": channels,
+        "layout": layout,
+        "device": "simulator",
+        "owner_name": args.owner,
+        "owner_company": args.company,
+    }
     if args.script:
         with open(args.script) as f:
             hello["fake_script"] = json.load(f)
@@ -61,9 +68,11 @@ async def main(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("wav")
-    parser.add_argument("--server", default="ws://127.0.0.1:8787")
+    parser.add_argument("--server", default="ws://127.0.0.1:8790")
     parser.add_argument("--layout", default="auto", choices=["auto", "mono", "stereo", "foa"])
     parser.add_argument("--script", help="ground-truth turns for the offline fake recogniser")
     parser.add_argument("--keywords", help="comma-separated recognition hints")
+    parser.add_argument("--owner", default="Eric", help="the badge wearer's name, so they are not listed as a person met")
+    parser.add_argument("--company", default="Vexi")
     parser.add_argument("--speed", type=float, default=1.0, help="1 = real time (Muse Voice Transcribe needs it)")
     asyncio.run(main(parser.parse_args()))

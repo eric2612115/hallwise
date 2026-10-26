@@ -13,7 +13,6 @@ targets:
       properties:
         CFBundleDisplayName: Hallwise
         UILaunchScreen: {}
-        UIRequiresFullScreen: true
         UIStatusBarHidden: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSMicrophoneUsageDescription: Hallwise listens to the conversations you have, to remember who you met and what you promised.

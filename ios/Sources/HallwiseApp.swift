@@ -13,6 +13,7 @@ struct HallwiseApp: App {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()
+            .preferredColorScheme(app.settings.colorScheme)
             .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
         }
     }
@@ -21,7 +22,7 @@ struct HallwiseApp: App {
 /// Wires the microphones, the server and the live record together.
 final class AppModel: ObservableObject {
     @Published var listening = false
-    let settings = BadgeSettings()
+    @ObservedObject var settings = BadgeSettings()
     let live = LiveModel()
     let link = ServerLink()
     private let capture = BadgeCapture()

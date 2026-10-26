@@ -28,3 +28,5 @@ xcuserdata/
 # tooling caches
 .pytest_cache/
 .ruff_cache/
+ios/build/
+ios/*.xcodeproj
