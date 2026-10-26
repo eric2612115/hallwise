@@ -200,7 +200,7 @@ Mac-3 as a waiter: "Something to drink?" ERIC (walking): "I'm good, thanks." One
 ## The table (1:47–2:15), the west end of the dining table (C), facing east
 
 [click]
-SIDDHARTH (Mac-3, ahead): Eric! Siddharth, from Blockchain Week. You know Kenji.
+SIDDHARTH (Mac-3, ahead): Eric! Siddharth Raghunathan, Quill Mesh, we met at Blockchain Week. You know Kenji.
 KENJI (iPhone-K, ahead-left): Kenji Watanabe, Hoshizora Robotics. We keep running into each other.
 
 Panels: both dots ringed the moment they are named: "met before · Blockchain Week", "met before · Hardware
