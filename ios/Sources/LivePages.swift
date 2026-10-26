@@ -4,7 +4,7 @@ import UIKit
 /// The pages after the badge, one screen each: Room (the radar and who you met), People, Owe (promises),
 /// Words (misheard words to settle), Talk (the transcript).
 enum Page: Int, CaseIterable, Identifiable {
-    case badge, room, people, ask, owe, words, transcript
+    case badge, room, people, ask, owe, words, transcript, map
     var id: Int { rawValue }
     var title: String {
         switch self {
@@ -12,6 +12,7 @@ enum Page: Int, CaseIterable, Identifiable {
         case .room: return "Room"
         case .people: return "People"
         case .ask: return "Ask"
+        case .map: return "Map"
         case .owe: return "Owe"
         case .words: return "Words"
         case .transcript: return "Transcript"
@@ -125,8 +126,13 @@ struct RoomPage: View {
                                 Text(p.name)
                                     .font(.system(size: 15, weight: .semibold, design: .serif))
                                     .foregroundStyle(Theme.ink).lineLimit(1)
-                                Text([p.company, p.role].filter { !$0.isEmpty }.joined(separator: " · "))
-                                    .font(.system(size: 12)).foregroundStyle(Theme.inkSoft).lineLimit(1)
+                                if let h = live.history[p.id], let e = h.encounters.first {
+                                    Text("met before · \(e.event.isEmpty ? dayString(e.started) : e.event)")
+                                        .font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.accent).lineLimit(1)
+                                } else {
+                                    Text([p.company, p.role].filter { !$0.isEmpty }.joined(separator: " · "))
+                                        .font(.system(size: 12)).foregroundStyle(Theme.inkSoft).lineLimit(1)
+                                }
                             }
                             Spacer(minLength: 0)
                         }
@@ -148,22 +154,75 @@ struct RoomPage: View {
 struct PeoplePage: View {
     @ObservedObject var live: LiveModel
     @ObservedObject var settings: BadgeSettings
+    @StateObject private var directory = Directory()
     @State private var selected: LiveModel.Person?
+    @State private var selectedKnown: DirectoryPerson?
+    @State private var query = ""
 
     var body: some View {
-        List {
-            if live.peopleOrder.isEmpty {
-                Text("Nobody yet").foregroundStyle(Theme.inkSoft).listRowBackground(Color.clear)
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        let tonight = live.peopleOrder.compactMap { live.people[$0] }
+            .filter { q.isEmpty || ($0.name + " " + $0.company + " " + $0.role).lowercased().contains(q) }
+        let tonightNames = Set(live.people.values.map { $0.name.lowercased() })
+        let earlier = directory.people
+            .filter { !tonightNames.contains($0.name.lowercased()) }
+            .filter { q.isEmpty || ($0.name + " " + $0.company + " " + $0.role + " " + $0.encounters.map(\.event).joined(separator: " ")).lowercased().contains(q) }
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(Theme.inkSoft)
+                TextField("Name, company, event…", text: $query)
+                    .font(.system(size: 16))
+                    .foregroundStyle(Theme.ink)
+                    .autocorrectionDisabled()
             }
-            ForEach(live.peopleOrder, id: \.self) { key in
-                if let p = live.people[key] {
-                    Button { selected = p } label: { PersonRow(person: p, live: live, offset: settings.yawOffset) }
-                        .listRowBackground(Theme.paperDeep)
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Theme.paperDeep))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.rule, lineWidth: 0.5))
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            List {
+                Section(header: PaperHeader(text: "Tonight")) {
+                    if tonight.isEmpty {
+                        Text("Nobody yet").foregroundStyle(Theme.inkSoft)
+                    }
+                    ForEach(tonight) { p in
+                        Button { selected = p } label: { PersonRow(person: p, live: live, offset: settings.yawOffset) }
+                    }
+                }
+                .listRowBackground(Theme.paperDeep)
+                if !earlier.isEmpty {
+                    Section(header: PaperHeader(text: "Earlier")) {
+                        ForEach(earlier) { p in
+                            Button { selectedKnown = p } label: {
+                                HStack(spacing: 14) {
+                                    Circle().fill(Theme.inkSoft.opacity(0.5)).frame(width: 12, height: 12).frame(width: 20, height: 20)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(p.name).font(.system(size: 17, weight: .semibold, design: .serif)).foregroundStyle(Theme.ink).lineLimit(1)
+                                        if !p.line.isEmpty { Text(p.line).font(.system(size: 15)).foregroundStyle(Theme.inkSoft).lineLimit(1) }
+                                        if let e = p.encounters.first {
+                                            Text([e.event.isEmpty ? "untitled" : e.event, dayString(e.started)].filter { !$0.isEmpty }.joined(separator: " · ")
+                                                 + (p.encounters.count > 1 ? " · ×\(p.encounters.count)" : ""))
+                                                .font(.system(size: 13)).foregroundStyle(Theme.inkSoft).lineLimit(1)
+                                        }
+                                    }
+                                    Spacer(minLength: 8)
+                                    Image(systemName: "chevron.right").font(.system(size: 17)).foregroundStyle(Theme.inkSoft)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .listRowBackground(Theme.paperDeep)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .scrollDismissesKeyboard(.interactively)
         }
-        .scrollContentBackground(.hidden)
+        .task { await directory.load(base: settings.serverURL) }
         .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).presentationDetents([.medium, .large]) }
+        .sheet(item: $selectedKnown) { p in KnownPersonSheet(person: p, settings: settings).presentationDetents([.medium, .large]) }
     }
 }
 
@@ -227,6 +286,26 @@ struct PersonDetail: View {
                     .padding(.vertical, 4)
                 }
                 .listRowBackground(Color.clear)
+                if let h = live.history[person.id], !h.encounters.isEmpty {
+                    Section(header: PaperHeader(text: "Before tonight")) {
+                        ForEach(h.encounters) { e in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text([e.event.isEmpty ? "untitled" : e.event, dayString(e.started)].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.system(size: 16, weight: .semibold, design: .serif)).foregroundStyle(Theme.ink)
+                                Text([e.venue, e.introducedBy.isEmpty ? "" : "via \(e.introducedBy)"].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.system(size: 14)).foregroundStyle(Theme.inkSoft)
+                            }
+                        }
+                        ForEach(h.promises) { q in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(q.what).font(.system(size: 16)).foregroundStyle(Theme.ink)
+                                Text([q.direction == "owner_owes" ? "you owed" : q.direction == "they_owe" ? "they owed you" : "", q.due, q.event].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.system(size: 14)).foregroundStyle(Theme.inkSoft)
+                            }
+                        }
+                    }
+                    .listRowBackground(Theme.paperDeep)
+                }
                 let promises = live.promiseOrder.compactMap { live.promises[$0] }
                     .filter { $0.owedTo == person.id || $0.owedBy == person.id }
                 if !promises.isEmpty {

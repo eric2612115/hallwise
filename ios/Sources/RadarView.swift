@@ -22,6 +22,7 @@ struct RadarView: View {
         let distance: Double // 0 = close, 1 = far
         let active: Bool     // talking now
         let recent: Bool     // spoke within the last while
+        var known = false    // met at an earlier event
         var radius: CGFloat = 0
         var drawn: Double = 0  // bearing after neighbours are spread apart
         var named: Bool { person != nil }
@@ -118,7 +119,7 @@ struct RadarView: View {
                     .fill(b.color)
                     .frame(width: b.active ? 22 : 16, height: b.active ? 22 : 16)
                     .overlay(Circle().stroke(Theme.paper, lineWidth: 2))
-                    .overlay(Circle().stroke(b.active || b.recent ? b.color : .clear, lineWidth: 1.5).padding(-3))
+                    .overlay(Circle().stroke(b.active || b.recent || b.known ? b.color : .clear, lineWidth: 1.5).padding(-3))
                     .shadow(color: b.active ? b.color.opacity(0.7) : .clear, radius: 10)
             }
             .frame(width: 32, height: 32)
@@ -201,7 +202,8 @@ struct RadarView: View {
                 id: p.id, person: p, label: first, color: live.color(for: p.id), bearing: b,
                 distance: live.distance(ofSpeakers: p.speakers),
                 active: p.speakers.contains(live.activeSpeaker ?? ""),
-                recent: p.speakers.contains(live.recentSpeaker ?? "")
+                recent: p.speakers.contains(live.recentSpeaker ?? ""),
+                known: live.history[p.id] != nil
             ))
         }
         for (speaker, az) in live.speakerAzimuth where !placedSpeakers.contains(speaker) && !live.ownerSpeakers.contains(speaker) {

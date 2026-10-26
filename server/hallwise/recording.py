@@ -22,6 +22,7 @@ from .asr import Asr
 from .direction import DirectionTracker, SpeakerPositions
 from .events import EventLog, fold_record
 from .extract import Extractor, Turn, draft_next_moves
+from .people import history_event, match, people_index
 
 ASR_RATE = 24_000
 LAYOUT_CHANNELS = {"mono": 1, "stereo": 2, "foa": 4}
@@ -113,6 +114,13 @@ class Recording:
         self._ask_asr: Asr | None = None  # while the owner holds to talk, audio goes here instead
         self._ask_turns: list[str] = []
         self.extractor = make_extractor(hello) if make_extractor else None
+        # Everyone met at earlier recordings, so a familiar name is recognised and spelled the same way.
+        self.known = people_index(root, exclude=self.id)
+        self._history_sent: set[str] = set()
+        if self.extractor is not None:
+            self.extractor.known = [
+                e["name"] + (f", {e['company']}" if e["company"] else "") for e in self.known[:60]
+            ]
         self._extract_task: asyncio.Task[None] | None = None
         self._extracted_upto = 0  # how many turns the latest finished run had seen
 
@@ -199,6 +207,11 @@ class Recording:
             try:
                 for kind, t_ms, data in await self.extractor.run():
                     self.log.emit(kind, t_ms, **data)
+                    if kind == "person" and data["key"] not in self._history_sent:
+                        entry = match(self.known, data.get("name", ""), data.get("company", ""))
+                        if entry is not None:
+                            self._history_sent.add(data["key"])
+                            self.log.emit("person_history", t_ms, **history_event(entry, data["key"], exclude=self.id))
             except Exception as err:  # a failed run must not stop the recording
                 self.log.emit("extract_error", self.now_ms, message=f"{err.__class__.__name__}: {err}"[:300])
             self._extracted_upto = seen

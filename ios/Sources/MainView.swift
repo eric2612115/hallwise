@@ -20,6 +20,7 @@ struct MainView: View {
                     case .room: RoomPage(app: app, live: app.live, settings: app.settings, showBadge: $showBadge)
                     case .people: PeoplePage(live: app.live, settings: app.settings)
                     case .ask: AskPage(app: app, live: app.live, settings: app.settings)
+                    case .map: MapPage(app: app, live: app.live, settings: app.settings)
                     case .owe: OwePage(live: app.live, settings: app.settings)
                     case .words: WordsPage(live: app.live, settings: app.settings)
                     default: TranscriptPage(live: app.live)
@@ -60,7 +61,8 @@ struct MainView: View {
         let openOwe = app.live.promiseOrder.filter { key in
             !app.live.donePromises.contains(key) && app.live.promises[key]?.owedBy == "owner"
         }.count
-        return [.people: app.live.peopleOrder.count, .owe: openOwe, .words: app.live.suspects.count]
+        _ = openOwe
+        return [.people: app.live.peopleOrder.count, .words: app.live.suspects.count]
     }
 
     /// Plain words, never an id: what the app is doing right now.
@@ -138,7 +140,7 @@ struct BigTabBar: View {
         (.room, "scope"),
         (.people, "person.2"),
         (.ask, "sparkles"),
-        (.owe, "checklist"),
+        (.map, "point.3.connected.trianglepath.dotted"),
         (.words, "textformat.abc"),
     ]
 

@@ -180,10 +180,14 @@ class Turn:
         return f"turn {self.turn} [{self.speaker}] {mmss(self.start_ms)}-{mmss(self.end_ms)}: {self.text}"
 
 
-def build_prompt(turns: list[Turn], owner_name: str, owner_company: str, vocabulary: list[str]) -> str:
+def build_prompt(
+    turns: list[Turn], owner_name: str, owner_company: str, vocabulary: list[str], known: list[str] | None = None
+) -> str:
     lines = [
         f"Owner: {owner_name or 'unknown'}" + (f", from {owner_company}" if owner_company else ""),
         "Vocabulary (names and terms the owner has confirmed before): " + (", ".join(vocabulary) or "none"),
+        "People the owner has met at earlier events (use these spellings when one of them turns up): "
+        + ("; ".join(known) if known else "none"),
         "",
         "Transcript:",
         *(t.line() for t in turns),
@@ -322,6 +326,7 @@ class Extractor:
         self.owner_name = owner_name
         self.owner_company = owner_company
         self.vocabulary = vocabulary or []
+        self.known: list[str] = []  # "Name, Company" of people met at earlier events
         self.turns: list[Turn] = []
         self.state: dict[str, Any] = {}
 
@@ -333,7 +338,7 @@ class Extractor:
         if not self.turns:
             return []
         turns = list(self.turns)
-        result = await self.llm(SYSTEM, build_prompt(turns, self.owner_name, self.owner_company, self.vocabulary))
+        result = await self.llm(SYSTEM, build_prompt(turns, self.owner_name, self.owner_company, self.vocabulary, self.known))
         return self.diff(normalize_keys(result), t_ms=turns[-1].end_ms)
 
     def diff(self, new: dict[str, Any], t_ms: int) -> list[tuple[str, int, dict[str, Any]]]:

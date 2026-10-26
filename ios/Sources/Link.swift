@@ -71,6 +71,14 @@ final class ServerLink: ObservableObject {
         publish("finishing")
     }
 
+    /// Everyone the owner has met, across recordings, newest encounter first.
+    func fetchPeople(base: String) async -> [[String: Any]] {
+        guard let url = URL(string: Self.httpBase(base) + "/api/people"),
+              let (data, _) = try? await urlSession.data(from: url),
+              let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+        return list
+    }
+
     /// The newest recording on the server: what a question after Stop is about when nothing is live.
     func latestRecording(base: String) async -> String? {
         guard let url = URL(string: Self.httpBase(base) + "/api/recordings"),

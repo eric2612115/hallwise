@@ -28,6 +28,36 @@ final class LiveModel: ObservableObject {
         let text: String
     }
 
+    /// Where the owner met this person before, and what passed between them: from earlier recordings.
+    struct History {
+        struct Encounter: Identifiable {
+            var id: String { recording }
+            let recording: String
+            let event: String
+            let venue: String
+            let started: Double
+            let introducedBy: String
+        }
+        struct PastPromise: Identifiable {
+            var id: String { recording + what }
+            let recording: String
+            let event: String
+            let what: String
+            let due: String
+            let direction: String  // owner_owes, they_owe, between_others
+        }
+        let encounters: [Encounter]
+        let promises: [PastPromise]
+    }
+
+    @Published var history: [String: History] = [:]       // by person key
+    @Published var speakerFirstMs: [String: Int] = [:]     // when each voice was first heard
+
+    /// When the owner first heard this person tonight, on the recording clock.
+    func firstHeardMs(of person: Person) -> Int? {
+        person.speakers.compactMap { speakerFirstMs[$0] }.min()
+    }
+
     /// A ready-to-send follow-up for one promise, drafted by the server when the recording ends.
     struct Move: Identifiable {
         var id: String { promiseKey }
@@ -157,7 +187,7 @@ final class LiveModel: ObservableObject {
     func reset() {
         people = [:]; peopleOrder = []; promises = [:]; promiseOrder = []; speakerAzimuth = [:]; speakerLevel = [:]
         ownerSpeakers = []; lines = []; turnKind = [:]; turnStart = [:]; turnEnd = [:]
-        suspects = []; moves = [:]; topics = []; translations = [:]
+        suspects = []; moves = [:]; topics = []; translations = [:]; history = [:]; speakerFirstMs = [:]
         tMs = 0; lastSpeaker = nil; donePromises = []; dismissedNotices = []; calendarAdded = []
     }
 
@@ -221,6 +251,7 @@ final class LiveModel: ObservableObject {
             if lines.count > 60 { lines.removeFirst(lines.count - 60) }
             turnStart[turn] = e["start_ms"] as? Int ?? tMs
             turnEnd[turn] = e["end_ms"] as? Int ?? tMs
+            if speakerFirstMs[speaker] == nil { speakerFirstMs[speaker] = e["start_ms"] as? Int ?? tMs }
             lastSpeaker = (speaker, (e["end_ms"] as? Int ?? tMs) + 1500)
         case "translation":
             if let turn = e["turn"] as? Int {
@@ -278,6 +309,19 @@ final class LiveModel: ObservableObject {
             if let heard = e["heard"] as? String, let turn = e["turn"] as? Int {
                 suspects.removeAll { $0.heard == heard && $0.turn == turn }
             }
+        case "person_history":
+            guard let key = e["key"] as? String else { return }
+            let encounters = (e["encounters"] as? [[String: Any]] ?? []).map {
+                History.Encounter(recording: $0["recording"] as? String ?? "", event: $0["event"] as? String ?? "",
+                                  venue: $0["venue"] as? String ?? "", started: $0["started"] as? Double ?? 0,
+                                  introducedBy: $0["introduced_by"] as? String ?? "")
+            }
+            let promises = (e["promises"] as? [[String: Any]] ?? []).map {
+                History.PastPromise(recording: $0["recording"] as? String ?? "", event: $0["event"] as? String ?? "",
+                                    what: $0["what"] as? String ?? "", due: $0["due"] as? String ?? "",
+                                    direction: $0["direction"] as? String ?? "")
+            }
+            history[key] = History(encounters: encounters, promises: promises)
         case "next_move":
             guard let key = e["promise_key"] as? String, !key.isEmpty else { return }
             moves[key] = Move(

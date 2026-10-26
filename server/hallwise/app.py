@@ -5,6 +5,7 @@
     /api/recordings             recordings, newest first
     /api/recordings/{id}/events one recording's event log
     /api/recordings/{id}/ask    a typed question about the recording, answered by Muse Spark
+    /api/people                 everyone met across recordings, with each encounter and promise
     /ask/{recording}            a spoken question: PCM in, Muse Voice Transcribe, then the same answer
 
 Run: ./run.sh (reads ../.env; HALLWISE_ASR=fake runs offline). Port 8790.
@@ -25,6 +26,7 @@ from .ask import answer, latest_moves
 from .asr import MetaRealtimeAsr, make_asr_factory
 from .events import fold_record, read_events
 from .extract import Extractor, SparkClient
+from .people import people_index
 from .recording import Hello, Recording
 
 
@@ -175,6 +177,11 @@ def create_app(
         for meta in metas:
             meta["live"] = meta["id"] in live
         return sorted(metas, key=lambda m: m["started"], reverse=True)
+
+    @app.get("/api/people")
+    def people(exclude: str | None = None) -> list[dict[str, Any]]:
+        """Everyone the owner has met, across recordings, newest encounter first."""
+        return people_index(data, exclude)
 
     @app.get("/api/recordings/{rid}/events")
     def recording_events(rid: str) -> list[dict[str, Any]]:
