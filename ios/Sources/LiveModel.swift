@@ -370,6 +370,8 @@ final class LiveModel: ObservableObject {
             if !donePromises.contains(key), let m = moves[key] { Reminders.schedule(m, promise: promises[key]) }
         case "room_topics":
             topics = e["topics"] as? [String] ?? []
+        case "replay_clock":
+            break  // a replay's clock through a silence: it only moves tMs (above), so the glow fades as it did live
         default:
             break
         }

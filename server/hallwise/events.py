@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncIterator
 
 
 class EventLog:
@@ -50,6 +50,56 @@ class EventLog:
         self._file.close()
         for queue in self._watchers:
             queue.put_nowait(None)
+
+
+REPLAY_TICK_S = 1.0  # a replay_clock tick after this much wall time with nothing sent
+
+
+async def replay(events: list[dict[str, Any]], pace: float, from_ms: int = 0) -> AsyncIterator[str]:
+    """A finished recording's events at its own pace, `pace` times faster, as JSON lines.
+
+    Events keep their log order. Each one is due when the replay clock reaches the latest t_ms so far (an
+    event logged after a later one, like an extraction that finished late, goes out right behind it, as it
+    did live), and every deadline is measured from one start on the monotonic clock, so time spent sending
+    never adds up. Events with the same time go out together. Everything due before `from_ms` goes out at
+    once first, so the state is right, then `{"type": "replay_clock", "t_ms": from_ms}` marks the start of
+    pacing, and another tick follows each second of wall time with nothing to send, so a client clock keeps
+    up with the recording through a silence.
+    """
+    timed: list[tuple[int, str]] = []
+    latest = 0
+    for e in events:
+        latest = max(latest, int(e.get("t_ms", 0)))
+        timed.append((latest, json.dumps(e, ensure_ascii=False)))
+    i = 0
+    while i < len(timed) and timed[i][0] < from_ms:
+        yield timed[i][1]
+        i += 1
+    loop = asyncio.get_running_loop()
+    t0 = loop.time()  # monotonic
+
+    async def until(t_ms: float) -> None:
+        delay = t0 + (t_ms - from_ms) / 1000 / pace - loop.time()
+        if delay > 0:
+            await asyncio.sleep(delay)
+
+    def tick(t_ms: float) -> str:
+        return json.dumps({"type": "replay_clock", "t_ms": int(round(t_ms))})
+
+    clock: float = from_ms  # recording time of the last thing sent
+    yield tick(clock)
+    step = REPLAY_TICK_S * 1000 * pace  # recording time per tick
+    while i < len(timed):
+        t = timed[i][0]
+        while t - clock > step:
+            clock += step
+            await until(clock)
+            yield tick(clock)
+        await until(t)
+        while i < len(timed) and timed[i][0] == t:
+            yield timed[i][1]
+            i += 1
+        clock = t
 
 
 def read_events(path: Path) -> list[dict[str, Any]]:

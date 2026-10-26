@@ -1,10 +1,12 @@
 import asyncio
 import json
+import time
 import wave
 
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from hallwise.app import create_app
 from hallwise.asr import FakeAsr, MetaRealtimeAsr
@@ -159,3 +161,104 @@ def test_holding_to_talk_diverts_audio_to_a_question(tmp_path):
     events = client.get(f"/api/recordings/{recording}/events").json()
     assert [e["text"] for e in events if e["type"] == "turn"] == ["Hi, I'm Sarah from Acme."]
     assert [e["type"] for e in events if e["type"] in ("ask", "ask_answer")] == ["ask", "ask_answer"]
+
+
+def finished_recording(tmp_path, events, rid="r1"):
+    """A server with one finished recording on disk, written straight to its event log."""
+    root = tmp_path / "recordings" / rid
+    root.mkdir(parents=True)
+    (root / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
+    return TestClient(create_app(tmp_path, asr="fake", make_extractor=None))
+
+
+def watch_to_the_end(client, url):
+    """Every message on an /events socket until the server closes it, each with its arrival time in seconds
+    since just before connecting (so no message can be due before its time on this clock)."""
+    start = time.monotonic()
+    out = []
+    with client.websocket_connect(url) as ws:
+        while True:
+            try:
+                msg = ws.receive_json()
+            except WebSocketDisconnect:
+                return out
+            out.append((time.monotonic() - start, msg))
+
+
+def tick(t_ms):
+    return {"type": "replay_clock", "t_ms": t_ms}
+
+
+THREE = [
+    {"type": "recording_start", "t_ms": 0},
+    {"type": "turn", "t_ms": 500, "turn": 1, "text": "Hi, I'm Sarah."},
+    {"type": "recording_end", "t_ms": 1500},
+]
+
+
+def test_a_finished_recording_replays_at_its_own_pace(tmp_path):
+    got = watch_to_the_end(finished_recording(tmp_path, THREE), "/events/r1?pace=10")
+    # The clock starts at 0; the gaps here are shorter than a tick, so no tick in between.
+    assert [m for _, m in got] == [tick(0), *THREE]
+    # Due at 0, 50 and 150 ms: never early, and nowhere near the 1.5 s it took live.
+    for (arrived, _), due in zip(got[1:], [0.0, 0.05, 0.15]):
+        assert due - 0.005 <= arrived <= due + 0.5
+
+
+def test_without_pace_a_finished_recording_comes_all_at_once(tmp_path):
+    got = watch_to_the_end(finished_recording(tmp_path, THREE), "/events/r1")
+    assert [m for _, m in got] == THREE  # no clock ticks either
+    assert got[-1][0] < 1.0  # at its own pace the last one would be 1.5 s in
+
+
+def test_from_ms_sends_everything_before_it_at_once_then_paces(tmp_path):
+    events = [
+        {"type": "recording_start", "t_ms": 0},
+        {"type": "turn", "t_ms": 4000, "turn": 1, "text": "Hi, I'm Sarah."},
+        {"type": "person", "t_ms": 2000, "key": "sarah", "name": "Sarah"},  # extracted late: logged after the turn
+        {"type": "turn", "t_ms": 10_500, "turn": 2, "text": "Eric, from Vexi."},
+        {"type": "recording_end", "t_ms": 11_000},
+    ]
+    got = watch_to_the_end(finished_recording(tmp_path, events), "/events/r1?pace=2&from_ms=10000")
+    # Log order holds, the late person included; pacing starts at from_ms.
+    assert [m for _, m in got] == [*events[:3], tick(10_000), *events[3:]]
+    assert all(arrived < 0.5 for arrived, _ in got[:4])  # at pace 2 from 0, the first turn alone is 2 s in
+    for (arrived, _), due in zip(got[4:], [0.25, 0.5]):
+        assert due - 0.005 <= arrived <= due + 0.5
+
+
+def test_a_long_silence_gets_a_clock_tick_each_second(tmp_path):
+    events = [
+        {"type": "recording_start", "t_ms": 0},
+        {"type": "turn", "t_ms": 60_000, "turn": 1, "text": "Finally."},
+        {"type": "recording_end", "t_ms": 60_000},
+    ]
+    got = watch_to_the_end(finished_recording(tmp_path, events), "/events/r1?pace=50")
+    # 60 s at pace 50 is 1.2 s: one tick a second in (50 s of recording), then the two equal-time events together.
+    assert [m for _, m in got] == [tick(0), events[0], tick(50_000), *events[1:]]
+    assert 0.995 <= got[2][0] <= 1.5
+    assert 1.195 <= got[3][0] <= 1.7
+    assert got[4][0] - got[3][0] < 0.2
+
+
+def test_a_live_recording_ignores_pace(tmp_path):
+    with TestClient(create_app(tmp_path, asr="fake", make_extractor=None)) as client:  # one event loop for both sockets
+        script = [{"start_ms": 200, "end_ms": 900, "speaker": "A", "text": "Hi, I'm Sarah from Acme."}]
+        rate = 24_000
+        with client.websocket_connect("/ingest") as ingest:
+            ingest.send_text(json.dumps({"sample_rate": rate, "channels": 1, "layout": "mono", "fake_script": script}))
+            recording = ingest.receive_json()["recording"]
+            with client.websocket_connect(f"/events/{recording}?pace=1&from_ms=999999") as ws:
+                assert ws.receive_json()["type"] == "recording_start"
+                ingest.send_bytes(silence(1.0, rate).tobytes())
+                ingest.send_text(json.dumps({"type": "end"}))
+                assert ingest.receive_json() == {"type": "closed", "recording": recording}
+                rest = []
+                while True:
+                    try:
+                        rest.append(ws.receive_json())
+                    except WebSocketDisconnect:
+                        break
+        assert "replay_clock" not in [m["type"] for m in rest]
+        assert [m["text"] for m in rest if m["type"] == "turn"] == ["Hi, I'm Sarah from Acme."]
+        assert rest[-1]["type"] == "recording_end"

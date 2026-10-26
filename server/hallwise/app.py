@@ -1,7 +1,8 @@
 """HTTP and WebSocket entry points.
 
     /ingest                     the badge streams here: a JSON hello, then binary PCM frames and JSON pose messages
-    /events/{recording}         watch a recording: everything so far, then live events until it ends
+    /events/{recording}         watch a recording: everything so far, then live events until it ends;
+                                a finished one with ?pace=1 (2 = twice as fast) and ?from_ms= plays at its own pace
     /api/recordings             recordings, newest first
     /api/recordings/{id}/events one recording's event log
     /api/recordings/{id}/ask    a typed question about the recording, answered by Muse Spark
@@ -16,16 +17,17 @@ from __future__ import annotations
 
 import json
 import os
+from contextlib import aclosing
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .ask import answer, latest_moves
 from .asr import MetaRealtimeAsr, make_asr_factory
-from .events import fold_record, read_events
+from .events import fold_record, read_events, replay
 from .extract import Extractor, SparkClient
 from .people import people_index
 from .photo import match_photo, save_photo
@@ -160,11 +162,21 @@ def create_app(
             pass
 
     @app.websocket("/events/{rid}")
-    async def events(ws: WebSocket, rid: str) -> None:
+    async def events(
+        ws: WebSocket, rid: str, pace: float | None = Query(None, gt=0), from_ms: int = Query(0, ge=0)
+    ) -> None:
+        """A live recording: the backlog, then events as they happen. A finished one: every event at once, or
+        with `pace`, at its own pace (`pace=2` twice as fast) from `from_ms` on, with replay_clock ticks
+        through the silences (see events.replay). A live recording ignores pace and from_ms."""
         await ws.accept()
         rec = live.get(rid)
         try:
-            if rec is None:
+            if rec is None and pace is not None:
+                log = read_events(data / "recordings" / rid / "events.jsonl")
+                async with aclosing(replay(log, pace, from_ms)) as lines:
+                    async for line in lines:
+                        await ws.send_text(line)
+            elif rec is None:
                 for event in read_events(data / "recordings" / rid / "events.jsonl"):
                     await ws.send_text(json.dumps(event, ensure_ascii=False))
             else:

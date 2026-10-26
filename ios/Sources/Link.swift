@@ -49,12 +49,23 @@ final class ServerLink: ObservableObject {
     }
 
     /// Watch an existing recording without capturing anything (previews, the simulator, a second screen).
-    func follow(base: String, recording: String) {
+    /// A finished recording replays at `pace` (1 = as it happened, 2 = twice as fast, 0 = everything at once);
+    /// a live one streams as it happens whatever the pace: the server decides.
+    func follow(base: String, recording: String, pace: Double) {
         self.base = base.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
         DispatchQueue.main.async { self.recordingID = recording }
         publish("following \(recording)")
-        watch(recording)
+        watch(recording, pace: pace)
     }
+
+    /// Stop following: the server stops sending, and a later follow starts over.
+    func unfollow() {
+        events?.cancel(with: .goingAway, reason: nil)
+        events = nil
+    }
+
+    /// The server is replaying a finished recording at its own pace (it sends replay_clock ticks only then).
+    private(set) var replaying = false
 
     func sendAudio(_ data: Data) {
         ingest?.send(.data(data)) { [weak self] error in
@@ -165,22 +176,35 @@ final class ServerLink: ObservableObject {
         }
     }
 
-    private func watch(_ id: String) {
-        guard let url = URL(string: base + "/events/" + id) else { return }
+    private func watch(_ id: String, pace: Double = 0) {
+        let query = pace > 0 ? "?pace=" + String(format: "%g", pace) : ""
+        guard let url = URL(string: base + "/events/" + id + query) else { return }
+        events?.cancel(with: .goingAway, reason: nil)  // one stream into the record at a time
+        replaying = false
         let task = urlSession.webSocketTask(with: url)
         events = task
         task.resume()
-        receiveEvents()
+        receiveEvents(task)
     }
 
-    private func receiveEvents() {
-        events?.receive { [weak self] result in
-            guard let self else { return }
-            if case .success(.string(let text)) = result, let event = Self.parse(text) {
-                DispatchQueue.main.async { self.onEvent?(event) }
+    private func receiveEvents(_ task: URLSessionWebSocketTask) {
+        task.receive { [weak self] result in
+            guard let self, task === self.events else { return }  // a socket we have moved on from
+            switch result {
+            case .success(.string(let text)):
+                if let event = Self.parse(text) {
+                    if event["type"] as? String == "replay_clock", !self.replaying {
+                        self.replaying = true
+                        self.publish("replaying")
+                    }
+                    DispatchQueue.main.async { self.onEvent?(event) }
+                }
+                self.receiveEvents(task)
+            case .success:
+                self.receiveEvents(task)
+            case .failure:
+                if self.replaying { self.publish("replay ended") }
             }
-            if case .failure = result { return }
-            self.receiveEvents()
         }
     }
 

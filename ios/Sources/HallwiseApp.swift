@@ -67,7 +67,7 @@ final class AppModel: ObservableObject {
     func resume() {
         paused = false
         capture.muted = false
-        link.status = "listening"
+        link.status = link.replaying ? "replaying" : "listening"
     }
 
     func start() {
@@ -78,7 +78,7 @@ final class AppModel: ObservableObject {
         showBadgeOnLockScreen()
         let settings = self.settings
         if !settings.followRecording.isEmpty {
-            link.follow(base: settings.serverURL, recording: settings.followRecording)
+            link.follow(base: settings.serverURL, recording: settings.followRecording, pace: settings.replayPace)
             return
         }
         Task { @MainActor in
@@ -115,6 +115,8 @@ final class AppModel: ObservableObject {
         if settings.followRecording.isEmpty {
             capture.stop()
             link.close()
+        } else {
+            link.unfollow()
         }
         listening = false
         paused = false

@@ -13,6 +13,7 @@ final class BadgeSettings: ObservableObject {
     @AppStorage("yawOffset") var yawOffset = 0.0     // degrees, calibrates the badge's forward direction
     @AppStorage("appearance") var appearance = Theme.Appearance.system.rawValue
     @AppStorage("followRecording") var followRecording = ""  // debug: watch this recording instead of capturing
+    @AppStorage("replayPace") var replayPace = 1.0  // debug: a finished recording followed plays at this speed; 0 = all at once
     @AppStorage("deckURL") var deckURL = ""        // the things people ask for, one tap to share
     @AppStorage("onePagerURL") var onePagerURL = ""
     @AppStorage("blurb") var blurb = ""            // two lines about you, for pasting

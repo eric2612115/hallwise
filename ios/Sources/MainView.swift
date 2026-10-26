@@ -72,6 +72,8 @@ struct MainView: View {
         if !app.listening { return "Not listening" }
         if app.paused { return "Paused" }
         if s == "connecting" { return "Connecting…" }
+        if s == "replaying" { return "Replay" }
+        if s == "replay ended" { return "Replay ended" }
         return "Live"
     }
 
@@ -256,8 +258,9 @@ struct MenuSheet: View {
                         field("Words", text: $settings.keywords, placeholder: "names to recognise, comma-separated")
                         forwardRow
                     }
-                    group("Debug", nil) {
-                        field("Follow", text: $settings.followRecording, placeholder: "recording id, no capture", keyboard: .URL, last: true)
+                    group("Debug", "Follow watches a recording instead of capturing; a finished one replays at this pace") {
+                        field("Follow", text: $settings.followRecording, placeholder: "recording id, no capture", keyboard: .URL)
+                        paceRow
                     }
                 }
                 .padding(.horizontal, 16)
@@ -409,6 +412,25 @@ struct MenuSheet: View {
         .overlay(alignment: .bottom) {
             if !last { Rectangle().fill(Theme.rule).frame(height: 0.5).padding(.leading, 14) }
         }
+    }
+
+    /// How fast a followed recording replays once it has finished; Live sends it all at once, as before.
+    private var paceRow: some View {
+        HStack(spacing: 12) {
+            Text("Replay pace")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.inkSoft)
+                .fixedSize()
+            Picker("Replay pace", selection: $settings.replayPace) {
+                Text("Live").tag(0.0)
+                Text("1×").tag(1.0)
+                Text("2×").tag(2.0)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 52)
     }
 
     private var forwardRow: some View {
