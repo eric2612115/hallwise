@@ -1,49 +1,72 @@
-# Hallwise demo — a week on one map, then one night, about 2:50
+# Hallwise demo — networking fails the next morning, about 2:55
 
-Three minutes is the limit and the first round watches fast. The video opens on sound, then on the week's map,
-then shows one night happening, then what the badge did with it. The party is one continuous camera take
-through the living room; the opening and the closing are shot in the two bedrooms on either side of it.
+The story in one line: **networking doesn't fail in the room, it fails the next morning.** You promise a deck,
+a coffee, an introduction; the next day you are busy, nothing goes out, and the relationship fades. Hallwise is
+a name badge that listens, so by morning every follow-up is already written, in the other person's language,
+with a reason to write that you had forgotten you had.
 
-The room is real: computers play the other guests' voices from where they would stand, Eric talks live, and
-Hallwise gets one device, the badge on Eric's chest. Everything on the panels is written by the models during
-the take; nothing is typed. The other four evenings on the map were rehearsed the same way earlier in the week.
+Rules for every shot: the hero is people and follow-ups, never text. Never say notes, transcript, summary or
+meeting; say people, promises, follow-ups, the room, this week. A feature gets screen time only if it proves
+"you don't have to remember, it does, and it acts". Everything else is one or two seconds of texture.
+
+The room is real: computers play the other guests' voices from where they would stand, Eric and his friend talk
+live, and Hallwise gets one device, the badge on Eric's chest. Everything on the panels is written by the models
+from what the badge heard; nothing is typed. The four other evenings in the week were rehearsals run through the
+same pipeline, dated on the days they stand for.
 
 ## Shape
 
-The flat: two bedrooms on the left (the friend's above, Eric's below), each with a door into the living room.
-In the living room the TV is on the top wall, sofa 1 under it, sofa 2 along the right wall, the dining table
-below sofa 1. The take walks a clockwise U: friend's room → its door → sofa 1 → past the table → Eric's room.
-
-| Time | Beat | Where, facing | What the viewer gets |
+| Time | Beat | Where | What it proves |
 |---|---|---|---|
-| 0:00–0:25 | Opening | Friend's room, sitting | Silence. One line of pain, the week on one map, four lines on what the badge does. |
-| 0:25–0:33 | Into the room | Through the friend's door | "Networking never sounds like this. It sounds like this." The TV crowd comes in on the step. |
-| 0:33–0:55 | The door | Just outside the friend's door, facing the friend | Start, the badge on the chest, a side-button press: still a name card. The friend, the first promise, one photo: the friend's card gets a face. |
-| 0:55–1:45 | The sofa | West end of sofa 1, facing east along it; TV on Eric's left | Two French investors talking among themselves; the friend introduces Eric; English; two grey dots become two names. A one-pager and a Wednesday demo. |
-| 1:45–1:52 | Past the table | Walking south past the table's west end | The waiter from Mac-3, filtered. |
-| 1:52–2:20 | The table | West end of the dining table, facing east | Siddharth (Mac-3, ahead) and Kenji (iPhone-K on sofa 2, ahead-left) both ringed the moment they speak: "It remembered both before I did." Friday, a Japanese murmur. |
-| 2:20–2:50 | Eric's room | Through the lower door, lamp on, the sofa top-right | Stop; the drafts land. "What did I promise tonight?", spoken. The bell. One word fixed. |
-| 2:50–2:58 | One night, one week | Same | Tonight's path, then the week. "When you're the whole company, you can't also be the one who remembers. Hallwise is." End card. |
+| 0:00–0:15 | The morning after | Eric's room, morning light, phone in hand | The payoff first: the morning report. Follow-ups written in French and English, two introductions he owed, one contact that could not be verified. "I typed nothing." |
+| 0:15–0:25 | Last night | Friend's room, then its door | "Networking events never sound like this. They sound like this." The crowd comes in. |
+| 0:25–0:45 | The door | Outside the friend's door | Start; the card stays a card. The friend, a promise, one selfie: SAM finds the faces, Spark says who is who. |
+| 0:45–1:40 | The sofa | West end of sofa 1 | **The proof.** Two French investors talk among themselves; Margaux murmurs "une page, avec des chiffres"; only then is Eric introduced and the grey dots get names. The panel links Margaux to Chloé, her colleague Eric met at Blockchain Week. |
+| 1:40–1:47 | Past the table | Walking | The waiter, filtered. One second. |
+| 1:47–2:15 | The table | West end of the table | Siddharth and Kenji ringed the moment they speak: met before. An open thread surfaces: Eric promised Lena an introduction to Kenji on Oct 20. Thursday, no, Friday. |
+| 2:15–2:40 | That night | Eric's room, lamp | Stop. The follow-ups land, each with its hook. "Who do I still owe an introduction?", asked out loud. |
+| 2:40–2:55 | One night, one week | Same | Tonight's path, then the week's map. "When you're the whole company, you can't also be the one who remembers. Hallwise is." |
+| 2:55–3:00 | End card | | Models, open source. |
+
+## The payoff, written down first
+
+The opening and the drafts must say this, because the night has to earn exactly these lines:
+- **Margaux (French, one-pager):** "Bonjour Margaux, Chloé m'a dit que vous voudriez voir ça… une page, avec des
+  chiffres, comme promis." Hook: her colleague Chloé (Corvane Capital) said so at Blockchain Week on Oct 23; the
+  "one page, with numbers" is what Margaux muttered in French before anyone knew her name.
+- **Kenji (coffee, Friday):** an invite at a free Friday slot. Hook: Eric promised Lena (Brightline Grid) an
+  introduction to Kenji at the ETH Taipei afterparty on Oct 20 and never sent it; the draft offers it.
+- **Julien (demo, Wednesday):** 16:00, "avoids your 14:00 board call". Morning check: no public profile found at
+  Corvane, confirm before sending the deck.
+- **[FRIEND] (deck, tonight):** sent with the deck link; the morning check matches their public company page.
+- **Introductions to make:** Lena and Kenji, from the open promise; nothing invented.
 
 ## Frame
 
 - Left 60%: the camera.
-- Right 40%: the app's **Room page**, screen-recorded from the iOS Simulator on Mac-0 following the live recording (follow
-  mode): the radar (ahead = up, each person a coloured dot where their voice comes from, lit while they talk, a
-  ring when the badge has met them before) and the strip of who Eric has met. For Stop, the bedroom and the
-  map, the follow view switches to Ask, the bell and Map.
-- Inserts from the dashboard on Mac-0 (screen-recorded) for lines that need reading: the French chat with its
-  English under it marked *translated*, Margaux's aside, Kenji's murmur, the Words list.
-- The panels read only the server's event stream, never the rig's scene files.
-- Fallback if live capture fails during the take: process the badge recording afterwards and caption the
-  panels "Hallwise's output for this recording, replayed at the moment each thing was said".
+- Right 40% during the night: the app's **Room page** from the iOS Simulator on Mac-0 following the live
+  recording (follow mode), recorded with `demo/rig/record-follow-view.sh`: the radar (ahead = up, a coloured dot
+  per person where their voice comes from, lit while they talk, a ring when the badge has met them before), the
+  strip of who Eric has met, and the hook lines ("met before", "Chloé's colleague", "you owe Lena an intro").
+- Right 40% in the morning and in Eric's room: the iPhone 17 Pro's own screen recording; after Stop it is in
+  Eric's hand, not a badge.
+- Inserts, timed from the event log by the editor: the French lines with their English marked *translated*,
+  Margaux's aside, Kenji's murmur.
+- Small model captions, lower left, two seconds each, at the moment the model acted:
+  "Muse Voice Transcribe · two voices, still apart after the switch to English", "Muse Spark · translated",
+  "SAM 3.1 finds the faces · Muse Spark says who is who", "Muse Spark · links Margaux to Chloé (Oct 23)",
+  "Muse Spark · promise corrected", "Muse Spark Open · a second listener checks the names", "Muse Spark · search
+  grounding checks who they are".
+- If the live capture of the right panel fails, replay the recording at its original pace in follow mode and
+  record it again; the content is the same event log.
 
 ## On-screen text
 
 - 0:00: "🎧 Headphones on."
-- Under the map: "Everyone except my friend and me is AI-generated. Voices: Kokoro. The other evenings were
-  rehearsals run through the same pipeline."
-- End card: "Built with Muse Voice Transcribe · Muse Spark · Muse Spark Open. Open source, AGPL-3.0."
+- Under the first night shot: "AI guests: voices by Kokoro, faces by Muse Image. My friend and I are real. The
+  other evenings this week were rehearsals through the same pipeline."
+- End card: "Built with Muse Voice Transcribe · Muse Spark · SAM 3.1 · Muse Spark Open on Baseten. Open source,
+  AGPL-3.0."
 
 Personas and companies are fictional. [FRIEND] and [FRIEND_CO] are a real friend's name and company.
 
@@ -97,67 +120,53 @@ one the badge will recognise tonight; at the afterparty he and Eric agreed to "t
 
 ---
 
-## Opening (0:00–0:25), the friend's room, sitting
+## The morning after (0:00–0:15), Eric's room, morning light
 
-Silence. Eric on the edge of the friend's bed, to camera. Caption: 🎧 Headphones on.
+Shot last, the morning after the take. Eric sits on the edge of the bed, phone in hand; the 17 Pro records its
+own screen. The camera holds on his face, then the phone.
 
-ERIC: Twenty people a night, half of them you've met before, and by morning you can't remember who promised
-what.
+ERIC: Networking doesn't fail in the room. It fails the next morning.
 
-He lifts the phone into frame: the Map tab, All. Five event chips, sixteen dots, Kenji ringed in the middle.
+He opens the morning report: four people last night; three follow-ups ready, Margaux's in French; "You owe Lena
+an introduction to Kenji, from Oct 20"; "Julien: no public profile found at Corvane, check first".
 
-ERIC: This is my week. Five evenings, sixteen people, one map. I typed nothing.
+ERIC: This is my morning after last night. Every follow-up is written, in their language, with a reason to
+write. I typed nothing. Here's last night.
 
-ERIC: Hallwise is a name badge that listens. It hears who's talking from where their voice comes from. It
-names them from how they introduce themselves. It catches what you promised. And it writes the follow-up in
-their language before you've left the room.
+## Last night (0:15–0:25), the friend's room, then its door
 
-## Into the room (0:25–0:33), the friend's door
-
-Eric stands, walks to the door, hand on the frame.
+Silence. Eric at the door of the friend's room, to camera.
 
 ERIC: Networking events never sound like this. [click] They sound like this.
 
 He steps through; the hall bed comes in on the TV, hard. Two seconds of it.
 
-## The door (0:33–0:55), just outside the friend's door (A)
+## The door (0:25–0:45), just outside the friend's door (A)
 
-Eric taps Start; the card comes back up; the phone goes onto the mount on his chest. Insert, two seconds: his
-thumb presses the side button, the screen locks, the lock screen shows the same name card. Nothing else on it.
+Eric taps Start; the card comes back up; the phone goes onto the mount on his chest. Insert, one second: the
+side button, the lock screen, the same name card.
 
-The friend's lines are their own words, about 30 words in all; keep the scene to these beats.
+The friend's lines are their own words; keep to these beats.
+1. [FRIEND] greets Eric, gives name, company and one sentence on what they do.
+2. ERIC: I'm Eric, from Hallwise. This badge. I'll send you our deck tonight.
+3. ERIC: Selfie? (front camera, one shot, the phone back on the mount) Now you have a face.
+4. [FRIEND]: Come, you should meet Margaux and Julien.
 
-1. [FRIEND] greets Eric.
-2. [FRIEND] gives name, company and one sentence on what they do.
-3. ERIC: I'm Eric, from Hallwise. This badge.
-4. ERIC: I'll send you our deck tonight.
-5. ERIC: One photo? (lifts the phone, taps the camera on the Room page, one shot, puts it back) There. Now
-   you have a face.
-6. [FRIEND]: Come, you should meet Margaux and Julien.
+Panels: [FRIEND]'s dot toward the door; about seven seconds after the selfie, their face on the dot and the card.
+Caption: "SAM 3.1 finds the faces · Muse Spark says who is who". Keep talking through the wait.
 
-Panels: [FRIEND] appears as a dot toward the door, lit while they talk. Owe: deck → [FRIEND], tonight. The
-photo: about seven seconds after the shot (SAM finds the face, Spark says who it is), the friend's card and the
-dot carry their face; keep talking through the wait. Caption: "SAM 3.1 finds the faces · Muse Spark matches
-them by where each voice came from". Words: "Hallwise"
-(expected back as "Hall Wise" or "hallways").
+## The sofa (0:45–1:40), the west end of sofa 1 (B), facing east
 
-The friend walks Eric to sofa 1 (0:53–0:57).
-
-## The sofa (0:55–1:45), the west end of sofa 1 (B), facing east
-
-Margaux and Julien are talking to each other, in French, about yesterday's pitch. Eric stops at the sofa's
-west end; the TV is on his left.
+Margaux and Julien talk to each other in French. Eric stops at the sofa's west end; the TV is on his left.
 
 [click]
 MARGAUX (to Julien): Franchement, le deck d'hier, j'ai rien compris à leur modèle.
 JULIEN: Pareil. Vingt slides, zéro chiffre.
 
-Panels: two unnamed grey dots ahead; the lines in the transcript as *ambient*, English under them marked
-*translated*: "Honestly, yesterday's deck, I didn't get their model at all." / "Same. Twenty slides, zero
-numbers." Nobody is a person yet; the room topics pick up "pitch decks".
+Panels: two grey dots ahead; the lines arrive as *ambient* with their English marked *translated*. Nobody has a
+name yet.
 
-[FRIEND] (own words, from Eric's right, a step back from the Macs): Margaux, Julien, this is Eric. Eric
-makes the badge.
+[FRIEND] (from Eric's right, a step back from the Macs): Margaux, Julien, this is Eric. He makes the badge.
 
 ERIC: Hi. Eric, from Hallwise. May I join your conversation?
 
@@ -165,10 +174,9 @@ ERIC: Hi. Eric, from Hallwise. May I join your conversation?
 MARGAUX: Margaux Lefèvre, Corvane Capital.
 JULIEN: Julien Caron. I'm with Margaux; I do the diligence.
 
-The friend steps away toward their room.
-
-Panels: the two grey dots become Margaux and Julien in their colours, the same two voices. Margaux's card
-gets *French*.
+Panels: the two grey dots become Margaux and Julien, the same two voices as the French. Under Margaux: "Chloé's
+colleague · Blockchain Week, Oct 23". Caption: "Muse Voice Transcribe · two voices, still apart after the
+switch to English".
 
 ERIC: Margaux, are you investing this quarter?
 
@@ -184,79 +192,73 @@ JULIEN: Come by our office next week and show us the demo? Wednesday afternoon?
 
 ERIC: Wednesday works.
 
-Panels: Owe: one-pager → Margaux, tomorrow; demo at Corvane with Julien, Wednesday afternoon. Both dots stay
-put while Eric turns.
+## Past the table (1:40–1:47)
 
-## Past the table (1:45–1:52)
+Mac-3 as a waiter: "Something to drink?" ERIC (walking): "I'm good, thanks." One second of the line marked
+*filtered*. Mac-3 then stays silent for three seconds.
 
-Eric walks south from the sofa's west end along the table's west end. Mac-3, at the table's east end, as a
-waiter: "Something to drink?" ERIC (still walking): "I'm good, thanks." Insert: the line marked *filtered*.
-Nothing reaches the roster. Mac-3 then stays silent for three seconds.
-
-## The table (1:52–2:20), the west end of the dining table (C), facing east
+## The table (1:47–2:15), the west end of the dining table (C), facing east
 
 [click]
-SIDDHARTH (Mac-3, ahead): Eric! Siddharth, Siddharth Raghunathan, from Blockchain Week. You know Kenji.
+SIDDHARTH (Mac-3, ahead): Eric! Siddharth, from Blockchain Week. You know Kenji.
 KENJI (iPhone-K, ahead-left): Kenji Watanabe, Hoshizora Robotics. We keep running into each other.
 
-Panels: both dots appear with rings; the strip reads "met before · Blockchain Week · ETH Taipei afterparty"
-and "met before · Hardware meetup · ETH Taipei afterparty". Hold until both rings are up.
+Panels: both dots ringed the moment they are named: "met before · Blockchain Week", "met before · Hardware
+meetup, ETH Taipei afterparty". Under Kenji, the open thread: "You promised Lena (Brightline) an intro · Oct 20".
 
-ERIC (to camera, one beat): It remembered both before I did. (to Kenji) Kenji! The coffee. Thursday?
+ERIC (to camera, one beat): It remembered both of them before I did. (to Kenji) Kenji! The coffee. Thursday?
 
 [click]
 KENJI: Thursday is... no, Friday. Friday is better. (murmurs) 金曜日ね、メモしておこう。
 
-Panels: Owe: coffee with Kenji, **Friday**, with "Thursday" struck through. Insert: the murmur in Japanese
-with "Friday, then. I'll make a note." under it, marked *translated*; Kenji's card gets *Japanese*.
+Panels: coffee with Kenji, **Friday**, "Thursday" struck through. Insert: the murmur with "Friday, then. I'll
+make a note." under it, marked *translated*. Caption: "Muse Spark · promise corrected".
 
-Eric walks to his own door (2:18–2:22).
+Eric walks to his own door.
 
-## Eric's room (2:20–2:50), lamp on, the sofa in the top-right corner
+## That night (2:15–2:40), Eric's room, lamp on, the sofa in the top-right corner
 
-Eric switches on the lamp, sits, lifts the badge, swipes, taps Stop, "Stop" again on the sheet. The TV mutes
-on the same click. The right panel switches to the bell, then Owe. The Draft chips arrive one after another.
+Lamp on, Eric sits, lifts the badge, taps Stop. The TV mutes on the same click. From here the right panel is the
+17 Pro's own screen.
 
-ERIC (while they land): It wrote these just now.
+ERIC (while the follow-ups land): It wrote these just now.
 
-Right panel, each given a moment: Margaux's draft, French with English under it, "one page, with numbers",
-the one-pager link attached. Julien's invite: "Wednesday 16:00 · 30 min · avoids your 14:00 board call".
-Kenji's: Friday, and it mentions the coffee from last week's afterparty.
+Each given a moment: Margaux's, French, "Chloé m'a dit…", "une page, avec des chiffres", the one-pager attached;
+Julien's invite, "Wednesday 16:00 · avoids your 14:00 board call"; Kenji's, Friday, offering the introduction to
+Lena. One second of Words: "two Meta models heard this differently: Ragoo Nathan / Raghunathan" (Muse Spark Open
+as the second listener).
 
 Eric opens Ask and holds the mic.
 
-ERIC: What did I promise tonight?
+ERIC: Who do I still owe an introduction?
 
-The panel shows the question as heard, then the answer: four lines, one per promise. Eric reads the last one
-out.
+The answer: Lena and Kenji, from Oct 20; the draft is ready. The bell shows the count; a reminder for eight
+o'clock is set.
 
-ERIC: ...and [FRIEND] gets the deck tonight. (the bell shows 4; he taps it) And if I forget, it doesn't. Eight
-o'clock, it taps me.
+## One night, one week (2:40–2:55)
 
-Insert: the notification "Deck for [FRIEND] due tonight". Then Words: "Hall Wise → Hallwise", Eric taps Keep.
+Map, Tonight: the room from above, the dotted path 1 → 5, the times. Two seconds. Map, All: the week, Kenji's
+ring in the middle, the five evenings as chips, one line from Chloé to Margaux. Two seconds.
 
-ERIC: I fix a word once. Next time it's a hint.
+ERIC: One night. One week. When you're the whole company, you can't also be the one who remembers. Hallwise is.
 
-## One night, one week (2:50–2:58)
-
-Map, Tonight: the room from above, the dotted path 1 → 4, the timeline underneath. Two seconds. Map, All: the
-week, Kenji's ring in the middle, five event chips. Two seconds.
-
-ERIC: One night. One week. One map. When you're the whole company, you can't also be the one who remembers.
-Hallwise is.
-
-End card (2:58–3:00).
+End card (2:55–3:00).
 
 ---
 
 ## To build before the shoot
 
-- Julien's voice: render the French lines with `ff_siwis` pitched down, the English with `am_michael` and French
-  shaping; check in rehearsal that diarization keeps him and Margaux apart.
-- A Wednesday 14:00–15:30 "Board call" on the badge phone's calendar, so the invite has something to dodge.
-- Deck and one-pager links set in the menu, so the drafts attach them.
-- Nobody has to pronounce a surname right. Names from earlier evenings go to the transcriber as hints, and the
-  badge matches a person by first name and company, so "Ragoo Nathan, Quill Mesh" is still Siddharth.
+- The morning report and the hooks (queued): research of new people with Muse Spark search grounding, rate
+  limited; hooks from the people index, promises and mentions across evenings (Chloé said "my colleague Margaux";
+  Eric promised Lena an intro to Kenji on Oct 20); a report screen in the app and an eight o'clock notification.
+- The hook lines on the Room strip and the person card ("Chloé's colleague", "you owe Lena an intro").
+- The second listener on Baseten (queued) for the Words moment.
+- Timed replay in follow mode (in progress) as the fallback for the right panel.
+- Julien's voice distinct from Margaux's; check diarization keeps them apart.
+- A Wednesday 14:00–15:30 "Board call" on the 17 Pro's calendar; deck and one-pager links set in the menu.
+- Selfies at the sofa and the table are not needed: the guests are laptops. Their faces on the radar come from
+  earlier evenings (Muse Image portraits attached to those recordings); Margaux and Julien stay dots, which is
+  the point: people you know have faces, people you just met do not yet.
 
 ## Before the take
 
@@ -288,8 +290,8 @@ End card (2:58–3:00).
 - The drafts take five to ten seconds after Stop; hold the shot on Eric until the first chip lands.
 - The calendar editor must be prefilled in the follow view, not on the badge phone: for the take, click Add to
   calendar in the Simulator (same server, same drafts).
-- The photo at the door: one face, one person, so the match is trivial, but it takes about seven seconds; the
-  first SAM call of the day can take nine. Take one warm-up photo before the take.
+- The selfie at the door: two faces, the wearer excluded, about seven seconds; the first SAM call of the day
+  can take nine. Take one warm-up photo before the take.
 - On the real iPhone, check once that a talker on the left lights the left dot with the badge hanging upside
   down: if iOS already corrects the microphones for orientation, the server's mirroring would flip it twice.
 - Live diarization must keep up in a noisy room; if not, use the replay fallback and its caption.
