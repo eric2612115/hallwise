@@ -1,0 +1,168 @@
+<title>Hallwise Replay</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Replay one evening recorded by the Hallwise name badge: who was there, what was promised, and the follow-ups.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<div class="paper-grain" aria-hidden="true"></div>
+<div class="paper-vignette" aria-hidden="true"></div>
+
+<div id="app" class="is-intro">
+  <header class="top wrap">
+    <a class="brand" href="#" id="brand" aria-label="Hallwise, back to the start">
+      <span class="brand-mark" aria-hidden="true">H</span>
+      <span class="brand-name">Hallwise</span>
+    </a>
+    <div class="top-tools">
+      <select id="pick" class="pick" hidden aria-label="Choose an evening"></select>
+      <button id="theme" class="ghost-btn" type="button" aria-label="Colour theme: automatic">
+        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg>
+        <span id="theme-label">Auto</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage wrap" aria-label="The evening">
+      <div class="radar-col">
+        <div class="radar ghost" id="radar" role="img" aria-label="The room around the badge, seen from above, ahead is up">
+          <svg class="radar-bg" viewBox="0 0 100 100" aria-hidden="true">
+            <defs>
+              <radialGradient id="wedge-fill" cx="50" cy="50" r="46" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="var(--accent)" stop-opacity="0.13"/>
+                <stop offset="1" stop-color="var(--accent)" stop-opacity="0.02"/>
+              </radialGradient>
+            </defs>
+            <g id="radar-static"></g>
+          </svg>
+          <div class="new-voice" id="new-voice"></div>
+          <div class="new-voice-label" id="new-voice-label">a new voice</div>
+          <div class="wearer" id="wearer">
+            <span class="wearer-mark" id="wearer-mark">E</span>
+            <span class="wearer-label">you</span>
+          </div>
+          <div class="blips" id="blips"></div>
+        </div>
+        <div class="radar-foot">
+          <p class="radar-note" id="radar-note"></p>
+          <div class="captions" id="captions" aria-live="polite"></div>
+          <ul class="people" id="people" aria-label="People met tonight"></ul>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="intro" id="intro">
+          <p class="eyebrow">Hallwise · a recorded evening, replayed</p>
+          <h1>A name badge that <em>remembers</em> the room</h1>
+          <p class="lede">An iPhone worn on the chest listens to a networking event. Meta's models separate the voices, put a name to each one, catch every promise, and write the follow-ups in each person's language.</p>
+          <div class="evening" id="evening">
+            <span class="evening-kicker">Tonight's recording</span>
+            <span class="evening-name" id="evening-name">Loading the evening…</span>
+            <span class="evening-meta" id="evening-meta"></span>
+            <div class="evening-stats" id="evening-stats"></div>
+          </div>
+          <div class="play-row">
+            <button class="play-big" id="play-big" type="button" disabled>
+              <span class="disc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg></span>
+              <span>Play the evening<span class="len" id="play-len"></span></span>
+            </button>
+            <span class="hint"><kbd>Space</kbd> plays and pauses</span>
+          </div>
+          <p class="audio-note" id="audio-note"></p>
+          <div><button class="link-btn" id="skip-end" type="button">Skip to the follow-ups</button></div>
+        </div>
+
+        <div class="live" id="live">
+          <section class="panel" aria-labelledby="h-transcript">
+            <div class="panel-head">
+              <h2 id="h-transcript">Transcript</h2>
+              <span class="sub">Muse Voice Transcribe · small talk is set aside, not deleted</span>
+            </div>
+            <ol class="transcript" id="transcript"></ol>
+          </section>
+          <section class="panel" aria-labelledby="h-promises">
+            <div class="panel-head">
+              <h2 id="h-promises">Promises</h2>
+              <span class="sub">Muse Spark · tap one to hear it said</span>
+            </div>
+            <ul class="promises" id="promises"></ul>
+            <div id="suspects-box" hidden>
+              <div class="sub-head">Names that may be misheard</div>
+              <ul class="suspects" id="suspects"></ul>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="after wrap" id="after" aria-labelledby="h-after">
+      <div class="after-head">
+        <div>
+          <h2 id="h-after">Follow-ups, ready to send</h2>
+          <p>When the recording stops, Muse Spark drafts one move per promise, in the other person's language, with a time that fits.</p>
+        </div>
+      </div>
+      <div class="waiting" id="waiting">
+        <p>The drafts are written when the recording stops.</p>
+        <button class="ghost-btn" id="skip-end-2" type="button">Skip to the end</button>
+      </div>
+      <div class="moves" id="moves"></div>
+
+      <section class="week" id="week" aria-labelledby="h-week" hidden>
+        <div class="week-head">
+          <div>
+            <h2 id="h-week">This week</h2>
+            <p id="week-sub">Everyone met in the seven days up to tonight, from the people index.</p>
+          </div>
+          <div class="legend">
+            <span><i></i>colour: where you first met</span>
+            <span><i class="ring"></i>met more than once</span>
+            <span><i class="thin"></i>met at that event</span>
+            <span><i class="line"></i>introduced</span>
+          </div>
+        </div>
+        <div class="chips" id="chips" role="group" aria-label="Show one event"></div>
+        <div class="map-box"><svg class="map" id="map" role="img" aria-label="Network of people met this week"></svg></div>
+      </section>
+    </section>
+
+    <footer class="foot wrap">
+      <span>Replayed from the badge's event log; every event carries its millisecond on the badge-audio clock.</span>
+      <span id="foot-id"></span>
+    </footer>
+  </main>
+
+  <div class="bar" id="bar">
+    <div class="bar-in">
+      <button class="pp" id="pp" type="button" aria-label="Play">
+        <svg viewBox="0 0 24 24" aria-hidden="true" id="pp-icon"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>
+      </button>
+      <div class="time" id="time"><b>0:00</b> / 0:00</div>
+      <div class="scrub" id="scrub">
+        <div class="lane l-person" id="lane-person"></div>
+        <div class="lane l-promise" id="lane-promise"></div>
+        <div class="lane l-translation" id="lane-translation"></div>
+        <div class="track" id="track" role="slider" tabindex="0" aria-label="Position in the recording" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+          <div id="segs"></div>
+          <div class="fill" id="fill"></div>
+          <div class="head" id="head"></div>
+        </div>
+      </div>
+      <div class="bar-right">
+        <div class="speed" role="group" aria-label="Speed">
+          <button type="button" data-rate="1" aria-pressed="true">1×</button>
+          <button type="button" data-rate="2" aria-pressed="false">2×</button>
+        </div>
+        <button class="mute" id="mute" type="button" aria-pressed="false" aria-label="Mute the sound" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path id="mute-waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path id="mute-cross" d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" hidden/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="tip" id="tip" role="tooltip"></div>
+  <div class="toast" id="toast" role="status"></div>
+</div>
+
+<script src="app.js"></script>
