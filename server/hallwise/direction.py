@@ -128,25 +128,47 @@ class DirectionTracker:
 
 @dataclass
 class SpeakerPositions:
-    """Each speaker's position in the room: the confidence- and duration-weighted mean of their turns."""
+    """Each speaker's position in the room: the confidence- and duration-weighted mean of their turns.
+
+    Only turns at or above `min_confidence` (mostly direct sound) make a position. A far or quiet talker can have
+    none: two metres away, in a room, their turns come in at 0.2-0.3, and in rehearsal Julien, Kenji and the
+    waiter got no dot at all. So until a speaker has a confident turn, their low-confidence turns make a
+    provisional position, flagged `low_confidence`; the first confident turn replaces it, and from then on
+    low-confidence turns no longer move it.
+    """
 
     min_confidence: float = 0.3
     _angles: dict[str, list[float]] = field(default_factory=dict)
     _weights: dict[str, list[float]] = field(default_factory=dict)
     _levels: dict[str, list[float]] = field(default_factory=dict)
+    _weak: dict[str, list[tuple[float, float, float | None]]] = field(default_factory=dict)  # azimuth, weight, level
 
     def update(
         self, speaker: str, azimuth: float, confidence: float, duration_ms: int, level_db: float | None = None
-    ) -> dict[str, float] | None:
+    ) -> dict[str, float | bool] | None:
+        """Add one turn; return the speaker's position if it changed, else None."""
+        weight = max(confidence, 0.0) * max(duration_ms, 1) / 1000
         if confidence < self.min_confidence:
-            return None
+            if speaker in self._angles:
+                return None  # a confident position already stands
+            weak = self._weak.setdefault(speaker, [])
+            weak.append((azimuth, max(weight, 1e-6), level_db))
+            return self._position([a for a, _, _ in weak], [w for _, w, _ in weak],
+                                  [l for _, _, l in weak if l is not None], low_confidence=True)
         self._angles.setdefault(speaker, []).append(azimuth)
-        self._weights.setdefault(speaker, []).append(confidence * max(duration_ms, 1) / 1000)
+        self._weights.setdefault(speaker, []).append(weight)
         if level_db is not None:
             self._levels.setdefault(speaker, []).append(level_db)
-        mean, spread = circular_mean(self._angles[speaker], self._weights[speaker])
-        out: dict[str, float] = {"azimuth": round(mean, 1), "spread": round(spread, 1), "turns": len(self._angles[speaker])}
-        if self._levels.get(speaker):
-            levels = self._levels[speaker]
+        return self._position(self._angles[speaker], self._weights[speaker], self._levels.get(speaker, []))
+
+    @staticmethod
+    def _position(
+        angles: list[float], weights: list[float], levels: list[float], low_confidence: bool = False
+    ) -> dict[str, float | bool]:
+        mean, spread = circular_mean(angles, weights)
+        out: dict[str, float | bool] = {"azimuth": round(mean, 1), "spread": round(spread, 1), "turns": len(angles)}
+        if levels:
             out["level_db"] = round(sum(levels) / len(levels), 1)
+        if low_confidence:
+            out["low_confidence"] = True
         return out

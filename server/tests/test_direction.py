@@ -88,13 +88,55 @@ def test_stereo_and_mono_badges_carry_no_direction():
     assert tracker.direction(0, 1000) is None
 
 
-def test_speaker_position_ignores_low_confidence_turns():
+def test_a_confident_position_is_not_moved_by_low_confidence_turns():
     positions = SpeakerPositions()
-    assert positions.update("1:A", 50, 0.1, 2000) is None
     assert positions.update("1:A", 60, 0.9, 2000)["azimuth"] == pytest.approx(60)
+    assert positions.update("1:A", -90, 0.1, 4000) is None  # far off and long, but mostly room: ignored
     placed = positions.update("1:A", 64, 0.9, 2000)
     assert placed["azimuth"] == pytest.approx(62, abs=0.1)
     assert placed["turns"] == 2
+    assert "low_confidence" not in placed
+
+
+def test_a_speaker_heard_only_at_low_confidence_still_gets_a_flagged_position():
+    positions = SpeakerPositions()
+    first = positions.update("1:G", 30, 0.2, 2000, -25.0)
+    assert first == {"azimuth": 30.0, "spread": 0.0, "turns": 1, "level_db": -25.0, "low_confidence": True}
+    second = positions.update("1:G", 40, 0.2, 2000, -27.0)
+    assert second["azimuth"] == pytest.approx(35, abs=0.1)
+    assert second["turns"] == 2 and second["low_confidence"] is True
+    assert second["level_db"] == pytest.approx(-26)
+
+
+def test_the_first_confident_turn_replaces_a_provisional_position():
+    positions = SpeakerPositions()
+    positions.update("1:D", -60, 0.25, 3000)
+    placed = positions.update("1:D", 10, 0.5, 1000)
+    assert placed["azimuth"] == pytest.approx(10)  # not pulled toward the provisional -60
+    assert placed["turns"] == 1
+    assert "low_confidence" not in placed
+    assert positions.update("1:D", -60, 0.25, 3000) is None
+
+
+def test_recording_places_a_far_talker_heard_only_at_low_confidence(tmp_path):
+    # A talks near the badge at 60°; B is far off at 35°, and the room around B's turn is loud enough that every
+    # one of B's turns comes in below the 0.3 floor. B still gets a dot, flagged, where B stands.
+    near = encode(voice(1.0), 60) + diffuse(1.0, 0.01)
+    far = encode(voice(1.5) * 0.3, 35) + diffuse(1.5, 0.08)
+    gap = np.zeros((int(0.5 * RATE), 4))
+    foa = to_int16(np.concatenate([near, gap, far, gap]))
+    script = [
+        {"start_ms": 0, "end_ms": 1000, "speaker": "A", "text": "This is Kenji."},
+        {"start_ms": 1500, "end_ms": 3000, "speaker": "B", "text": "Kenji Watanabe, Hoshizora Robotics."},
+    ]
+    events = run_recording(tmp_path, foa, script, [{"t_ms": 0, "yaw": 0.0}])
+    (b_turn,) = [e for e in events if e["type"] == "position" and e["speaker"] == "1:B"]
+    assert b_turn["confidence"] < 0.3
+    placed = {e["speaker"]: e for e in events if e["type"] == "speaker_position"}
+    assert placed["1:B"]["azimuth"] == pytest.approx(35, abs=5)
+    assert placed["1:B"]["low_confidence"] is True
+    assert placed["1:A"]["azimuth"] == pytest.approx(60, abs=5)
+    assert "low_confidence" not in placed["1:A"]
 
 
 def test_recording_emits_positions_for_each_turn_and_each_speaker(tmp_path):
