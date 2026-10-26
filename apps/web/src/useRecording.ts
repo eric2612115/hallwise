@@ -35,6 +35,8 @@ export interface RecordingMeta {
   started: number
   device: string
   layout: string
+  event?: string
+  venue?: string
   live: boolean
 }
 

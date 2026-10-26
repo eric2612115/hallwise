@@ -4,12 +4,15 @@ import SwiftUI
 final class BadgeSettings: ObservableObject {
     @AppStorage("serverURL") var serverURL = "ws://192.168.0.142:8790"
     @AppStorage("ownerName") var ownerName = "Eric"
-    @AppStorage("ownerCompany") var ownerCompany = "Vexi"
+    @AppStorage("ownerCompany") var ownerCompany = "Hallwise"
     @AppStorage("ownerTitle") var ownerTitle = ""
     @AppStorage("contact") var contact = ""          // email or handle, goes into the QR card
-    @AppStorage("keywords") var keywords = "Vexi"    // comma-separated recognition hints
+    @AppStorage("keywords") var keywords = "Hallwise"  // comma-separated recognition hints
+    @AppStorage("eventName") var eventName = ""      // tonight's event, stored with each recording
+    @AppStorage("venue") var venue = ""
     @AppStorage("yawOffset") var yawOffset = 0.0     // degrees, calibrates the badge's forward direction
     @AppStorage("appearance") var appearance = Theme.Appearance.system.rawValue
+    @AppStorage("followRecording") var followRecording = ""  // debug: watch this recording instead of capturing
 
     var colorScheme: ColorScheme? { Theme.Appearance(rawValue: appearance)?.colorScheme }
 
@@ -41,6 +44,10 @@ struct SettingsView: View {
                     TextField("Email or handle for the QR card", text: $settings.contact)
                         .textInputAutocapitalization(.never)
                 }
+                Section("Tonight") {
+                    TextField("Event (e.g. ETH Taipei afterparty)", text: $settings.eventName)
+                    TextField("Venue", text: $settings.venue)
+                }
                 Section("Listening") {
                     TextField("Server", text: $settings.serverURL)
                         .textInputAutocapitalization(.never)
@@ -49,6 +56,11 @@ struct SettingsView: View {
                     Stepper(value: $settings.yawOffset, in: -180...180, step: 15) {
                         Text("Forward offset \(Int(settings.yawOffset))°")
                     }
+                }
+                Section("Debug") {
+                    TextField("Follow recording id (no capture)", text: $settings.followRecording)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                 }
                 Section("Appearance") {
                     Picker("Paper", selection: $settings.appearance) {

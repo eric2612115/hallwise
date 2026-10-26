@@ -79,6 +79,17 @@ def test_recording_keeps_multichannel_audio_and_finds_two_turns(tmp_path):
     assert events[-1]["t_ms"] == pytest.approx(len(mono) / rate * 1000, abs=1)
 
 
+def test_a_scripted_hello_gets_the_fake_recogniser_even_on_the_meta_backend(monkeypatch):
+    from hallwise.asr import make_asr_factory
+
+    monkeypatch.setenv("MODEL_API_KEY", "key")
+    make = make_asr_factory("meta")
+    scripted = Hello(sample_rate=24_000, channels=1, layout="mono", fake_script=[])
+    real = Hello(sample_rate=24_000, channels=1, layout="mono")
+    assert isinstance(make(lambda *a, **k: None, rate=24_000, hello=scripted), FakeAsr)
+    assert isinstance(make(lambda *a, **k: None, rate=24_000, hello=real), MetaRealtimeAsr)
+
+
 def test_meta_events_map_onto_turns_with_speaker_and_times():
     out = []
     asr = MetaRealtimeAsr("key", lambda type, t, **d: out.append((type, t, d)))

@@ -44,6 +44,8 @@ async def main(args: argparse.Namespace) -> None:
         "device": "simulator",
         "owner_name": args.owner,
         "owner_company": args.company,
+        "event": args.event,
+        "venue": args.venue,
     }
     if args.script:
         with open(args.script) as f:
@@ -56,6 +58,7 @@ async def main(args: argparse.Namespace) -> None:
         ready = json.loads(await ws.recv())
         print(f"recording {ready['recording']}: {channels} ch, {rate} Hz, {layout}")
         watcher = asyncio.create_task(watch(args.server, ready["recording"]))
+        await ws.send(json.dumps({"type": "pose", "t_ms": 0, "yaw": 0.0, "pitch": 0.0, "roll": 0.0}))
         step = int(rate * FRAME_SECONDS) * channels * 2
         for i in range(0, len(audio), step):
             await ws.send(audio[i : i + step])
@@ -73,6 +76,8 @@ if __name__ == "__main__":
     parser.add_argument("--script", help="ground-truth turns for the offline fake recogniser")
     parser.add_argument("--keywords", help="comma-separated recognition hints")
     parser.add_argument("--owner", default="Eric", help="the badge wearer's name, so they are not listed as a person met")
-    parser.add_argument("--company", default="Vexi")
+    parser.add_argument("--company", default="Hallwise")
+    parser.add_argument("--event", default="Living-room rehearsal")
+    parser.add_argument("--venue", default="Taipei")
     parser.add_argument("--speed", type=float, default=1.0, help="1 = real time (Muse Voice Transcribe needs it)")
     asyncio.run(main(parser.parse_args()))

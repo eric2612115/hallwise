@@ -53,6 +53,14 @@ def test_a_talker_is_found_where_they_stand_over_room_noise(azimuth):
     assert where["confidence"] > 0.7
 
 
+def test_a_quieter_talker_reports_a_lower_level():
+    tracker = DirectionTracker(RATE, "foa")
+    tracker.add(to_int16(encode(voice(1.0), 20)))
+    tracker.add(to_int16(encode(voice(1.0) * 0.25, 20)))  # 12 dB quieter, like someone further away
+    near, far = tracker.direction(0, 1000), tracker.direction(1000, 2000)
+    assert near["level_db"] - far["level_db"] == pytest.approx(12, abs=1.5)
+
+
 def test_diffuse_room_noise_alone_has_low_confidence():
     tracker = DirectionTracker(RATE, "foa")
     tracker.add(to_int16(diffuse(1.0, 0.1)))

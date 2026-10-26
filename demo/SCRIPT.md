@@ -80,14 +80,14 @@ The friend's lines are their own words, about 30 words in all; keep the scene to
 
 1. [FRIEND] greets Eric.
 2. [FRIEND] gives name, company and one sentence on what they do.
-3. ERIC: I'm Eric, from Vexi. We build options trading.
+3. ERIC: I'm Eric. I make Hallwise — this badge.
 4. ERIC: I'll send you our deck tonight.
 5. [FRIEND] says Eric should meet Siddharth, by the sofa.
 
 Panels:
 - [FRIEND] · [FRIEND_CO]; their icon appears in the sound field toward the door.
-- Eric's own label bound from "I'm Eric, from Vexi".
-- Suspect word: "Vexi" (expected to come back as "Vexy" or "Lexi").
+- Eric's own label bound from "I'm Eric. I make Hallwise".
+- Suspect word: "Hallwise" (expected to come back as "Hall Wise" or "hallways").
 - Promise: deck → [FRIEND], tonight.
 - Mentioned, not met yet: Siddharth.
 - Room radar: first topics from group X, with no names attached.
@@ -114,7 +114,7 @@ WEI LING: Wei Ling, from Pandan Pay — payments for, uh, hawker stalls. In Sing
 ERIC: Margaux, are you investing this quarter?
 
 [click]
-MARGAUX: Pre-seed, yes. Send me your one-pager — en français si possible, c'est pour mon associé.
+MARGAUX: Pre-seed, yes. Send me your one-pager. (half to herself) Bon, ça c'est intéressant.
 
 ERIC: Will do. Wei Ling — [FRIEND] builds wallets. I'll introduce you two.
 
@@ -124,8 +124,9 @@ SIDDHARTH: And Eric — we launch in — sorry, we pilot next week. Launch is Ma
 Panels:
 - Three people appear as they introduce themselves; three icons settle where each voice comes from and stay put
   while Eric turns and leans in; each lights while that person talks.
-- Margaux's preferred language: French (from the code-switched line).
-- Promises: one-pager in French → Margaux; introduce Wei Ling ↔ [FRIEND].
+- Margaux's aside shows in the transcript with its English under it, marked "translated"; her card gets a
+  "French" tag, so her follow-up is drafted in French.
+- Promises: one-pager → Margaux; introduce Wei Ling ↔ [FRIEND].
 - Quillmesh: pilot next week, launch in March (the restart is resolved, not "launching now").
 - Suspect word: "Raghunathan" — "two Meta models heard this differently".
 - [FRIEND] linked to Wei Ling through the promised introduction.
@@ -147,12 +148,13 @@ KENJI: Kenji Watanabe, Hoshizora Robotics. W, A, T, A, N, A, B, E.
 ERIC: Coffee on Thursday?
 
 [click]
-KENJI: Thursday is — no, Friday. Friday is better. Could you send it in Japanese? 部長も読むので。
+KENJI: Thursday is — no, Friday. Friday is better. (murmurs) 金曜日ね、メモしておこう。
 
 Panels:
 - Kenji bound, spelling confirmed by the spelled-out surname; "introduced by Siddharth"; his icon toward the window.
 - Promise: coffee with Kenji, **Friday** (Thursday dropped, with both quotes).
-- Kenji's preferred language: Japanese.
+- The murmur appears in Japanese with "Friday, then — I'll make a note" under it, marked translated; Kenji's
+  card gets a "Japanese" tag.
 
 Walk to the sofa and sit (2:04–2:07). Eric taps "Stop" on `/record`.
 
@@ -160,7 +162,7 @@ Walk to the sofa and sit (2:04–2:07). Eric taps "Stop" on `/record`.
 
 Panels, in order, each given a moment:
 1. **Follow-ups**: five drafts — English to [FRIEND], Siddharth and Wei Ling (the introduction), French to Margaux
-   with the one-pager, Japanese to Kenji with a Friday invite. Eric taps "Approve"; approve saves the drafts and
+   with the one-pager, Japanese to Kenji with a Friday invite — each in the language that person spoke. Eric taps "Approve"; approve saves the drafts and
    the invite.
 2. **Words**: "Vexy" → Eric types "Vexi" and adds it to memory.
 

@@ -45,6 +45,11 @@ final class AppModel: ObservableObject {
     func start() {
         live.reset()
         let settings = self.settings
+        if !settings.followRecording.isEmpty {
+            link.follow(base: settings.serverURL, recording: settings.followRecording)
+            listening = true
+            return
+        }
         capture.onFormat = { [weak self] format in
             let hello: [String: Any] = [
                 "sample_rate": format.sampleRate,
@@ -54,6 +59,8 @@ final class AppModel: ObservableObject {
                 "owner_name": settings.ownerName,
                 "owner_company": settings.ownerCompany,
                 "keywords": settings.keywordList,
+                "event": settings.eventName,
+                "venue": settings.venue,
             ]
             self?.link.open(base: settings.serverURL, hello: hello)
         }
@@ -62,8 +69,10 @@ final class AppModel: ObservableObject {
     }
 
     func stop() {
-        capture.stop()
-        link.close()
+        if settings.followRecording.isEmpty {
+            capture.stop()
+            link.close()
+        }
         listening = false
     }
 }

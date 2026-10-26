@@ -285,13 +285,19 @@ class FakeAsr:
 
 
 def make_asr_factory(kind: str) -> Callable[..., Asr]:
-    """Pick a backend by name: "meta" (needs MODEL_API_KEY) or "fake"."""
+    """Pick a backend by name: "meta" (needs MODEL_API_KEY) or "fake".
+
+    A recording whose hello carries a `fake_script` (the rig's ground truth) always gets the scripted
+    recogniser, whatever the server default: the rig knows what was said, and synthetic audio is not speech.
+    """
     if kind == "meta":
         key = os.environ.get("MODEL_API_KEY")
         if not key:
             raise RuntimeError("HALLWISE_ASR=meta needs MODEL_API_KEY in the environment")
 
         def meta(sink: Sink, *, rate: int, hello: Any) -> Asr:
+            if hello.fake_script is not None:
+                return FakeAsr(sink, rate=rate, script=hello.fake_script)
             return MetaRealtimeAsr(key, sink, rate=rate, language_bias=hello.language_bias, keywords=hello.keywords)
 
         return meta

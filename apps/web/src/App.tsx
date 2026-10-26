@@ -4,6 +4,7 @@ import { SoundField } from './SoundField'
 import { useRecording, useRecordings } from './useRecording'
 
 type Theme = 'system' | 'light' | 'dark'
+const THEMES: Theme[] = ['system', 'light', 'dark']
 
 function useTheme(): [Theme, (t: Theme) => void] {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -35,21 +36,49 @@ function useHash(): string {
   return hash
 }
 
+/** Sun, moon, or half-disc for "follow the system". */
+function ThemeIcon({ theme }: { theme: Theme }) {
+  const stroke = 'currentColor'
+  if (theme === 'light')
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round">
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" />
+      </svg>
+    )
+  if (theme === 'dark')
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round">
+        <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" />
+      </svg>
+    )
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 3.5v17A8.5 8.5 0 0 0 12 3.5z" fill={stroke} />
+    </svg>
+  )
+}
+
 export default function App() {
   const [theme, setTheme] = useTheme()
   const hash = useHash()
   const match = /^#\/r\/([^/]+)/.exec(hash)
+  const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
   return (
     <>
       <header className="top">
-        <a href="#/"><h1>Hallwise</h1></a>
-        <span className="soft">who you met · what you owe them</span>
+        <a href="#/" className="brand">
+          <span className="mark" aria-hidden="true" />
+          <h1>Hallwise</h1>
+        </a>
+        <nav className="nav">
+          <a href="#/" className={match ? '' : 'current'}>Recordings</a>
+        </nav>
         <span className="spacer" />
-        <select value={theme} onChange={(e) => setTheme(e.target.value as Theme)} aria-label="Appearance">
-          <option value="system">Paper: system</option>
-          <option value="light">Paper: light</option>
-          <option value="dark">Paper: dark</option>
-        </select>
+        <button className="icon" onClick={() => setTheme(next)} title={`Paper: ${theme} — click for ${next}`} aria-label="Appearance">
+          <ThemeIcon theme={theme} />
+        </button>
       </header>
       {match ? <Dashboard id={match[1]} /> : <RecordingList />}
     </>
@@ -63,12 +92,14 @@ function RecordingList() {
       <h2>Recordings</h2>
       {!rows.length && <p className="empty">Nothing recorded yet. Start the badge app and this list fills in.</p>}
       {rows.map((r) => (
-        <a key={r.id} className="card" href={`#/r/${r.id}`}>
+        <a key={r.id} className="card row" href={`#/r/${r.id}`}>
           <span>
-            <span className={`dot${r.live ? ' live' : ''}`} /> &nbsp;{r.id}
+            <span className={`dot${r.live ? ' live' : ''}`} /> &nbsp;
+            <span className="title">{r.event || 'Untitled recording'}</span>
+            {r.venue && <small> · {r.venue}</small>}
           </span>
           <small>
-            {r.device || 'unknown device'} · {r.layout} · {new Date(r.started * 1000).toLocaleString()}
+            {new Date(r.started * 1000).toLocaleString()} · {r.device || 'unknown device'} · {r.layout}
           </small>
         </a>
       ))}
@@ -80,10 +111,12 @@ function Dashboard({ id }: { id: string }) {
   const { state, status } = useRecording(id)
   return (
     <>
-      <div className="top" style={{ position: 'static', borderTop: 0 }}>
+      <div className="subhead">
         <span className={`dot${status === 'live' ? ' live' : ''}`} />
+        <span className="title">{state.event || id}</span>
         <span className="soft">
-          {status === 'live' ? 'live' : status === 'ended' ? 'finished' : status} · {mmss(state.tMs)} · {id}
+          {state.venue && `${state.venue} · `}
+          {status === 'live' ? 'live' : status === 'ended' ? 'finished' : status} · {mmss(state.tMs)}
         </span>
       </div>
       <main className="layout">
@@ -91,13 +124,13 @@ function Dashboard({ id }: { id: string }) {
           <Transcript state={state} />
         </div>
         <div className="column">
-          <People state={state} />
-          <Promises state={state} />
-          <Suspects state={state} />
           <section className="card">
             <h2>Where everyone is</h2>
             <SoundField state={state} />
           </section>
+          <People state={state} />
+          <Promises state={state} />
+          <Suspects state={state} />
           {state.topics.length > 0 && (
             <section className="card">
               <h2>The room is talking about</h2>
@@ -117,7 +150,7 @@ function People({ state }: { state: State }) {
       {!state.people.length && <div className="empty">Nobody yet</div>}
       {state.people.map((p) => {
         const b = bearing(state, p)
-        const rel = b === null ? null : b - (state.yaw ?? 0) - 90 // 0 = straight ahead of the badge
+        const rel = b === null ? null : b - (state.yaw ?? 0) // 0 = straight ahead of the badge, positive = left
         return (
           <div className="person" key={p.key}>
             <div className="arrow" style={rel === null ? { opacity: 0.35 } : { transform: `rotate(${-rel}deg)` }}>
@@ -186,6 +219,7 @@ function Transcript({ state }: { state: State }) {
             ? 'You'
             : (state.people.find((p) => p.speakers.includes(l.speaker))?.name.split(' ')[0] ?? l.speaker)
           const cls = kind === 'incidental' || kind === 'noise' ? 'filtered' : kind === 'ambient' || kind === 'stage' ? 'ambient' : ''
+          const tr = state.translations[l.turn]
           return (
             <div className={`line ${cls}`} key={l.turn}>
               <span className="who">{who}</span>
@@ -193,6 +227,11 @@ function Transcript({ state }: { state: State }) {
                 {l.text}
                 <span className="t">{mmss(l.startMs)}</span>
                 {cls === 'filtered' && <span className="t">filtered</span>}
+                {tr && (
+                  <div className="translation">
+                    {tr.english} <span className="t">translated from {tr.language}</span>
+                  </div>
+                )}
               </span>
             </div>
           )

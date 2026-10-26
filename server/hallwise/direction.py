@@ -72,7 +72,9 @@ class DirectionTracker:
         lo, hi = bisect_left(self._pose_t, start_ms), bisect_left(self._pose_t, end_ms)
         if hi > lo:
             return circular_mean(self._pose_yaw[lo:hi], [1.0] * (hi - lo))[0]
-        return self._pose_yaw[lo - 1] if lo > 0 else None
+        if lo > 0:
+            return self._pose_yaw[lo - 1]
+        return self._pose_yaw[0] if self._pose_yaw else None  # the first reading, if it came late
 
     def direction(self, start_ms: int, end_ms: int) -> dict[str, float | None] | None:
         i0 = max(0, start_ms // BLOCK_MS)
@@ -88,10 +90,18 @@ class DirectionTracker:
         iy = float(np.array(self._iy[i0:i1])[loud].sum())
         device = math.degrees(math.atan2(iy, ix))
         yaw = self.yaw(start_ms, end_ms)
+        # Loudness of the talker over their louder blocks, in dBFS of the omni channel: nearer is louder.
+        # Together with confidence (direct sound vs room reverberation) it is the cue for distance; the UI
+        # turns it into near/far relative to the other voices in the room.
+        rms = math.sqrt(e / (int(loud.sum()) * self.block))
+        level_db = 20 * math.log10(max(rms, 1e-9) / 32768)
+        # With no orientation data at all, the room frame is the badge frame.
         return {
             "azimuth_device": round(wrap(device), 1),
-            "azimuth_room": round(wrap(device + yaw), 1) if yaw is not None else None,
+            "azimuth_room": round(wrap(device + (yaw or 0.0)), 1),
+            "has_pose": yaw is not None,
             "confidence": round(min(1.0, math.hypot(ix, iy) / e), 2),
+            "level_db": round(level_db, 1),
         }
 
 
@@ -102,11 +112,20 @@ class SpeakerPositions:
     min_confidence: float = 0.3
     _angles: dict[str, list[float]] = field(default_factory=dict)
     _weights: dict[str, list[float]] = field(default_factory=dict)
+    _levels: dict[str, list[float]] = field(default_factory=dict)
 
-    def update(self, speaker: str, azimuth: float, confidence: float, duration_ms: int) -> dict[str, float] | None:
+    def update(
+        self, speaker: str, azimuth: float, confidence: float, duration_ms: int, level_db: float | None = None
+    ) -> dict[str, float] | None:
         if confidence < self.min_confidence:
             return None
         self._angles.setdefault(speaker, []).append(azimuth)
         self._weights.setdefault(speaker, []).append(confidence * max(duration_ms, 1) / 1000)
+        if level_db is not None:
+            self._levels.setdefault(speaker, []).append(level_db)
         mean, spread = circular_mean(self._angles[speaker], self._weights[speaker])
-        return {"azimuth": round(mean, 1), "spread": round(spread, 1), "turns": len(self._angles[speaker])}
+        out: dict[str, float] = {"azimuth": round(mean, 1), "spread": round(spread, 1), "turns": len(self._angles[speaker])}
+        if self._levels.get(speaker):
+            levels = self._levels[speaker]
+            out["level_db"] = round(sum(levels) / len(levels), 1)
+        return out

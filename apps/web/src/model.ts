@@ -38,6 +38,8 @@ export interface Suspect {
 export interface State {
   recording: string
   device: string
+  event: string
+  venue: string
   layout: string
   ended: boolean
   tMs: number
@@ -48,14 +50,18 @@ export interface State {
   lines: Line[]
   turnKinds: Record<number, string>
   suspects: Suspect[]
+  translations: Record<number, { language: string; english: string }>
   topics: string[]
   speakerAzimuth: Record<string, number>
+  speakerLevel: Record<string, number>
   lastSpeaker: { speaker: string; untilMs: number } | null
 }
 
 export const empty: State = {
   recording: '',
   device: '',
+  event: '',
+  venue: '',
   layout: '',
   ended: false,
   tMs: 0,
@@ -66,8 +72,10 @@ export const empty: State = {
   lines: [],
   turnKinds: {},
   suspects: [],
+  translations: {},
   topics: [],
   speakerAzimuth: {},
+  speakerLevel: {},
   lastSpeaker: null,
 }
 
@@ -87,7 +95,15 @@ export function reduce(s: State, e: Event): State {
   const tMs = Math.max(s.tMs, e.t_ms)
   switch (e.type) {
     case 'recording_start':
-      return { ...s, tMs, recording: str(e.recording), device: str(e.device), layout: str(e.layout) }
+      return {
+        ...s,
+        tMs,
+        recording: str(e.recording),
+        device: str(e.device),
+        event: str(e.event),
+        venue: str(e.venue),
+        layout: str(e.layout),
+      }
     case 'recording_end':
       return { ...s, tMs, ended: true, lastSpeaker: null }
     case 'device_pose':
@@ -110,8 +126,11 @@ export function reduce(s: State, e: Event): State {
       return { ...s, tMs, turnKinds: { ...s.turnKinds, [num(e.turn)]: str(e.kind) } }
     case 'owner':
       return { ...s, tMs, ownerSpeakers: strs(e.speakers) }
-    case 'speaker_position':
-      return { ...s, tMs, speakerAzimuth: { ...s.speakerAzimuth, [str(e.speaker)]: num(e.azimuth) } }
+    case 'speaker_position': {
+      const next = { ...s, tMs, speakerAzimuth: { ...s.speakerAzimuth, [str(e.speaker)]: num(e.azimuth) } }
+      if (typeof e.level_db === 'number') next.speakerLevel = { ...s.speakerLevel, [str(e.speaker)]: e.level_db }
+      return next
+    }
     case 'person': {
       const p: Person = {
         key: str(e.key),
@@ -139,10 +158,25 @@ export function reduce(s: State, e: Event): State {
       const w: Suspect = { heard: str(e.heard), likely: str(e.likely), turn: num(e.turn) }
       return { ...s, tMs, suspects: upsert(s.suspects, w, (a, b) => a.turn === b.turn && a.heard === b.heard) }
     }
-    case 'room_topic': {
-      const topic = str(e.topic)
-      return s.topics.includes(topic) ? { ...s, tMs } : { ...s, tMs, topics: [...s.topics, topic] }
+    case 'translation':
+      return {
+        ...s,
+        tMs,
+        translations: { ...s.translations, [num(e.turn)]: { language: str(e.language), english: str(e.english) } },
+      }
+    case 'translation_removed': {
+      const next = { ...s.translations }
+      delete next[num(e.turn)]
+      return { ...s, tMs, translations: next }
     }
+    case 'person_removed':
+      return { ...s, tMs, people: s.people.filter((p) => p.key !== str(e.key)) }
+    case 'promise_removed':
+      return { ...s, tMs, promises: s.promises.filter((p) => p.key !== str(e.key)) }
+    case 'suspect_word_removed':
+      return { ...s, tMs, suspects: s.suspects.filter((w) => !(w.turn === num(e.turn) && w.heard === str(e.heard))) }
+    case 'room_topics':
+      return { ...s, tMs, topics: strs(e.topics) }
     default:
       return { ...s, tMs }
   }
@@ -164,6 +198,16 @@ export function bearing(s: State, p: Person): number | null {
   const x = az.reduce((acc, a) => acc + Math.cos((a * Math.PI) / 180), 0)
   const y = az.reduce((acc, a) => acc + Math.sin((a * Math.PI) / 180), 0)
   return (Math.atan2(y, x) * 180) / Math.PI
+}
+
+/** 0 = as close as anyone gets, 1 = far: loudness against the loudest voice that is not the wearer's, over ~18 dB. */
+export function distance(s: State, speakers: string[]): number {
+  const others = Object.entries(s.speakerLevel)
+    .filter(([k]) => !s.ownerSpeakers.includes(k))
+    .map(([, v]) => v)
+  const levels = speakers.map((k) => s.speakerLevel[k]).filter((v): v is number => typeof v === 'number')
+  if (!others.length || !levels.length) return 0.5
+  return Math.min(1, Math.max(0, (Math.max(...others) - Math.max(...levels)) / 18))
 }
 
 export function mmss(ms: number): string {

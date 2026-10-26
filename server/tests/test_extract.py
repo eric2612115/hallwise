@@ -36,6 +36,7 @@ def state(**overrides):
         "mentioned": [],
         "promises": [],
         "suspect_words": [],
+        "translations": [],
         "room_topics": [],
     }
     return {**base, **overrides}
@@ -92,7 +93,7 @@ def test_diff_emits_only_what_is_new_or_changed():
             ],
             people=[SARAH],
             promises=[friday],
-            suspect_words=[{"heard": "Vexy", "turn": 1, "likely": "Vexi", "reason": "owner's company"}],
+            suspect_words=[],  # confirmed since the last run
             room_topics=["restaking yields"],
         ),
     )
@@ -108,10 +109,13 @@ def test_diff_emits_only_what_is_new_or_changed():
         ("turn_kind", 13_700),
         ("turn_kind", 13_700),
         ("promise", 13_700),
-        ("room_topic", 13_700),
+        ("suspect_word_removed", 13_700),
+        ("room_topics", 13_700),
     ]
     promise = second[2][2]
     assert (promise["due"], promise["replaces"], promise["new"]) == ("Friday", "Thursday", False)
+    assert second[3][2] == {"heard": "Vexy", "turn": 1}
+    assert second[4][2] == {"topics": ["restaking yields"]}
 
 
 def test_recording_reruns_extraction_until_every_turn_is_seen(tmp_path):

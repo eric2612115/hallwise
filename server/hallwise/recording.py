@@ -37,6 +37,8 @@ class Hello:
     device: str = ""
     owner_name: str = ""
     owner_company: str = ""
+    event: str = ""  # which event and where, so a list of recordings reads like a diary
+    venue: str = ""
     language_bias: list[str] | None = None
     keywords: list[str] | None = None
     fake_script: list[dict[str, Any]] | None = field(default=None, repr=False)  # rig ground truth, offline only
@@ -50,6 +52,8 @@ class Hello:
             device=str(msg.get("device", "")),
             owner_name=str(msg.get("owner_name", "")),
             owner_company=str(msg.get("owner_company", "")),
+            event=str(msg.get("event", "")),
+            venue=str(msg.get("venue", "")),
             language_bias=msg.get("language_bias"),
             keywords=msg.get("keywords"),
             fake_script=msg.get("fake_script"),
@@ -111,6 +115,8 @@ class Recording:
             0,
             recording=self.id,
             device=self.hello.device,
+            event=self.hello.event,
+            venue=self.hello.venue,
             layout=self.hello.layout,
             sample_rate=self.hello.sample_rate,
             channels=self.hello.channels,
@@ -165,12 +171,11 @@ class Recording:
             return
         speaker = f"{turn.get('session', 1)}:{turn.get('speaker') or '?'}"
         self.log.emit("position", turn["end_ms"], turn=turn["turn"], speaker=speaker, **where)
-        if where["azimuth_room"] is not None:
-            placed = self.speaker_positions.update(
-                speaker, where["azimuth_room"], where["confidence"], turn["end_ms"] - turn["start_ms"]
-            )
-            if placed is not None:
-                self.log.emit("speaker_position", turn["end_ms"], speaker=speaker, **placed)
+        placed = self.speaker_positions.update(
+            speaker, where["azimuth_room"], where["confidence"], turn["end_ms"] - turn["start_ms"], where["level_db"]
+        )
+        if placed is not None:
+            self.log.emit("speaker_position", turn["end_ms"], speaker=speaker, **placed)
 
     async def _extract(self) -> None:
         """Run until the latest run has seen every turn; a turn arriving mid-run triggers one more run."""

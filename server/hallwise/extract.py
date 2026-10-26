@@ -75,6 +75,14 @@ SCHEMA: dict[str, Any] = _obj(
             reason=_STR,
         ),
     },
+    translations={
+        "type": "array",
+        "items": _obj(
+            turn={"type": "integer"},
+            language={**_STR, "description": "the non-English language in this turn, e.g. 'Japanese'"},
+            english={**_STR, "description": "the whole turn in English"},
+        ),
+    },
     room_topics={**_STR_LIST, "description": "short topics from ambient speech only; never names or quotes"},
 )
 
@@ -96,7 +104,10 @@ Rules:
   topics with no names and no quotes.
 - A promise is a commitment to do something later. When someone corrects it ("Thursday — no, Friday"), keep one
   promise with the final version in due and the earlier one in replaces.
-- preferred_language: the language a person asks to be written to in, or clearly prefers; empty if not stated.
+- preferred_language: a language the person spoke other than English (an aside, a murmur, a phrase), or one
+  they asked for; follow-ups go in that language. Empty if they only spoke English.
+- translations: one entry for every turn that is partly or wholly not in English, with the whole turn in
+  English. People mutter to themselves in their own language mid-conversation; that is still conversation.
 - suspect_words: words the transcriber probably got wrong, mainly names, companies and product terms.
   - A word close to one in the vocabulary below is a suspect; likely = the vocabulary word.
   - When the same name appears in two spellings (for example a self-introduction and someone addressing that
@@ -218,20 +229,25 @@ class Extractor:
             if old_kinds.get(t["turn"]) != t["kind"]:
                 out.append(("turn_kind", t_ms, {"turn": t["turn"], "kind": t["kind"]}))
 
-        for section, event, ident in (
-            ("people", "person", lambda x: x["key"]),
-            ("promises", "promise", lambda x: x["key"]),
-            ("mentioned", "mention", lambda x: x["name"].lower()),
-            ("suspect_words", "suspect_word", lambda x: (x["heard"].lower(), x["turn"])),
+        # Each run is the whole picture, so anything the new run no longer lists is withdrawn: the model may
+        # merge two people, rename a promise's key, or drop a suspect word once a name is confirmed.
+        for section, event, ident, id_fields in (
+            ("people", "person", lambda x: x["key"], ("key",)),
+            ("promises", "promise", lambda x: x["key"], ("key",)),
+            ("mentioned", "mention", lambda x: x["name"].lower(), ("name", "turn")),
+            ("suspect_words", "suspect_word", lambda x: (x["heard"].lower(), x["turn"]), ("heard", "turn")),
+            ("translations", "translation", lambda x: x["turn"], ("turn",)),
         ):
             before = {ident(x): x for x in old.get(section, [])}
-            for item in new.get(section, []):
-                previous = before.get(ident(item))
+            after = {ident(x): x for x in new.get(section, [])}
+            for key, item in after.items():
+                previous = before.get(key)
                 if previous != item:
                     out.append((event, t_ms, {**item, "new": previous is None}))
+            for key, item in before.items():
+                if key not in after:
+                    out.append((f"{event}_removed", t_ms, {f: item[f] for f in id_fields}))
 
-        old_topics = set(old.get("room_topics", []))
-        for topic in new.get("room_topics", []):
-            if topic not in old_topics:
-                out.append(("room_topic", t_ms, {"topic": topic}))
+        if new.get("room_topics", []) != old.get("room_topics", []):
+            out.append(("room_topics", t_ms, {"topics": list(new.get("room_topics", []))}))
         return out

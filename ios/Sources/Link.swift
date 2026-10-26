@@ -27,6 +27,14 @@ final class ServerLink: ObservableObject {
         publish("connecting")
     }
 
+    /// Watch an existing recording without capturing anything (previews, the simulator, a second screen).
+    func follow(base: String, recording: String) {
+        self.base = base.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        DispatchQueue.main.async { self.recordingID = recording }
+        publish("following \(recording)")
+        watch(recording)
+    }
+
     func sendAudio(_ data: Data) {
         ingest?.send(.data(data)) { [weak self] error in
             if let error { self?.publish("audio send failed: \(error.localizedDescription)") }
