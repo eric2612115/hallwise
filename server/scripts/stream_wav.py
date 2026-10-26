@@ -2,6 +2,12 @@
 
     uv run python scripts/stream_wav.py path.wav [--server ws://127.0.0.1:8790] [--layout auto]
                                         [--script turns.json] [--keywords "Vexi,Raghunathan"] [--speed 1]
+                                        [--deck URL] [--one-pager URL] [--blurb URL]
+                                        [--busy START/END ...] [--tz Asia/Taipei] [--now ISO|auto]
+
+--deck, --one-pager, --blurb, --busy, --tz and --now go in the hello as the phone sends them, so the follow-ups
+drafted when the recording closes can attach the links and avoid the busy windows. --now auto is this machine's
+clock with its UTC offset.
 
 The WAV must be 16-bit PCM: 1 channel (mono), 2 (stereo) or 4 (first-order ambisonics, ACN/SN3D).
 """
@@ -11,7 +17,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import time
 import wave
+from datetime import datetime
 
 import websockets
 
@@ -52,6 +60,15 @@ async def main(args: argparse.Namespace) -> None:
             hello["fake_script"] = json.load(f)
     if args.keywords:
         hello["keywords"] = [k.strip() for k in args.keywords.split(",") if k.strip()]
+    links = {k: v for k, v in (("deck", args.deck), ("one_pager", args.one_pager), ("blurb", args.blurb)) if v}
+    if links:
+        hello["links"] = links
+    if args.busy:
+        hello["busy"] = [b.split("/", 1) for b in args.busy]
+    if args.tz:
+        hello["tz"] = args.tz
+    if args.now:
+        hello["now"] = datetime.now().astimezone().isoformat(timespec="seconds") if args.now == "auto" else args.now
 
     async with websockets.connect(f"{args.server}/ingest", max_size=None) as ws:
         await ws.send(json.dumps(hello))
@@ -60,9 +77,14 @@ async def main(args: argparse.Namespace) -> None:
         watcher = asyncio.create_task(watch(args.server, ready["recording"]))
         await ws.send(json.dumps({"type": "pose", "t_ms": 0, "yaw": 0.0, "pitch": 0.0, "roll": 0.0}))
         step = int(rate * FRAME_SECONDS) * channels * 2
-        for i in range(0, len(audio), step):
+        # Pace against the wall clock, not frame by frame: sleeping a fixed 80 ms after each send drifts behind
+        # real time by the send's own cost, and Muse Voice Transcribe closes a session whose ingress falls behind.
+        started = time.monotonic()
+        for k, i in enumerate(range(0, len(audio), step)):
             await ws.send(audio[i : i + step])
-            await asyncio.sleep(FRAME_SECONDS / args.speed)
+            delay = started + (k + 1) * FRAME_SECONDS / args.speed - time.monotonic()
+            if delay > 0:
+                await asyncio.sleep(delay)
         await ws.send(json.dumps({"type": "end"}))
         await asyncio.wait_for(ws.recv(), timeout=120)
     await watcher
@@ -80,4 +102,10 @@ if __name__ == "__main__":
     parser.add_argument("--event", default="Living-room rehearsal")
     parser.add_argument("--venue", default="Taipei")
     parser.add_argument("--speed", type=float, default=1.0, help="1 = real time (Muse Voice Transcribe needs it)")
+    parser.add_argument("--deck", default="", help="link to the owner's deck, attached to follow-ups")
+    parser.add_argument("--one-pager", default="", help="link to the owner's one-pager")
+    parser.add_argument("--blurb", default="", help="link to a short bio or intro text")
+    parser.add_argument("--busy", nargs="*", default=[], help="busy windows, ISO START/END pairs with offsets")
+    parser.add_argument("--tz", default="", help="the owner's time zone, e.g. Asia/Taipei")
+    parser.add_argument("--now", default="", help="the phone's clock at start, ISO 8601 with offset, or 'auto'")
     asyncio.run(main(parser.parse_args()))
