@@ -231,9 +231,9 @@ End card (2:52–2:58).
 
 ## To build before the shoot
 
-- Ask by voice after Stop: today a spoken question rides the badge's audio stream, so it works only while
-  listening. The closing needs the phone's own microphone feeding `/ask/{recording}` once the recording is over.
-  Half a day. Until then, the Ask beat is shot before Stop, with Stop and the drafts as the last images.
+- Ask by voice after Stop is built: once the badge has stopped, holding the mic uses the phone's own
+  microphone into `/ask/{recording}`; while listening it rides the badge's stream. Rehearse the closing once
+  with the room bed playing, since the phone mic now hears the TV.
 - A Wednesday 14:00–15:30 "Board call" on the badge phone's calendar, so the invite has something to dodge.
 - Deck and one-pager links set in the menu, so the drafts attach them.
 - Julien's voice: render the French lines with `ff_siwis` pitched down, the English with `am_michael` and French

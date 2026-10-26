@@ -143,10 +143,19 @@ struct BigTabBar: View {
     ]
 
     var body: some View {
+        ZStack(alignment: .top) {
+            // the rule sits behind the buttons, so the raised Ask disc is never crossed by it
+            Rectangle().fill(Theme.rule).frame(height: 0.5)
+            bar
+        }
+        .background(Theme.paper.opacity(0.92))
+    }
+
+    private var bar: some View {
         HStack(spacing: 4) {
             ForEach(tabs, id: \.0) { page, icon in
                 if page == .ask {
-                    askButton
+                    askButton.zIndex(1)
                 } else {
                 Button { withAnimation(.easeInOut(duration: 0.15)) { selected = page } } label: {
                     VStack(spacing: 5) {
@@ -180,8 +189,6 @@ struct BigTabBar: View {
         .padding(.horizontal, 8)
         .padding(.top, 6)
         .padding(.bottom, 2)
-        .background(Theme.paper.opacity(0.92))
-        .overlay(alignment: .top) { Rectangle().fill(Theme.rule).frame(height: 0.5) }
     }
 }
 

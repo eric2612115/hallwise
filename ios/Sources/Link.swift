@@ -71,6 +71,14 @@ final class ServerLink: ObservableObject {
         publish("finishing")
     }
 
+    /// The newest recording on the server: what a question after Stop is about when nothing is live.
+    func latestRecording(base: String) async -> String? {
+        guard let url = URL(string: Self.httpBase(base) + "/api/recordings"),
+              let (data, _) = try? await urlSession.data(from: url),
+              let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return nil }
+        return list.first?["id"] as? String
+    }
+
     /// A typed question about a recording, answered over HTTP. With no recording id, the newest one.
     func ask(base: String, recording: String?, question: String, history: [[String: String]], keywords: [String]) async throws -> [String: Any] {
         let http = Self.httpBase(base)

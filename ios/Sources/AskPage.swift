@@ -81,6 +81,18 @@ struct AskPage: View {
         }
         .onAppear {
             app.link.onAsk = { msg in received(msg) }
+            app.voiceAsk.onEvent = { msg in
+                switch msg["type"] as? String {
+                case "partial", "question":
+                    if let i = thread.lastIndex(where: { $0.pending }), let t = msg["text"] as? String, !t.isEmpty {
+                        thread[i].question = t
+                    }
+                case "answer":
+                    received(msg)
+                default:
+                    break
+                }
+            }
         }
         .sheet(item: $draft) { d in
             MoveSheet(move: d.move, promise: d.promise, live: live, settings: settings)
@@ -141,7 +153,8 @@ struct AskPage: View {
         }
     }
 
-    /// A text field, a send button, and a hold-to-talk mic that is live only while the badge is streaming.
+    /// A text field, a send button, and a hold-to-talk mic: through the badge's stream while listening,
+    /// through the phone's own microphone once it has stopped.
     private var inputBar: some View {
         HStack(spacing: 10) {
             TextField(holding ? "Listening… release to ask" : "Ask about tonight…", text: $question, axis: .vertical)
@@ -175,28 +188,57 @@ struct AskPage: View {
     }
 
     private var mic: some View {
-        let live = app.link.canAskByVoice
-        return Image(systemName: holding ? "waveform" : "mic.fill")
+        Image(systemName: holding ? "waveform" : "mic.fill")
             .font(.system(size: 20, weight: .semibold))
-            .foregroundStyle(live ? Theme.paper : Theme.inkSoft)
+            .foregroundStyle(Theme.paper)
             .frame(width: 48, height: 48)
-            .background(Circle().fill(live ? (holding ? Theme.live : Theme.ink) : Theme.paperDeep))
+            .background(Circle().fill(holding ? Theme.live : Theme.ink))
             .scaleEffect(holding ? 1.12 : 1)
             .animation(.spring(response: 0.25), value: holding)
             .contentShape(Circle())
             .onLongPressGesture(minimumDuration: 60, maximumDistance: 60, pressing: { down in
-                guard live else { return }
                 if down, !holding {
                     holding = true
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    app.link.askStart()
+                    beginVoice()
                 } else if !down, holding {
                     holding = false
-                    thread.append(Exchange(question: "…", answer: "", actions: [], pending: true))
-                    app.link.askEnd(history: history)
+                    endVoice()
                 }
             }, perform: {})
-            .accessibilityLabel(live ? "Hold to ask by voice" : "Start listening to ask by voice")
+            .accessibilityLabel("Hold to ask by voice")
+    }
+
+    private func beginVoice() {
+        if app.link.canAskByVoice {
+            app.link.askStart()
+            return
+        }
+        let history = self.history
+        Task { @MainActor in
+            var found = app.link.recordingID
+            if found == nil { found = await app.link.latestRecording(base: settings.serverURL) }
+            guard let rid = found else {
+                thread.append(Exchange(question: "…", answer: "No recording to ask about yet.", actions: []))
+                holding = false
+                return
+            }
+            do {
+                try app.voiceAsk.start(base: settings.serverURL, recording: rid, keywords: settings.keywordList, history: history)
+            } catch {
+                thread.append(Exchange(question: "…", answer: "Microphone: \(error.localizedDescription)", actions: []))
+                holding = false
+            }
+        }
+    }
+
+    private func endVoice() {
+        thread.append(Exchange(question: "…", answer: "", actions: [], pending: true))
+        if app.link.canAskByVoice {
+            app.link.askEnd(history: history)
+        } else {
+            app.voiceAsk.stop()
+        }
     }
 
     private var history: [[String: String]] {

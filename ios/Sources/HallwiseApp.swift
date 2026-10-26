@@ -31,6 +31,7 @@ final class AppModel: ObservableObject {
     let settings = BadgeSettings()
     let live = LiveModel()
     let link = ServerLink()
+    let voiceAsk = VoiceAsk()
     private let capture = BadgeCapture()
     private var badgeActivity: Activity<BadgeActivityAttributes>?
     private let whereabouts = Whereabouts()
