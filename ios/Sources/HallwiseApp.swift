@@ -1,6 +1,7 @@
 import ActivityKit
 import SwiftUI
 import UIKit
+import UserNotifications
 
 @main
 struct HallwiseApp: App {
@@ -28,6 +29,8 @@ struct HallwiseApp: App {
 final class AppModel: ObservableObject {
     @Published var listening = false
     @Published var paused = false
+    @Published var reportRequests = 0        // each one opens the morning report
+    var reportRecording: String?             // which recording's report; nil = the newest
     let settings = BadgeSettings()
     let live = LiveModel()
     let link = ServerLink()
@@ -47,6 +50,8 @@ final class AppModel: ObservableObject {
             self?.link.sendPose(tMs: t, yaw: heading, pitch: pitch, roll: roll, inverted: inverted)
             DispatchQueue.main.async { self?.live.yaw = heading }
         }
+        UNUserNotificationCenter.current().delegate = NotificationRouter.shared
+        NotificationRouter.shared.onReport = { [weak self] rid in self?.openReport(rid.isEmpty ? nil : rid) }
         capture.onError = { [weak self] message in
             DispatchQueue.main.async {
                 self?.link.status = message
@@ -70,8 +75,24 @@ final class AppModel: ObservableObject {
         link.status = link.replaying ? "replaying" : "listening"
     }
 
+    /// The recording just made or followed, for its report.
+    var currentRecording: String? {
+        link.recordingID ?? (settings.followRecording.isEmpty ? nil : settings.followRecording)
+    }
+
+    func openReport(_ rid: String?) {
+        reportRecording = rid ?? currentRecording
+        reportRequests += 1
+    }
+
+    /// Debug: the morning notification in ten seconds.
+    func scheduleReportSoon() {
+        MorningNotice.schedule(in: 10, recording: currentRecording ?? "")
+    }
+
     func start() {
         live.reset()
+        live.serverBase = settings.serverURL
         paused = false
         capture.muted = false
         listening = true
@@ -79,6 +100,13 @@ final class AppModel: ObservableObject {
         let settings = self.settings
         if !settings.followRecording.isEmpty {
             link.follow(base: settings.serverURL, recording: settings.followRecording, pace: settings.replayPace)
+            // a recording that already has its report: its hooks show up as the people do
+            let rid = settings.followRecording
+            Task { @MainActor [weak self] in
+                if let report = await ReportStore.get(ServerLink.httpBase(settings.serverURL) + "/api/report/" + rid) {
+                    self?.live.applyReport(report)
+                }
+            }
             return
         }
         Task { @MainActor in
@@ -112,6 +140,8 @@ final class AppModel: ObservableObject {
     }
 
     func stop() {
+        // the follow-ups land now; the morning report waits for eight o'clock
+        MorningNotice.scheduleMorning(recording: currentRecording ?? "")
         if settings.followRecording.isEmpty {
             capture.stop()
             link.close()

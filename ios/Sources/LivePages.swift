@@ -152,6 +152,7 @@ struct RoomPage: View {
         let people = live.peopleOrder.compactMap { live.people[$0] }
         if !people.isEmpty {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                let tall = people.suffix(6).contains { !live.hooks(for: $0.id).isEmpty }
                 ForEach(Array(people.suffix(6).reversed())) { p in
                     Button { selected = p } label: {
                         HStack(spacing: 8) {
@@ -160,10 +161,16 @@ struct RoomPage: View {
                                 Text(p.name)
                                     .font(.system(size: 15, weight: .semibold, design: .serif))
                                     .foregroundStyle(Theme.ink).lineLimit(1)
+                                if let hook = live.hooks(for: p.id).first {
+                                    // the reason to write, the moment they turn up
+                                    Text(hook.tag)
+                                        .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.live).lineLimit(1)
+                                        .minimumScaleFactor(0.65)
+                                }
                                 if let h = live.history[p.id], let e = h.encounters.first {
                                     Text("met before · \(e.event.isEmpty ? dayString(e.started) : e.event)")
                                         .font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.accent).lineLimit(1)
-                                } else {
+                                } else if live.hooks(for: p.id).isEmpty {
                                     Text([p.company, p.role].filter { !$0.isEmpty }.joined(separator: " · "))
                                         .font(.system(size: 12)).foregroundStyle(Theme.inkSoft).lineLimit(1)
                                 }
@@ -171,7 +178,7 @@ struct RoomPage: View {
                             Spacer(minLength: 0)
                         }
                         .padding(.horizontal, 10)
-                        .frame(height: 46)
+                        .frame(height: tall ? 58 : 46)
                         .background(RoundedRectangle(cornerRadius: 10).fill(Theme.paperDeep))
                     }
                     .buttonStyle(.plain)
@@ -321,6 +328,13 @@ struct PersonDetail: View {
                     .padding(.vertical, 4)
                 }
                 .listRowBackground(Color.clear)
+                let hooks = live.hooks(for: person.id)
+                if !hooks.isEmpty {
+                    Section(header: PaperHeader(text: "Why reach out now")) {
+                        ForEach(hooks) { h in HookRow(hook: h) }
+                    }
+                    .listRowBackground(Theme.paperDeep)
+                }
                 if let h = live.history[person.id], !h.encounters.isEmpty {
                     Section(header: PaperHeader(text: "Before tonight")) {
                         ForEach(h.encounters) { e in
@@ -367,6 +381,47 @@ struct PersonDetail: View {
             .scrollContentBackground(.hidden)
         }
         .preferredColorScheme(settings.colorScheme)
+    }
+}
+
+/// One reason to reach out: what it is, why, and the lines it rests on, each with where and when.
+struct HookRow: View {
+    let hook: LiveModel.Hook
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.accent)
+                Text(hook.title).font(.system(size: 17, weight: .semibold, design: .serif)).foregroundStyle(Theme.ink)
+            }
+            if !hook.reason.isEmpty {
+                Text(hook.reason).font(.system(size: 15)).foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
+            }
+            // the lines it rests on, unless the reason already quotes them
+            ForEach(Array(hook.evidence.filter { !$0.quote.isEmpty && !hook.reason.contains($0.quote) }.prefix(3).enumerated()), id: \.offset) { _, e in
+                if let url = URL(string: e.source), !e.source.isEmpty {
+                    Link(destination: url) {
+                        Label(e.quote + " · " + (url.host() ?? e.source), systemImage: "link").font(.system(size: 13))
+                    }
+                    .foregroundStyle(Theme.accent)
+                } else {
+                    Text(([e.event, e.day].filter { !$0.isEmpty }.joined(separator: " · "))
+                         + (e.speaker.isEmpty ? "" : " · \(e.speaker)") + ": “\(e.quote)”")
+                        .font(.system(size: 13, design: .serif)).italic().foregroundStyle(Theme.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var icon: String {
+        switch hook.type {
+        case "introduction": return "person.line.dotted.person"
+        case "mutual_connection": return "person.2.wave.2"
+        case "timely": return "newspaper"
+        default: return "arrow.uturn.left"
+        }
     }
 }
 
@@ -467,7 +522,7 @@ struct PromiseRow: View {
         }
         .padding(.vertical, 2)
         .sheet(item: $draft) { m in
-            MoveSheet(move: m, promise: promise, live: live, settings: settings)
+            MoveSheet(move: m, promise: promise, live: live, settings: settings, hook: live.hooks(for: m.personKey).first)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -481,11 +536,13 @@ struct MoveSheet: View {
     let promise: LiveModel.Promise
     @ObservedObject var live: LiveModel
     @ObservedObject var settings: BadgeSettings
+    var personName: String? = nil      // from the morning report, when tonight's record is not on the phone
+    var hook: LiveModel.Hook? = nil    // the reason to write, when there is one
     @State private var share: ShareItems?
     @State private var calendar = false
     @State private var copied = false
 
-    private var person: String { live.name(for: move.personKey) }
+    private var person: String { personName ?? live.name(for: move.personKey) }
     private var attachment: String? { move.attach.isEmpty ? nil : settings.links[move.attach] }
     private var text: String { [move.body, attachment].compactMap { $0 }.joined(separator: "\n\n") }
     private var when: Date? { move.when.isEmpty ? nil : OwnerCalendar.parse(move.when) }
@@ -514,6 +571,15 @@ struct MoveSheet: View {
                         Image(systemName: "checklist").foregroundStyle(Theme.inkSoft)
                         Text(promise.what + (promise.due.isEmpty ? "" : " · \(promise.due)"))
                             .font(.system(size: 14)).foregroundStyle(Theme.inkSoft)
+                    }
+                    if let hook {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label(hook.tag, systemImage: "sparkle").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.accent)
+                            Text(hook.reason).font(.system(size: 14)).foregroundStyle(Theme.ink)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.paperDeep))
                     }
                     if !move.subject.isEmpty {
                         Text(move.subject).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.ink)

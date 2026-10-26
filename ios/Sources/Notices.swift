@@ -41,6 +41,7 @@ struct NoticesSheet: View {
     @ObservedObject var live: LiveModel
     @ObservedObject var settings: BadgeSettings
     let onWords: () -> Void
+    var onReport: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var draft: DraftRef?
 
@@ -62,6 +63,8 @@ struct NoticesSheet: View {
                     }
                 }
                 .padding(.horizontal, 20).padding(.top, 22).padding(.bottom, 8)
+                reportRow
+                    .padding(.horizontal, 20).padding(.bottom, 6)
                 if live.notices.isEmpty {
                     Text("Nothing waiting. Hallwise taps you here when a draft is due, a time needs the calendar, or a word needs you.")
                         .font(.system(size: 15, design: .serif))
@@ -85,10 +88,38 @@ struct NoticesSheet: View {
         }
         .preferredColorScheme(settings.colorScheme)
         .sheet(item: $draft) { d in
-            MoveSheet(move: d.move, promise: d.promise, live: live, settings: settings)
+            MoveSheet(move: d.move, promise: d.promise, live: live, settings: settings, hook: live.hooks(for: d.move.personKey).first)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+    }
+
+    /// Always on top: the morning report, every follow-up with its reason to write.
+    private var reportRow: some View {
+        Button {
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onReport() }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "sun.horizon.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Theme.paper)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Theme.ink))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Morning report").font(.system(size: 17, weight: .semibold, design: .serif)).foregroundStyle(Theme.ink)
+                    Text("Who to write to today, and why").font(.system(size: 14)).foregroundStyle(Theme.inkSoft)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 17)).foregroundStyle(Theme.inkSoft)
+            }
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.paperDeep))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.rule, lineWidth: 0.5))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Morning report")
     }
 
     private func row(_ n: LiveModel.Notice) -> some View {

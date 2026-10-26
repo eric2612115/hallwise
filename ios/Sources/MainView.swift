@@ -9,6 +9,7 @@ struct MainView: View {
     @State private var showMenu = false
     @State private var showTranscript = false
     @State private var showNotices = false
+    @State private var showReport = false
 
     var body: some View {
         ZStack {
@@ -31,14 +32,26 @@ struct MainView: View {
             }
         }
         .sheet(isPresented: $showMenu) {
-            MenuSheet(settings: app.settings, showBadge: $showBadge, showTranscript: $showTranscript)
+            MenuSheet(settings: app.settings, showBadge: $showBadge, showTranscript: $showTranscript,
+                      onReportSoon: { app.scheduleReportSoon() })
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showNotices) {
-            NoticesSheet(live: app.live, settings: app.settings) { tab = .words }
+            NoticesSheet(live: app.live, settings: app.settings, onWords: { tab = .words }, onReport: { app.openReport(nil) })
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showReport) {
+            MorningReportView(app: app, live: app.live, settings: app.settings, recording: app.reportRecording)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .onChange(of: app.reportRequests) { _, _ in
+            // the bell, or the eight o'clock notification: one sheet at a time
+            let busy = showNotices || showMenu || showTranscript
+            showNotices = false; showMenu = false; showTranscript = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + (busy ? 0.45 : 0)) { showReport = true }
         }
         .sheet(isPresented: $showTranscript) {
             ZStack {
@@ -225,9 +238,11 @@ struct MenuSheet: View {
     @ObservedObject var settings: BadgeSettings
     @Binding var showBadge: Bool
     @Binding var showTranscript: Bool
+    var onReportSoon: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var share: ShareItems?
     @State private var copiedBlurb = false
+    @State private var reportScheduled = false
 
     var body: some View {
         ZStack {
@@ -261,6 +276,7 @@ struct MenuSheet: View {
                     group("Debug", "Follow watches a recording instead of capturing; a finished one replays at this pace") {
                         field("Follow", text: $settings.followRecording, placeholder: "recording id, no capture", keyboard: .URL)
                         paceRow
+                        reportSoonRow
                     }
                 }
                 .padding(.horizontal, 16)
@@ -431,6 +447,28 @@ struct MenuSheet: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 52)
+    }
+
+    /// The eight o'clock notification, in ten seconds: tap it and the morning report opens.
+    private var reportSoonRow: some View {
+        Button {
+            onReportSoon()
+            withAnimation { reportScheduled = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { withAnimation { reportScheduled = false } }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: reportScheduled ? "checkmark" : "bell.badge").font(.system(size: 17, weight: .semibold))
+                Text(reportScheduled ? "Coming in 10 s" : "Report in 10 s").font(.system(size: 17, weight: .semibold))
+                Spacer()
+            }
+            .foregroundStyle(Theme.accent)
+            .padding(.horizontal, 14)
+            .frame(height: 52)
+            .overlay(alignment: .top) { Rectangle().fill(Theme.rule).frame(height: 0.5).padding(.leading, 14) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Report in 10 s")
     }
 
     private var forwardRow: some View {

@@ -217,8 +217,15 @@ struct PhotoMatchSheet: View {
     }
 
     private func keep() {
+        let base = settings.serverURL
         for f in faces where !f.key.isEmpty {
-            live.setPhoto(photo.face(in: f.box), for: f.key)
+            let crop = photo.face(in: f.box)
+            live.setPhoto(crop, for: f.key)
+            // and on the server, under the person, so the face is there the next evening they turn up
+            if let crop {
+                let key = live.indexKey(for: f.key)
+                Task.detached { await Faces.upload(base: base, key: key, image: crop) }
+            }
         }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         dismiss()

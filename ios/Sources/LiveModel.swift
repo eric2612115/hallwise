@@ -52,6 +52,103 @@ final class LiveModel: ObservableObject {
 
     @Published var photos: [String: UIImage] = [:]        // a face per person key, from the owner's photos
     var recordingID = ""                                   // where faces are kept on disk
+    var serverBase = ""                                    // ws:// address, for faces kept on the server
+
+    /// A reason to reach out, found across evenings: an open introduction, a colleague who mentioned them,
+    /// a question left hanging. From the recording's `hook` events or from the morning report.
+    struct Hook: Identifiable, Equatable {
+        struct Evidence: Equatable {
+            let event: String
+            let day: String
+            let speaker: String
+            let quote: String
+            let source: String  // research only: the page it came from
+        }
+        var id: String { type + "|" + title }
+        let type: String     // introduction, mutual_connection, open_thread, timely
+        let title: String
+        let tag: String      // the short form, under the name in the room
+        let reason: String
+        let names: [String]
+        let evidence: [Evidence]
+        let draft: String
+        let draftEnglish: String
+        let language: String
+        let promiseKey: String
+
+        init(_ d: [String: Any]) {
+            type = (d["kind"] as? String) ?? (d["type"] as? String) ?? "open_thread"
+            title = d["title"] as? String ?? ""
+            let t = d["tag"] as? String ?? ""
+            tag = t.isEmpty ? title : t
+            reason = d["reason"] as? String ?? ""
+            names = d["names"] as? [String] ?? []
+            evidence = (d["evidence"] as? [[String: Any]] ?? []).map {
+                Evidence(event: $0["event"] as? String ?? "", day: $0["day"] as? String ?? "",
+                         speaker: $0["speaker"] as? String ?? "", quote: $0["quote"] as? String ?? "",
+                         source: $0["source"] as? String ?? "")
+            }
+            draft = d["draft"] as? String ?? ""
+            draftEnglish = d["draft_english"] as? String ?? ""
+            language = d["language"] as? String ?? ""
+            promiseKey = d["promise_key"] as? String ?? ""
+        }
+    }
+
+    @Published var liveHooks: [String: [Hook]] = [:]    // by person key, from `hook` events
+    @Published var reportHooks: [String: [Hook]] = [:]  // by person key, from the morning report
+    var indexKeys: [String: String] = [:]               // person key -> people-index key, from person_history
+
+    /// Hooks for someone met tonight: the report's (reasoned across the week) first, then the room's own.
+    func hooks(for key: String) -> [Hook] {
+        let report = reportHooks[key] ?? []
+        let room = (liveHooks[key] ?? []).filter { h in !report.contains { $0.tag == h.tag || $0.title == h.title } }
+        return report + room
+    }
+
+    /// The morning report's hooks, attached to tonight's people by their key in this recording.
+    func applyReport(_ report: [String: Any]) {
+        var out: [String: [Hook]] = [:]
+        for h in report["hooks"] as? [[String: Any]] ?? [] {
+            let hook = Hook(h)
+            for key in (h["record_keys"] as? [String: String] ?? [:]).values { out[key, default: []].append(hook) }
+        }
+        reportHooks = out
+    }
+
+    /// Where the server keeps this person's face: the people index key (name and company, slugged as the server
+    /// does), or the one person_history named.
+    func indexKey(for key: String) -> String {
+        if let k = indexKeys[key] { return k }
+        guard let p = people[key] else { return key }
+        let company = Self.slug(p.company)
+        return Self.slug(p.name) + (company.isEmpty ? "" : "-" + company)
+    }
+
+    /// The server's slug: lowercase ASCII letters and digits, runs joined by "-" ("Lefèvre" → "lef-vre").
+    static func slug(_ text: String) -> String {
+        var runs: [String] = []
+        var cur = ""
+        for ch in text.lowercased().unicodeScalars {
+            if ("a"..."z").contains(ch) || ("0"..."9").contains(ch) { cur.unicodeScalars.append(ch) }
+            else if !cur.isEmpty { runs.append(cur); cur = "" }
+        }
+        if !cur.isEmpty { runs.append(cur) }
+        return runs.joined(separator: "-")
+    }
+
+    /// Someone met before turns up with no face here: bring the one kept on the server from an earlier evening.
+    private func fetchFace(for key: String) {
+        guard photos[key] == nil, !serverBase.isEmpty, let p = people[key] else { return }
+        let base = serverBase, ik = indexKey(for: key)
+        Task { [weak self] in
+            guard let image = await Faces.fetch(base: base, key: ik, name: p.name, company: p.company) else { return }
+            await MainActor.run {
+                guard let self, self.photos[key] == nil else { return }
+                self.photos[key] = image
+            }
+        }
+    }
 
     /// Keep a face for a person, on screen and on disk under the recording.
     func setPhoto(_ image: UIImage?, for key: String) {
@@ -216,6 +313,7 @@ final class LiveModel: ObservableObject {
         people = [:]; peopleOrder = []; promises = [:]; promiseOrder = []; speakerAzimuth = [:]; speakerLevel = [:]
         ownerSpeakers = []; lines = []; turnKind = [:]; turnStart = [:]; turnEnd = [:]
         suspects = []; moves = [:]; topics = []; translations = [:]; history = [:]; speakerFirstMs = [:]; photos = [:]
+        liveHooks = [:]; reportHooks = [:]; indexKeys = [:]
         tMs = 0; lastSpeaker = nil; donePromises = []; dismissedNotices = []; calendarAdded = []
     }
 
@@ -350,24 +448,17 @@ final class LiveModel: ObservableObject {
                                     direction: $0["direction"] as? String ?? "")
             }
             history[key] = History(encounters: encounters, promises: promises)
+            if let ik = e["index_key"] as? String, !ik.isEmpty { indexKeys[key] = ik }
+            fetchFace(for: key)
+        case "hook":
+            guard let key = e["person_key"] as? String, !key.isEmpty else { return }
+            let hook = Hook(e)
+            liveHooks[key] = (liveHooks[key] ?? []).filter { $0.title != hook.title } + [hook]
         case "next_move":
-            guard let key = e["promise_key"] as? String, !key.isEmpty else { return }
-            moves[key] = Move(
-                promiseKey: key,
-                personKey: e["person_key"] as? String ?? "",
-                kind: e["kind"] as? String ?? "message",
-                language: e["language"] as? String ?? "",
-                subject: e["subject"] as? String ?? "",
-                body: e["body"] as? String ?? "",
-                bodyEnglish: e["body_english"] as? String ?? "",
-                when: e["when"] as? String ?? "",
-                durationMinutes: e["duration_minutes"] as? Int ?? 30,
-                attach: e["attach"] as? String ?? "",
-                why: e["why"] as? String ?? "",
-                remindAt: e["remind_at"] as? String ?? "",
-                nudge: e["nudge"] as? String ?? ""
-            )
-            if !donePromises.contains(key), let m = moves[key] { Reminders.schedule(m, promise: promises[key]) }
+            guard let m = Move(e) else { return }
+            let key = m.promiseKey
+            moves[key] = m
+            if !donePromises.contains(key) { Reminders.schedule(m, promise: promises[key]) }
         case "room_topics":
             topics = e["topics"] as? [String] ?? []
         case "replay_clock":
@@ -375,5 +466,27 @@ final class LiveModel: ObservableObject {
         default:
             break
         }
+    }
+}
+
+extension LiveModel.Move {
+    /// A follow-up as the server sends it: a `next_move` event, or a row of the morning report.
+    init?(_ e: [String: Any]) {
+        guard let key = e["promise_key"] as? String, !key.isEmpty else { return nil }
+        self.init(
+            promiseKey: key,
+            personKey: e["person_key"] as? String ?? "",
+            kind: e["kind"] as? String ?? "message",
+            language: e["language"] as? String ?? "",
+            subject: e["subject"] as? String ?? "",
+            body: e["body"] as? String ?? "",
+            bodyEnglish: e["body_english"] as? String ?? "",
+            when: e["when"] as? String ?? "",
+            durationMinutes: e["duration_minutes"] as? Int ?? 30,
+            attach: e["attach"] as? String ?? "",
+            why: e["why"] as? String ?? "",
+            remindAt: e["remind_at"] as? String ?? "",
+            nudge: e["nudge"] as? String ?? ""
+        )
     }
 }
