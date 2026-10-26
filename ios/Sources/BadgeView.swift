@@ -2,9 +2,11 @@ import SwiftUI
 
 /// The face of the badge: a paper name card, readable from a metre away, with a QR contact card.
 /// Nothing else — no recording light, no app name — so it reads as a badge, not a device.
+/// If the lanyard leaves the phone hanging top-down, the card turns itself the right way up.
 struct BadgeView: View {
     @ObservedObject var settings: BadgeSettings
     @Environment(\.colorScheme) private var scheme
+    @StateObject private var hanging = BadgeHanging()
 
     var body: some View {
         ZStack {
@@ -51,10 +53,38 @@ struct BadgeView: View {
                 Spacer(minLength: 28)
             }
             .padding(.horizontal, 32)
+            .rotationEffect(.degrees(hanging.upsideDown ? 180 : 0))
+            .animation(.easeInOut(duration: 0.35), value: hanging.upsideDown)
         }
+        .onAppear { hanging.start() }
+        .onDisappear { hanging.stop() }
     }
 
     private var initials: String {
         settings.ownerName.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined()
     }
+}
+
+/// Whether the badge hangs top-down. The app is locked to portrait, and UIDevice's orientation stops updating when
+/// the owner has rotation lock on, so this listens to the motion sensor itself (through the app's one motion
+/// manager), whether or not a recording is running: the badge is on show before anyone presses Start.
+final class BadgeHanging: ObservableObject {
+    @Published private(set) var upsideDown = false
+    private var listener: UUID?
+
+    func start() {
+        guard listener == nil else { return }
+        listener = BadgeMotion.shared.listen { [weak self] _, inverted in
+            DispatchQueue.main.async {
+                if let self, self.upsideDown != inverted { self.upsideDown = inverted }
+            }
+        }
+    }
+
+    func stop() {
+        if let listener { BadgeMotion.shared.stopListening(listener) }
+        listener = nil
+    }
+
+    deinit { stop() }
 }

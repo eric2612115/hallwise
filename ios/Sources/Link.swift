@@ -62,8 +62,10 @@ final class ServerLink: ObservableObject {
         }
     }
 
-    func sendPose(tMs: Int, yaw: Double, pitch: Double, roll: Double) {
-        sendJSON(["type": "pose", "t_ms": tMs, "yaw": yaw, "pitch": pitch, "roll": roll])
+    /// `yaw` is the badge's heading (see `badgeHeading`), not CoreMotion's Euler yaw; `inverted` means it hangs
+    /// top-down, so the server mirrors the microphones' left and right.
+    func sendPose(tMs: Int, yaw: Double, pitch: Double, roll: Double, inverted: Bool) {
+        sendJSON(["type": "pose", "t_ms": tMs, "yaw": yaw, "pitch": pitch, "roll": roll, "inverted": inverted])
     }
 
     func close() {

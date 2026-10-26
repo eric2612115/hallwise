@@ -5,6 +5,11 @@ azimuth θ (counter-clockwise from the X axis) arrives as W = s, X = s·cos θ, 
 (Σ W·X, Σ W·Y) over a turn therefore points at whoever was talking, relative to the phone. Adding the phone's yaw
 at that moment gives a bearing in the room, which stays put when the wearer turns or leans in to listen.
 
+The badge's "yaw" is the direction its screen faces (taken from the attitude matrix, not Euler yaw, which locks up
+on an upright phone). A phone hanging top-down on its lanyard is turned 180° about the screen normal, so its left
+and right swap: its poses say `inverted`, and the azimuth it hears is negated back into the wearer's frame before
+the yaw is added.
+
 Only the louder half of a turn's 20 ms blocks counts, so the talker's own voice outweighs the room around them.
 """
 
@@ -45,6 +50,7 @@ class DirectionTracker:
         self._energy: list[float] = []
         self._pose_t: list[int] = []
         self._pose_yaw: list[float] = []
+        self._pose_inverted: list[bool] = []
 
     def add(self, frames: np.ndarray) -> None:
         """frames: (n, channels) int16 as received. Only first-order ambisonics carries direction."""
@@ -62,10 +68,11 @@ class DirectionTracker:
         self._iy.extend((w * y).sum(axis=1).tolist())
         self._energy.extend((w * w).sum(axis=1).tolist())
 
-    def add_pose(self, t_ms: int, yaw_deg: float) -> None:
+    def add_pose(self, t_ms: int, yaw_deg: float, inverted: bool = False) -> None:
         i = bisect_right(self._pose_t, t_ms)
         self._pose_t.insert(i, t_ms)
         self._pose_yaw.insert(i, yaw_deg)
+        self._pose_inverted.insert(i, bool(inverted))
 
     def yaw(self, start_ms: int, end_ms: int) -> float | None:
         """The phone's mean yaw over [start, end), or the last reading before it."""
@@ -75,6 +82,16 @@ class DirectionTracker:
         if lo > 0:
             return self._pose_yaw[lo - 1]
         return self._pose_yaw[0] if self._pose_yaw else None  # the first reading, if it came late
+
+    def inverted(self, start_ms: int, end_ms: int) -> bool:
+        """Whether the phone hung top-down over [start, end): most of the readings in it, else the same fallbacks as
+        yaw(). With no orientation data at all, upright."""
+        lo, hi = bisect_left(self._pose_t, start_ms), bisect_left(self._pose_t, end_ms)
+        if hi > lo:
+            return 2 * sum(self._pose_inverted[lo:hi]) > hi - lo
+        if lo > 0:
+            return self._pose_inverted[lo - 1]
+        return self._pose_inverted[0] if self._pose_inverted else False
 
     def direction(self, start_ms: int, end_ms: int) -> dict[str, float | None] | None:
         i0 = max(0, start_ms // BLOCK_MS)
@@ -89,6 +106,9 @@ class DirectionTracker:
         ix = float(np.array(self._ix[i0:i1])[loud].sum())
         iy = float(np.array(self._iy[i0:i1])[loud].sum())
         device = math.degrees(math.atan2(iy, ix))
+        inverted = self.inverted(start_ms, end_ms)
+        if inverted:
+            device = -device  # top-down, the microphones' left is the wearer's right
         yaw = self.yaw(start_ms, end_ms)
         # Loudness of the talker over their louder blocks, in dBFS of the omni channel: nearer is louder.
         # Together with confidence (direct sound vs room reverberation) it is the cue for distance; the UI
@@ -100,6 +120,7 @@ class DirectionTracker:
             "azimuth_device": round(wrap(device), 1),
             "azimuth_room": round(wrap(device + (yaw or 0.0)), 1),
             "has_pose": yaw is not None,
+            "inverted": inverted,
             "confidence": round(min(1.0, math.hypot(ix, iy) / e), 2),
             "level_db": round(level_db, 1),
         }

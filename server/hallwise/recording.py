@@ -170,9 +170,11 @@ class Recording:
 
     def on_pose(self, msg: dict[str, Any]) -> None:
         t_ms = int(msg.get("t_ms", self.now_ms))
+        inverted = bool(msg.get("inverted", False))  # older badges never send it: upright
         if msg.get("yaw") is not None:
-            self.direction.add_pose(t_ms, float(msg["yaw"]))
-        self.log.emit("device_pose", t_ms, yaw=msg.get("yaw"), pitch=msg.get("pitch"), roll=msg.get("roll"))
+            self.direction.add_pose(t_ms, float(msg["yaw"]), inverted)
+        extra = {"inverted": inverted} if "inverted" in msg else {}
+        self.log.emit("device_pose", t_ms, yaw=msg.get("yaw"), pitch=msg.get("pitch"), roll=msg.get("roll"), **extra)
 
     def _on_asr(self, type: str, t_ms: int, **data: Any) -> None:
         self.log.emit(type, t_ms, **data)

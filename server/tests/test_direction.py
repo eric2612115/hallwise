@@ -123,3 +123,99 @@ def test_recording_emits_positions_for_each_turn_and_each_speaker(tmp_path):
     assert placed["1:A"] == pytest.approx(60, abs=5)
     assert placed["1:B"] == pytest.approx(-45, abs=5)
     assert len([e for e in events if e["type"] == "position"]) == 2
+
+
+def heard(wearer_azimuth: float, inverted: bool) -> float:
+    """Where the badge's microphones hear a talker who stands at `wearer_azimuth` relative to the wearer. Hanging
+    top-down, the phone is turned 180° about the screen normal: ahead stays ahead, left and right swap."""
+    return -wearer_azimuth if inverted else wearer_azimuth
+
+
+@pytest.mark.parametrize("inverted", [False, True])
+def test_a_talker_on_the_left_stays_on_the_left_when_the_badge_hangs_upside_down(inverted):
+    # The talker stands 60° to the wearer's left; the wearer faces 30° in the room, so the talker is at 90°.
+    tracker = DirectionTracker(RATE, "foa")
+    tracker.add(to_int16(encode(voice(1.0), heard(60, inverted)) + diffuse(1.0, 0.02)))
+    tracker.add_pose(0, 30.0, inverted)
+    where = tracker.direction(0, 1000)
+    assert where["inverted"] is inverted
+    assert where["azimuth_device"] == pytest.approx(60, abs=5)
+    assert where["azimuth_room"] == pytest.approx(90, abs=5)
+
+
+def test_an_upright_badge_hearing_a_talker_on_the_right_puts_them_on_the_right():
+    # The contrast: the same mirrored signal as the top-down case above, from an upright badge, is a talker on the right.
+    tracker = DirectionTracker(RATE, "foa")
+    tracker.add(to_int16(encode(voice(1.0), -60) + diffuse(1.0, 0.02)))
+    tracker.add_pose(0, 30.0, False)
+    where = tracker.direction(0, 1000)
+    assert where["azimuth_device"] == pytest.approx(-60, abs=5)
+    assert where["azimuth_room"] == pytest.approx(-30, abs=5)
+
+
+def run_recording(tmp_path, foa: np.ndarray, script: list[dict], poses: list[dict]) -> list[dict]:
+    hello = Hello(sample_rate=RATE, channels=4, layout="foa", fake_script=script)
+    rec = Recording(tmp_path, hello, lambda sink, *, rate, hello: FakeAsr(sink, rate=rate, script=hello.fake_script))
+
+    async def run():
+        await rec.start()
+        for pose in poses:
+            rec.on_pose(pose)
+        data = foa.tobytes()
+        for i in range(0, len(data), 4 * 2 * 4800):
+            await rec.on_audio(data[i : i + 4 * 2 * 4800])
+        await rec.close()
+
+    asyncio.run(run())
+    return read_events(rec.dir / "events.jsonl")
+
+
+@pytest.mark.parametrize("inverted", [False, True])
+def test_recording_places_a_talker_on_the_left_whichever_way_up_the_badge_hangs(tmp_path, inverted):
+    # A on the wearer's left at 50°, B on the right at -40°; the wearer faces 20° in the room.
+    gap = np.zeros((int(0.5 * RATE), 4))
+    foa = np.concatenate(
+        [encode(voice(1.0), heard(50, inverted)), gap, encode(voice(1.0), heard(-40, inverted)), gap]
+    )
+    script = [
+        {"start_ms": 0, "end_ms": 1000, "speaker": "A", "text": "Hi, I'm Sarah."},
+        {"start_ms": 1500, "end_ms": 2500, "speaker": "B", "text": "I'm Eric."},
+    ]
+    poses = [
+        {"type": "pose", "t_ms": t, "yaw": 20.0, "pitch": 88.0, "roll": 0.0, "inverted": inverted}
+        for t in range(0, 3000, 100)
+    ]
+    events = run_recording(tmp_path, to_int16(foa + diffuse(3.0, 0.01)), script, poses)
+    placed = {e["speaker"]: e["azimuth"] for e in events if e["type"] == "speaker_position"}
+    assert placed["1:A"] == pytest.approx(70, abs=5)  # left of the wearer: positive
+    assert placed["1:B"] == pytest.approx(-20, abs=5)  # right of the wearer: negative
+    assert {e["inverted"] for e in events if e["type"] == "position"} == {inverted}
+    assert {e["inverted"] for e in events if e["type"] == "device_pose"} == {inverted}
+
+
+def test_a_badge_that_flips_over_between_turns_keeps_the_talker_where_they_stand(tmp_path):
+    # One talker stays put 60° to the wearer's left (room 60°, wearer facing 0°). Halfway through, the lanyard turns
+    # the phone top-down; the microphones now hear the same talker at -60°.
+    gap = np.zeros((int(0.5 * RATE), 4))
+    foa = np.concatenate([encode(voice(1.0), 60), gap, encode(voice(1.0), heard(60, True)), gap])
+    script = [
+        {"start_ms": 0, "end_ms": 1000, "speaker": "A", "text": "Before the flip."},
+        {"start_ms": 1500, "end_ms": 2500, "speaker": "A", "text": "After the flip."},
+    ]
+    poses = [{"type": "pose", "t_ms": t, "yaw": 0.0, "pitch": 89.0, "roll": 0.0, "inverted": t >= 1250} for t in range(0, 3000, 100)]
+    events = run_recording(tmp_path, to_int16(foa + diffuse(3.0, 0.01)), script, poses)
+    rooms = [e["azimuth_room"] for e in events if e["type"] == "position"]
+    assert rooms == [pytest.approx(60, abs=5), pytest.approx(60, abs=5)]
+    assert [e["inverted"] for e in events if e["type"] == "position"] == [False, True]
+
+
+def test_poses_without_the_inverted_field_mean_upright(tmp_path):
+    gap = np.zeros((int(0.5 * RATE), 4))
+    foa = np.concatenate([encode(voice(1.0), 60), gap])
+    script = [{"start_ms": 0, "end_ms": 1000, "speaker": "A", "text": "Hello."}]
+    events = run_recording(tmp_path, to_int16(foa + diffuse(1.5, 0.01)), script, [{"t_ms": 0, "yaw": 10.0}])
+    (position,) = [e for e in events if e["type"] == "position"]
+    assert position["inverted"] is False
+    assert position["azimuth_room"] == pytest.approx(70, abs=5)
+    (pose,) = [e for e in events if e["type"] == "device_pose"]
+    assert "inverted" not in pose

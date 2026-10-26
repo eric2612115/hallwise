@@ -43,9 +43,9 @@ final class AppModel: ObservableObject {
         settings.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
         live.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
         capture.onAudio = { [weak self] data in self?.link.sendAudio(data) }
-        capture.onPose = { [weak self] t, yaw, pitch, roll in
-            self?.link.sendPose(tMs: t, yaw: yaw, pitch: pitch, roll: roll)
-            DispatchQueue.main.async { self?.live.yaw = yaw }
+        capture.onPose = { [weak self] t, heading, pitch, roll, inverted in
+            self?.link.sendPose(tMs: t, yaw: heading, pitch: pitch, roll: roll, inverted: inverted)
+            DispatchQueue.main.async { self?.live.yaw = heading }
         }
         capture.onError = { [weak self] message in
             DispatchQueue.main.async {
