@@ -29,13 +29,13 @@ struct AskPage: View {
     private var chips: [String] {
         var out: [String] = suggested
         if let p = live.promiseOrder.compactMap({ live.promises[$0] }).first(where: { !live.donePromises.contains($0.id) && $0.owedBy == "owner" }) {
-            out.append("Mark “\(p.what)” done")
-            if live.moves[p.id] != nil { out.append("Open the draft for \(live.name(for: p.owedTo))") }
+            out.append("Done: \(p.what)")
+            if live.moves[p.id] != nil { out.append("Show \(live.name(for: p.owedTo))'s draft") }
         }
         if let last = live.lines.last(where: { !live.ownerSpeakers.contains($0.speaker) }) {
             out.append("What did \(live.speakerName(last.speaker)) say?")
         }
-        if !live.suspects.isEmpty, let w = live.suspects.first { out.append("Remember “\(w.likely)”") }
+        if let w = live.suspects.first { out.append("Remember \(w.likely)") }
         out += ["What do I owe?", "Who did I meet?", "What's due tonight?", "Any drafts ready?", "我今晚答應了誰什麼？"]
         var seen: Set<String> = []
         return out.filter { seen.insert($0).inserted }
@@ -107,14 +107,16 @@ struct AskPage: View {
             ForEach(Array(chips.prefix(3)), id: \.self) { c in
                 Button { ask(c) } label: {
                     Text(c)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(suggested.contains(c) ? Theme.paper : Theme.ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .padding(.horizontal, 12)
-                        .frame(height: 38)
-                        .background(Capsule().fill(suggested.contains(c) ? Theme.accent : Theme.paperDeep))
-                        .overlay(Capsule().stroke(Theme.rule, lineWidth: suggested.contains(c) ? 0 : 0.5))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(RoundedRectangle(cornerRadius: 14).fill(suggested.contains(c) ? Theme.accent : Theme.paperDeep))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.rule, lineWidth: suggested.contains(c) ? 0 : 0.5))
                 }
                 .buttonStyle(.plain)
             }
