@@ -2,7 +2,7 @@ import Foundation
 
 /// The live record, rebuilt from the server's event stream.
 final class LiveModel: ObservableObject {
-    struct Person: Identifiable {
+    struct Person: Identifiable, Equatable {
         let id: String  // person key
         var name: String
         var company: String
@@ -92,6 +92,20 @@ final class LiveModel: ObservableObject {
 
     func name(for key: String) -> String {
         key == "owner" ? "you" : (people[key]?.name ?? key)
+    }
+
+    /// First name of whoever speaks under a label; "You" for the owner; "Someone" before they introduce themselves.
+    func speakerName(_ speaker: String) -> String {
+        if ownerSpeakers.contains(speaker) { return "You" }
+        if let p = people.values.first(where: { $0.speakers.contains(speaker) }) {
+            return p.name.split(separator: " ").first.map(String.init) ?? p.name
+        }
+        return "Someone"
+    }
+
+    /// The owner dealt with a suspect word (kept, corrected or dismissed); it leaves the list.
+    func resolve(_ suspect: Suspect) {
+        suspects.removeAll { $0.id == suspect.id }
     }
 
     func apply(_ e: [String: Any]) {

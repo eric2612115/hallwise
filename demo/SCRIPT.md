@@ -11,13 +11,13 @@ judged by the models in real time.
 
 ## Frame
 
-- Left 60%: the camera take; Hallwise's live transcript under it.
-- Right top: roster — each person with company, preferred language, promises; the room radar under it.
-- Right bottom: sound field seen from above — Eric's badge direction, and each person as a small speaker icon
-  where their voice came from in the room. Icons stay put when Eric turns or leans; each lights while that person
-  talks.
-- The right side is Hallwise's live dashboard on Mac-0, screen-recorded during the take. It reads only the
-  pipeline's event log, never the rig's scene files.
+- Left 60%: the camera take.
+- Right 40%: the app's **Room page**, screen-recorded from a second iPhone (the iPhone 16) that follows the live
+  recording in the app's follow mode, so the badge on Eric's chest keeps showing his name card while the video
+  shows what Hallwise hears: the radar (ahead = up; each person where their voice comes from, close voices on the
+  inner ring, the talker lit) and the subtitle with its translation. For the closing, the second phone switches to
+  People, Owe and Words.
+- The Room page reads only the server's event stream, never the rig's scene files.
 - Fallback if live capture fails: process after the take and caption the panels "Hallwise's output for this
   recording, replayed at the moment each thing was said".
 

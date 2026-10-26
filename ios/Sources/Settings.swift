@@ -20,6 +20,17 @@ final class BadgeSettings: ObservableObject {
         keywords.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
+    /// A corrected word becomes a recognition hint for the next recording.
+    func remember(_ word: String) {
+        let w = word.trimmingCharacters(in: .whitespaces)
+        guard !w.isEmpty, !keywordList.contains(where: { $0.caseInsensitiveCompare(w) == .orderedSame }) else { return }
+        keywords = (keywordList + [w]).joined(separator: ", ")
+    }
+
+    func forget(_ word: String) {
+        keywords = keywordList.filter { $0 != word }.joined(separator: ", ")
+    }
+
     /// A vCard for the badge's QR code.
     var vCard: String {
         var lines = ["BEGIN:VCARD", "VERSION:3.0", "FN:\(ownerName)", "ORG:\(ownerCompany)"]

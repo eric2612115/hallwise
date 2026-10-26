@@ -4,18 +4,30 @@ import UIKit
 @main
 struct HallwiseApp: App {
     @StateObject private var app = AppModel()
+    @State private var page: Page = .badge
 
     var body: some Scene {
         WindowGroup {
-            TabView {
-                BadgeView(settings: app.settings, listening: app.listening)
-                LiveView(app: app, live: app.live, link: app.link, settings: app.settings)
+            ZStack {
+                PaperBackground()  // under the status bar and the home indicator too
+                TabView(selection: $page) {
+                    BadgeView(settings: app.settings, listening: app.listening)
+                        .tag(Page.badge)
+                    chrome { RoomPage(live: app.live, settings: app.settings) }.tag(Page.room)
+                    chrome { PeoplePage(live: app.live, settings: app.settings) }.tag(Page.people)
+                    chrome { OwePage(live: app.live) }.tag(Page.owe)
+                    chrome { WordsPage(live: app.live, settings: app.settings) }.tag(Page.words)
+                    chrome { TranscriptPage(live: app.live) }.tag(Page.transcript)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .ignoresSafeArea()
             .preferredColorScheme(app.settings.colorScheme)
             .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
         }
+    }
+
+    private func chrome<Content: View>(@ViewBuilder _ content: @escaping () -> Content) -> some View {
+        LiveChrome(page: $page, app: app, link: app.link, settings: app.settings, content: content)
     }
 }
 
