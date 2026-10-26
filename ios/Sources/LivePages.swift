@@ -174,42 +174,34 @@ struct PersonRow: View {
 
     var body: some View {
         let talking = person.speakers.contains(live.activeSpeaker ?? "")
-        HStack(alignment: .top, spacing: 12) {
-            ZStack(alignment: .topTrailing) {
-                if let bearing = live.relativeBearing(of: person, offset: offset) {
-                    Image(systemName: "location.north.fill")
-                        .rotationEffect(.degrees(-bearing))
-                        .foregroundStyle(live.color(for: person.id))
-                        .frame(width: 24, height: 24)
-                } else {
-                    Circle().fill(live.color(for: person.id)).frame(width: 12, height: 12).frame(width: 24, height: 24)
-                }
-                if talking {
-                    Circle().fill(Theme.accent).frame(width: 8, height: 8)
-                        .shadow(color: Theme.accent.opacity(0.6), radius: 4)
-                        .offset(x: 4, y: -4)
-                }
-            }
+        HStack(spacing: 14) {
+            Circle()
+                .fill(live.color(for: person.id))
+                .frame(width: talking ? 16 : 12, height: talking ? 16 : 12)
+                .shadow(color: talking ? live.color(for: person.id).opacity(0.6) : .clear, radius: 6)
+                .frame(width: 20, height: 20)
+                .animation(.easeInOut(duration: 0.2), value: talking)
             VStack(alignment: .leading, spacing: 3) {
-                Text(person.name).font(.system(.headline, design: .serif)).foregroundStyle(Theme.ink)
-                Text([person.company, person.role].filter { !$0.isEmpty }.joined(separator: " · "))
-                    .font(.subheadline).foregroundStyle(Theme.inkSoft)
-                HStack(spacing: 6) {
-                    if !person.language.isEmpty { Tag(text: person.language) }
-                    if !person.introducedBy.isEmpty { Tag(text: "via \(live.name(for: person.introducedBy))") }
-                    if let last = live.lines.last(where: { person.speakers.contains($0.speaker) }), !talking {
-                        Text("spoke \(mmss(live.tMs - lastEnd(last))) ago")
-                            .font(.system(size: 13)).foregroundStyle(Theme.inkSoft)
+                Text(person.name)
+                    .font(.system(size: 17, weight: .semibold, design: .serif))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+                let line = [person.company, person.role].filter { !$0.isEmpty }.joined(separator: " · ")
+                if !line.isEmpty {
+                    Text(line).font(.system(size: 15)).foregroundStyle(Theme.inkSoft).lineLimit(1)
+                }
+                if !person.language.isEmpty || !person.introducedBy.isEmpty {
+                    HStack(spacing: 6) {
+                        if !person.language.isEmpty { Tag(text: person.language) }
+                        if !person.introducedBy.isEmpty { Tag(text: "via \(live.name(for: person.introducedBy))") }
                     }
                 }
             }
-            Spacer()
+            Spacer(minLength: 8)
             Image(systemName: "chevron.right").font(.system(size: 17)).foregroundStyle(Theme.inkSoft)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
     }
-
-    private func lastEnd(_ line: LiveModel.Line) -> Int { live.turnEnd[line.id] ?? live.tMs }
 }
 
 /// One person: what you know, what you owe each other, what they said.

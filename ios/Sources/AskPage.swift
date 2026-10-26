@@ -101,28 +101,27 @@ struct AskPage: View {
         .padding(.top, 8)
     }
 
-    /// Two rows of things to say, always there, so a full evening never leaves you staring at an empty box.
+    /// Three things to say, always there, one row: people type or talk, they don't scroll a shelf.
     private var suggestionRows: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHGrid(rows: [GridItem(.fixed(40), spacing: 8), GridItem(.fixed(40), spacing: 8)], alignment: .top, spacing: 8) {
-                ForEach(chips, id: \.self) { c in
-                    Button { ask(c) } label: {
-                        Text(c)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(suggested.contains(c) ? Theme.paper : Theme.ink)
-                            .lineLimit(1)
-                            .padding(.horizontal, 14)
-                            .frame(height: 40)
-                            .background(Capsule().fill(suggested.contains(c) ? Theme.accent : Theme.paperDeep))
-                            .overlay(Capsule().stroke(Theme.rule, lineWidth: suggested.contains(c) ? 0 : 0.5))
-                    }
-                    .buttonStyle(.plain)
+        HStack(spacing: 8) {
+            ForEach(Array(chips.prefix(3)), id: \.self) { c in
+                Button { ask(c) } label: {
+                    Text(c)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(suggested.contains(c) ? Theme.paper : Theme.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .padding(.horizontal, 12)
+                        .frame(height: 38)
+                        .background(Capsule().fill(suggested.contains(c) ? Theme.accent : Theme.paperDeep))
+                        .overlay(Capsule().stroke(Theme.rule, lineWidth: suggested.contains(c) ? 0 : 0.5))
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
         }
-        .frame(height: 104)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
     private func bubble(_ text: String, mine: Bool) -> some View {

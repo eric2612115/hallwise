@@ -89,10 +89,15 @@ struct MainView: View {
                     .foregroundStyle(Theme.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
-                Text(stateText)
-                    .font(.caption)
-                    .foregroundStyle(Theme.inkSoft)
-                    .lineLimit(1)
+                HStack(spacing: 5) {
+                    if app.listening {
+                        Circle().fill(app.paused ? Theme.inkSoft : Theme.live).frame(width: 7, height: 7)
+                    }
+                    Text(stateText)
+                        .font(.caption)
+                        .foregroundStyle(Theme.inkSoft)
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 4)
@@ -116,18 +121,6 @@ struct MainView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("For you")
-            if app.listening {
-                HStack(spacing: 6) {
-                    Circle().fill(app.paused ? Theme.inkSoft : Theme.live).frame(width: 9, height: 9)
-                    Text(mmss(app.live.tMs))
-                        .font(.system(size: 17, weight: .semibold).monospacedDigit())
-                        .foregroundStyle(Theme.ink)
-                }
-                .padding(.horizontal, 12)
-                .frame(height: 36)
-                .background(Capsule().fill(Theme.paperDeep))
-                .fixedSize()
-            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 6)
