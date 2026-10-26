@@ -20,6 +20,8 @@ targets:
         NSMicrophoneUsageDescription: Hallwise listens to the conversations you have, to remember who you met and what you promised.
         NSMotionUsageDescription: Hallwise uses the badge's orientation to keep everyone's position steady while you turn.
         NSLocalNetworkUsageDescription: Hallwise streams audio to your Hallwise server on this network.
+        NSCameraUsageDescription: One photo of the people you are talking to, so each card gets a face.
+        NSPhotoLibraryUsageDescription: Pick a photo of the people you are talking to, so each card gets a face.
         NSLocationWhenInUseUsageDescription: Hallwise notes where a recording happened, so an evening is filed under its venue.
         NSCalendarsFullAccessUsageDescription: Hallwise reads your calendar so the times it proposes for follow-ups don't collide with what you already have.
         NSAppTransportSecurity:

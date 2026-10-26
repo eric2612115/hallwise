@@ -45,6 +45,8 @@ struct RoomPage: View {
     @Binding var showBadge: Bool
     @State private var selected: LiveModel.Person?
     @State private var confirmStop = false
+    @State private var showCamera = false
+    @State private var taken: TakenPhoto?
 
     var body: some View {
         VStack(spacing: 14) {
@@ -52,6 +54,38 @@ struct RoomPage: View {
                 selected = person
             }
             .padding(.horizontal, 8)
+            .overlay(alignment: .topTrailing) {
+                // one photo, everyone gets a face
+                if !live.peopleOrder.isEmpty {
+                    Button { showCamera = true } label: {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Theme.ink)
+                            .frame(width: 48, height: 48)
+                            .background(Circle().fill(Theme.paperDeep))
+                            .overlay(Circle().stroke(Theme.rule, lineWidth: 0.5))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 16)
+                    .accessibilityLabel("Photo of the people here")
+                }
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                PhotoPicker { image in
+                    showCamera = false
+                    // let the camera go away before the sheet comes up, or the two presentations fight
+                    if let image {
+                        let photo = image.normalised()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { taken = TakenPhoto(image: photo) }
+                    }
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(item: $taken) { t in
+                PhotoMatchSheet(photo: t.image, app: app, live: live, settings: settings)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
             controls
             met
             Spacer(minLength: 0)
@@ -121,7 +155,7 @@ struct RoomPage: View {
                 ForEach(Array(people.suffix(6).reversed())) { p in
                     Button { selected = p } label: {
                         HStack(spacing: 8) {
-                            Circle().fill(live.color(for: p.id)).frame(width: 10, height: 10)
+                            FaceDot(live: live, key: p.id, size: 10)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(p.name)
                                     .font(.system(size: 15, weight: .semibold, design: .serif))
@@ -234,11 +268,9 @@ struct PersonRow: View {
     var body: some View {
         let talking = person.speakers.contains(live.activeSpeaker ?? "")
         HStack(spacing: 14) {
-            Circle()
-                .fill(live.color(for: person.id))
-                .frame(width: talking ? 16 : 12, height: talking ? 16 : 12)
+            FaceDot(live: live, key: person.id, size: talking ? 16 : 12, ring: talking)
                 .shadow(color: talking ? live.color(for: person.id).opacity(0.6) : .clear, radius: 6)
-                .frame(width: 20, height: 20)
+                .frame(width: 32, height: 32)
                 .animation(.easeInOut(duration: 0.2), value: talking)
             VStack(alignment: .leading, spacing: 3) {
                 Text(person.name)
@@ -274,13 +306,16 @@ struct PersonDetail: View {
             PaperBackground()
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .top, spacing: 14) {
+                        if live.photos[person.id] != nil { FaceDot(live: live, key: person.id, size: 32, ring: true) }
+                        VStack(alignment: .leading, spacing: 4) {
                         Text(person.name).font(.system(size: 26, weight: .bold, design: .serif)).foregroundStyle(Theme.ink)
                         Text([person.company, person.role].filter { !$0.isEmpty }.joined(separator: " · "))
                             .foregroundStyle(Theme.inkSoft)
                         HStack(spacing: 6) {
                             if !person.language.isEmpty { Tag(text: "speaks \(person.language)") }
                             if !person.introducedBy.isEmpty { Tag(text: "via \(live.name(for: person.introducedBy))") }
+                        }
                         }
                     }
                     .padding(.vertical, 4)

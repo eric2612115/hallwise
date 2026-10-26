@@ -50,6 +50,34 @@ final class LiveModel: ObservableObject {
         let promises: [PastPromise]
     }
 
+    @Published var photos: [String: UIImage] = [:]        // a face per person key, from the owner's photos
+    var recordingID = ""                                   // where faces are kept on disk
+
+    /// Keep a face for a person, on screen and on disk under the recording.
+    func setPhoto(_ image: UIImage?, for key: String) {
+        photos[key] = image
+        let dir = Self.photoDir(recordingID)
+        let file = dir.appendingPathComponent(key + ".jpg")
+        if let image, let data = image.jpegData(compressionQuality: 0.85) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try? data.write(to: file)
+        } else {
+            try? FileManager.default.removeItem(at: file)
+        }
+    }
+
+    /// Faces saved earlier for this recording, when a person turns up again (a relaunch, a replay).
+    func loadPhoto(for key: String) {
+        guard photos[key] == nil, !recordingID.isEmpty else { return }
+        let file = Self.photoDir(recordingID).appendingPathComponent(key + ".jpg")
+        if let data = try? Data(contentsOf: file), let image = UIImage(data: data) { photos[key] = image }
+    }
+
+    static func photoDir(_ rid: String) -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("photos").appendingPathComponent(rid)
+    }
+
     @Published var history: [String: History] = [:]       // by person key
     @Published var speakerFirstMs: [String: Int] = [:]     // when each voice was first heard
 
@@ -187,7 +215,7 @@ final class LiveModel: ObservableObject {
     func reset() {
         people = [:]; peopleOrder = []; promises = [:]; promiseOrder = []; speakerAzimuth = [:]; speakerLevel = [:]
         ownerSpeakers = []; lines = []; turnKind = [:]; turnStart = [:]; turnEnd = [:]
-        suspects = []; moves = [:]; topics = []; translations = [:]; history = [:]; speakerFirstMs = [:]
+        suspects = []; moves = [:]; topics = []; translations = [:]; history = [:]; speakerFirstMs = [:]; photos = [:]
         tMs = 0; lastSpeaker = nil; donePromises = []; dismissedNotices = []; calendarAdded = []
     }
 
@@ -270,7 +298,7 @@ final class LiveModel: ObservableObject {
             }
         case "person":
             guard let key = e["key"] as? String else { return }
-            if people[key] == nil { peopleOrder.append(key) }
+            if people[key] == nil { peopleOrder.append(key); loadPhoto(for: key) }
             people[key] = Person(
                 id: key,
                 name: e["name"] as? String ?? key,

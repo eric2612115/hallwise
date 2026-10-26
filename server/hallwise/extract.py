@@ -321,11 +321,21 @@ class SparkClient:
         self.last_seconds = 0.0
 
     async def __call__(
-        self, system: str, user: str, schema: dict[str, Any] = SCHEMA, name: str = "hallwise_record"
+        self,
+        system: str,
+        user: str,
+        schema: dict[str, Any] = SCHEMA,
+        name: str = "hallwise_record",
+        images: list[tuple[str, str]] | None = None,  # (mime, base64)
     ) -> dict[str, Any]:
+        content: Any = user
+        if images:
+            content = [{"type": "text", "text": user}] + [
+                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}} for mime, b64 in images
+            ]
         body = {
             "model": self.model,
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": content}],
             "response_format": {"type": "json_schema", "json_schema": {"name": name, "schema": schema}},
             "reasoning_effort": self.effort,
         }

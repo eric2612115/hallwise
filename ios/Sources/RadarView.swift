@@ -115,12 +115,20 @@ struct RadarView: View {
                         .frame(width: 30, height: 30)
                         .modifier(Ripple(trigger: rippleTurn))
                 }
-                Circle()
-                    .fill(b.color)
-                    .frame(width: b.active ? 22 : 16, height: b.active ? 22 : 16)
-                    .overlay(Circle().stroke(Theme.paper, lineWidth: 2))
-                    .overlay(Circle().stroke(b.active || b.recent || b.known ? b.color : .clear, lineWidth: 1.5).padding(-3))
-                    .shadow(color: b.active ? b.color.opacity(0.7) : .clear, radius: 10)
+                Group {
+                    if let person = b.person, let face = live.photos[person.id] {
+                        Image(uiImage: face).resizable().scaledToFill()
+                            .frame(width: b.active ? 30 : 24, height: b.active ? 30 : 24).clipShape(Circle())
+                            .overlay(Circle().stroke(b.color, lineWidth: 2))
+                    } else {
+                        Circle()
+                            .fill(b.color)
+                            .frame(width: b.active ? 22 : 16, height: b.active ? 22 : 16)
+                            .overlay(Circle().stroke(Theme.paper, lineWidth: 2))
+                    }
+                }
+                .overlay(Circle().stroke(b.active || b.recent || b.known ? b.color : .clear, lineWidth: 1.5).padding(-3))
+                .shadow(color: b.active ? b.color.opacity(0.7) : .clear, radius: 10)
             }
             .frame(width: 32, height: 32)
             let label = Text(b.label)

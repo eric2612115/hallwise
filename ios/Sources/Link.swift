@@ -71,6 +71,21 @@ final class ServerLink: ObservableObject {
         publish("finishing")
     }
 
+    /// A photo of the people around the badge, with who is where; back come the faces and who each one is.
+    func matchPhoto(base: String, recording: String, jpeg: Data, people: [[String: Any]], hint: String) async throws -> [String: Any] {
+        guard let url = URL(string: Self.httpBase(base) + "/api/recordings/\(recording)/photo") else { throw URLError(.badURL) }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.timeoutInterval = 120
+        req.httpBody = try JSONSerialization.data(withJSONObject: [
+            "image_b64": jpeg.base64EncodedString(), "mime": "image/jpeg", "people": people, "hint": hint,
+        ])
+        let (data, response) = try await urlSession.data(for: req)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+
     /// Everyone the owner has met, across recordings, newest encounter first.
     func fetchPeople(base: String) async -> [[String: Any]] {
         guard let url = URL(string: Self.httpBase(base) + "/api/people"),

@@ -38,6 +38,7 @@ final class AppModel: ObservableObject {
 
     init() {
         link.onEvent = { [weak self] event in self?.live.apply(event) }
+        link.$recordingID.sink { [weak self] rid in self?.live.recordingID = rid ?? "" }.store(in: &bag)
         link.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
         settings.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
         live.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)

@@ -6,6 +6,7 @@
     /api/recordings/{id}/events one recording's event log
     /api/recordings/{id}/ask    a typed question about the recording, answered by Muse Spark
     /api/people                 everyone met across recordings, with each encounter and promise
+    /api/recordings/{id}/photo  a photo of the people around the badge; Muse Spark says which face is which
     /ask/{recording}            a spoken question: PCM in, Muse Voice Transcribe, then the same answer
 
 Run: ./run.sh (reads ../.env; HALLWISE_ASR=fake runs offline). Port 8790.
@@ -27,6 +28,8 @@ from .asr import MetaRealtimeAsr, make_asr_factory
 from .events import fold_record, read_events
 from .extract import Extractor, SparkClient
 from .people import people_index
+from .photo import match_photo, save_photo
+from .events import EventLog
 from .recording import Hello, Recording
 
 
@@ -34,6 +37,13 @@ class Question(BaseModel):
     question: str
     history: list[dict[str, str]] = []
     keywords: list[str] = []
+
+
+class Photo(BaseModel):
+    image_b64: str
+    mime: str = "image/jpeg"
+    people: list[dict[str, Any]] = []  # key, name, company, bearing
+    hint: str = ""
 
 
 def spark_extractor_factory() -> Callable[[Hello], Extractor | None] | None:
@@ -177,6 +187,27 @@ def create_app(
         for meta in metas:
             meta["live"] = meta["id"] in live
         return sorted(metas, key=lambda m: m["started"], reverse=True)
+
+    @app.post("/api/recordings/{rid}/photo")
+    async def photo(rid: str, body: Photo) -> dict[str, Any]:
+        """A photo of the people around the badge: Spark says which face is which; the original is kept."""
+        if spark is None:
+            raise HTTPException(503, "MODEL_API_KEY is not set")
+        root = data / "recordings" / rid
+        if not (root / "meta.json").exists():
+            raise HTTPException(404, "no such recording")
+        result = await match_photo(spark, body.image_b64, body.mime, body.people, body.hint)
+        name = save_photo(root, body.image_b64, body.mime)
+        rec = live.get(rid)
+        event = {"file": name, "faces": result["faces"]}
+        if rec is not None:
+            rec.log.emit("photo", rec.now_ms, **event)
+        else:
+            log = EventLog(root / "events.jsonl")
+            last = max((e.get("t_ms", 0) for e in read_events(root / "events.jsonl")), default=0)
+            log.emit("photo", last, **event)
+            log.close()
+        return {"file": name, **result}
 
     @app.get("/api/people")
     def people(exclude: str | None = None) -> list[dict[str, Any]]:
