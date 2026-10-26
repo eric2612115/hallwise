@@ -136,7 +136,9 @@ The friend's lines are their own words, about 30 words in all; keep the scene to
 6. [FRIEND]: Come, you should meet Margaux and Julien.
 
 Panels: [FRIEND] appears as a dot toward the door, lit while they talk. Owe: deck → [FRIEND], tonight. The
-photo: three seconds after the shot, the friend's card and the dot carry their face. Words: "Hallwise"
+photo: about seven seconds after the shot (SAM finds the face, Spark says who it is), the friend's card and the
+dot carry their face; keep talking through the wait. Caption: "SAM 3.1 finds the faces · Muse Spark matches
+them by where each voice came from". Words: "Hallwise"
 (expected back as "Hall Wise" or "hallways").
 
 The friend walks Eric to sofa 1 (0:53–0:57).
@@ -286,6 +288,8 @@ End card (2:58–3:00).
 - The drafts take five to ten seconds after Stop; hold the shot on Eric until the first chip lands.
 - The calendar editor must be prefilled on the follow phone, not the badge phone: for the take, tap Add to
   calendar on the follow phone (same server, same drafts).
-- The photo at the door: one face, one person, so the match is trivial; still wait for the card to show the
-  face before moving on.
+- The photo at the door: one face, one person, so the match is trivial, but it takes about seven seconds; the
+  first SAM call of the day can take nine. Take one warm-up photo before the take.
+- On the real iPhone, check once that a talker on the left lights the left dot with the badge hanging upside
+  down: if iOS already corrects the microphones for orientation, the server's mirroring would flip it twice.
 - Live diarization must keep up in a noisy room; if not, use the replay fallback and its caption.
