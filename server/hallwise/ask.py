@@ -14,6 +14,7 @@ from .extract import LLM, _INT_LIST, _STR, _STR_LIST, _obj, slug  # noqa: F401
 
 ASK_SCHEMA: dict[str, Any] = _obj(
     answer={**_STR, "description": "the reply, in the language of the question"},
+    suggestions={**_STR_LIST, "description": "two or three things the owner would plausibly say next, each under 7 words, in the question's language: a follow-up question or a command ('mark the deck done', 'open Margaux's draft')"},
     actions={
         "type": "array",
         "items": _obj(
@@ -39,6 +40,8 @@ Rules:
 - Promises: say who owes what to whom and the due date as finally agreed; mention a correction only if asked.
 - Follow-ups: when a draft exists for a promise, say so and offer it; open_draft with its promise_key when the
   owner asks to see, send or check it.
+- suggestions: two or three next things to say that the record can actually answer or do, specific to what
+  was just discussed (a person, a promise, a draft), never generic. Same language as the question.
 - Actions: mark_done when the owner says a promise is done, sent, or handled; add_word when the owner says to
   remember, add, or spell a name or term; otherwise none. Actions carry the exact key from the record. Confirm
   what you did in the answer."""
@@ -129,7 +132,8 @@ async def answer(llm: LLM, record: dict[str, Any], moves: list[dict[str, Any]], 
             continue
         if a["type"] != "none":
             actions.append(a)
-    return {"answer": result.get("answer", ""), "actions": actions}
+    suggestions = [str(x).strip() for x in result.get("suggestions", []) if str(x).strip()][:3]
+    return {"answer": result.get("answer", ""), "actions": actions, "suggestions": suggestions}
 
 
 def latest_moves(events: list[dict[str, Any]]) -> list[dict[str, Any]]:

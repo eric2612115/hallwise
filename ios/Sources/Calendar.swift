@@ -49,6 +49,7 @@ struct CalendarEditor: UIViewControllerRepresentable {
     let start: Date
     let minutes: Int
     let notes: String
+    var onSaved: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> EKEventEditViewController {
@@ -66,12 +67,14 @@ struct CalendarEditor: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ vc: EKEventEditViewController, context: Context) {}
-    func makeCoordinator() -> Coordinator { Coordinator(dismiss: dismiss) }
+    func makeCoordinator() -> Coordinator { Coordinator(dismiss: dismiss, onSaved: onSaved) }
 
     final class Coordinator: NSObject, EKEventEditViewDelegate {
         let dismiss: DismissAction
-        init(dismiss: DismissAction) { self.dismiss = dismiss }
+        let onSaved: () -> Void
+        init(dismiss: DismissAction, onSaved: @escaping () -> Void) { self.dismiss = dismiss; self.onSaved = onSaved }
         func eventEditViewController(_ controller: EKEventEditViewController, didCompleteWith action: EKEventEditViewAction) {
+            if action == .saved { onSaved() }
             dismiss()
         }
     }

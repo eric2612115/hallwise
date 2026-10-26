@@ -8,6 +8,7 @@ struct MainView: View {
     @State private var tab: Page = .room
     @State private var showMenu = false
     @State private var showTranscript = false
+    @State private var showNotices = false
 
     var body: some View {
         ZStack {
@@ -31,6 +32,11 @@ struct MainView: View {
         .sheet(isPresented: $showMenu) {
             MenuSheet(settings: app.settings, showBadge: $showBadge, showTranscript: $showTranscript)
                 .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showNotices) {
+            NoticesSheet(live: app.live, settings: app.settings) { tab = .words }
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showTranscript) {
@@ -88,8 +94,28 @@ struct MainView: View {
                     .foregroundStyle(Theme.inkSoft)
                     .lineLimit(1)
             }
-            .layoutPriority(1)
-            Spacer(minLength: 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer(minLength: 4)
+            Button { showNotices = true } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: app.live.notices.isEmpty ? "bell" : "bell.fill")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(Theme.ink)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(Theme.paperDeep))
+                    if !app.live.notices.isEmpty {
+                        Text("\(app.live.notices.count)")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Theme.paper)
+                            .padding(.horizontal, 5)
+                            .frame(minWidth: 18, minHeight: 18)
+                            .background(Capsule().fill(Theme.live))
+                            .offset(x: 3, y: -3)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("For you")
             if app.listening {
                 HStack(spacing: 6) {
                     Circle().fill(app.paused ? Theme.inkSoft : Theme.live).frame(width: 9, height: 9)
@@ -100,6 +126,7 @@ struct MainView: View {
                 .padding(.horizontal, 12)
                 .frame(height: 36)
                 .background(Capsule().fill(Theme.paperDeep))
+                .fixedSize()
             }
         }
         .padding(.horizontal, 16)

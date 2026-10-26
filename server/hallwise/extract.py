@@ -101,6 +101,8 @@ NEXT_SCHEMA: dict[str, Any] = _obj(
             duration_minutes={"type": "integer"},
             attach={**_STR, "description": "'deck', 'one_pager', 'blurb' or '' — only ones the owner has"},
             why={**_STR, "description": "one line: why this move, and for calendar what the time avoids"},
+            remind_at={**_STR, "description": "ISO 8601 with the owner's offset: when to remind the owner if this is still not sent; empty if no due"},
+            nudge={**_STR, "description": "the reminder line, under 10 words, e.g. 'Deck for Kevin is due tonight'"},
         ),
     },
 )
@@ -124,6 +126,9 @@ Write exactly one move per promise:
 - attach: "deck" when the promise is about slides, a deck or a pitch; "one_pager" for a one-pager, overview or
   intro document; "blurb" when they asked for a short bio or intro text; else "". Use only links the owner has.
   Do not paste the link into body; the phone adds it.
+- remind_at: when to nudge the owner if the move is still not sent. "tonight" → 20:00 today; "tomorrow" →
+  10:00 tomorrow; a named day → 09:00 that day; a meeting → 09:00 the day before; no due → empty. nudge is the
+  notification line: what, to whom, by when, under ten words.
 - Sign off with the owner's first name only."""
 
 

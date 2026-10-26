@@ -309,7 +309,7 @@ struct PromiseRow: View {
         HStack(alignment: .top, spacing: 12) {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
-                    if done { live.donePromises.remove(promise.id) } else { live.donePromises.insert(promise.id) }
+                    if done { live.markUndone(promise.id) } else { live.markDone(promise.id) }
                 }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
@@ -466,8 +466,10 @@ struct MoveSheet: View {
         .sheet(item: $share) { ShareSheet(items: $0.items) }
         .sheet(isPresented: $calendar) {
             if let when {
-                CalendarEditor(title: "\(person) · \(promise.what)", start: when, minutes: move.durationMinutes, notes: text)
-                    .ignoresSafeArea()
+                CalendarEditor(title: "\(person) · \(promise.what)", start: when, minutes: move.durationMinutes, notes: text) {
+                    live.calendarAdded.insert(promise.id)
+                }
+                .ignoresSafeArea()
             }
         }
     }

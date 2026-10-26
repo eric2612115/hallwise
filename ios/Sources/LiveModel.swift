@@ -42,6 +42,57 @@ final class LiveModel: ObservableObject {
         let durationMinutes: Int
         let attach: String      // deck, one_pager, blurb or ""
         let why: String
+        let remindAt: String    // ISO 8601: when to tap the owner if this is still not sent
+        let nudge: String       // the reminder line
+    }
+
+    /// What Hallwise would tap you on the shoulder about: drafts waiting to go, a time not yet on the
+    /// calendar, words to settle.
+    struct Notice: Identifiable {
+        enum Kind { case send, calendar, word }
+        let id: String
+        let title: String
+        let detail: String
+        let kind: Kind
+        let promiseKey: String?
+    }
+
+    @Published var dismissedNotices: Set<String> = []
+    @Published var calendarAdded: Set<String> = []
+
+    var notices: [Notice] {
+        var out: [Notice] = []
+        for key in promiseOrder where !donePromises.contains(key) {
+            guard let p = promises[key], let m = moves[key] else { continue }
+            let who = p.owedBy == "owner" ? name(for: p.owedTo) : name(for: p.owedBy)
+            let due = p.due.isEmpty ? "" : " · \(p.due)"
+            if m.kind == "calendar" {
+                guard !calendarAdded.contains(key) else { continue }
+                out.append(Notice(id: "cal:" + key, title: m.nudge.isEmpty ? "Put \(who) on the calendar" : m.nudge,
+                                  detail: p.what + due, kind: .calendar, promiseKey: key))
+            } else if m.kind == "nudge" {
+                out.append(Notice(id: "nudge:" + key, title: m.nudge.isEmpty ? "Nudge \(who) in a few days" : m.nudge,
+                                  detail: p.what + due, kind: .send, promiseKey: key))
+            } else {
+                out.append(Notice(id: "send:" + key, title: m.nudge.isEmpty ? "Send to \(who)" : m.nudge,
+                                  detail: p.what + due, kind: .send, promiseKey: key))
+            }
+        }
+        if !suspects.isEmpty {
+            out.append(Notice(id: "words", title: suspects.count == 1 ? "One word to confirm" : "\(suspects.count) words to confirm",
+                              detail: suspects.prefix(3).map(\.likely).joined(separator: ", "), kind: .word, promiseKey: nil))
+        }
+        return out.filter { !dismissedNotices.contains($0.id) }
+    }
+
+    func markDone(_ key: String) {
+        donePromises.insert(key)
+        Reminders.cancel(key)
+    }
+
+    func markUndone(_ key: String) {
+        donePromises.remove(key)
+        if let m = moves[key] { Reminders.schedule(m, promise: promises[key]) }
     }
 
     struct Suspect: Identifiable {
@@ -107,7 +158,7 @@ final class LiveModel: ObservableObject {
         people = [:]; peopleOrder = []; promises = [:]; promiseOrder = []; speakerAzimuth = [:]; speakerLevel = [:]
         ownerSpeakers = []; lines = []; turnKind = [:]; turnStart = [:]; turnEnd = [:]
         suspects = []; moves = [:]; topics = []; translations = [:]
-        tMs = 0; lastSpeaker = nil; donePromises = []
+        tMs = 0; lastSpeaker = nil; donePromises = []; dismissedNotices = []; calendarAdded = []
     }
 
     /// A room bearing as seen from the badge now (degrees, 0 = ahead, positive = left).
@@ -240,8 +291,11 @@ final class LiveModel: ObservableObject {
                 when: e["when"] as? String ?? "",
                 durationMinutes: e["duration_minutes"] as? Int ?? 30,
                 attach: e["attach"] as? String ?? "",
-                why: e["why"] as? String ?? ""
+                why: e["why"] as? String ?? "",
+                remindAt: e["remind_at"] as? String ?? "",
+                nudge: e["nudge"] as? String ?? ""
             )
+            if !donePromises.contains(key), let m = moves[key] { Reminders.schedule(m, promise: promises[key]) }
         case "room_topics":
             topics = e["topics"] as? [String] ?? []
         default:

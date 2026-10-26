@@ -21,15 +21,25 @@ struct AskPage: View {
     @State private var thread: [Exchange] = []
     @State private var holding = false
     @State private var draft: DraftRef?
+    @State private var suggested: [String] = []  // what the last answer thought you'd say next
     @FocusState private var focused: Bool
 
-    struct DraftRef: Identifiable {
-        let id: String
-        let move: LiveModel.Move
-        let promise: LiveModel.Promise
+    /// Things worth saying right now, from the record: the first open promise, the last person who spoke,
+    /// then the standing questions. The answer's own suggestions go first when there are any.
+    private var chips: [String] {
+        var out: [String] = suggested
+        if let p = live.promiseOrder.compactMap({ live.promises[$0] }).first(where: { !live.donePromises.contains($0.id) && $0.owedBy == "owner" }) {
+            out.append("Mark “\(p.what)” done")
+            if live.moves[p.id] != nil { out.append("Open the draft for \(live.name(for: p.owedTo))") }
+        }
+        if let last = live.lines.last(where: { !live.ownerSpeakers.contains($0.speaker) }) {
+            out.append("What did \(live.speakerName(last.speaker)) say?")
+        }
+        if !live.suspects.isEmpty, let w = live.suspects.first { out.append("Remember “\(w.likely)”") }
+        out += ["What do I owe?", "Who did I meet?", "What's due tonight?", "Any drafts ready?", "我今晚答應了誰什麼？"]
+        var seen: Set<String> = []
+        return out.filter { seen.insert($0).inserted }
     }
-
-    private let starters = ["Who did I meet?", "What do I owe?", "我今晚答應了誰什麼？", "Any drafts ready?"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -66,6 +76,7 @@ struct AskPage: View {
                 .onChange(of: thread.last?.pending ?? false) { _, _ in withAnimation { proxy.scrollTo("end", anchor: .bottom) } }
             }
             .scrollDismissesKeyboard(.interactively)
+            suggestionRows
             inputBar
         }
         .onAppear {
@@ -83,25 +94,35 @@ struct AskPage: View {
             Text("Ask about tonight")
                 .font(.system(size: 24, weight: .bold, design: .serif))
                 .foregroundStyle(Theme.ink)
-            Text("Who you met, what you owe, what someone said, which drafts are ready. Say a promise is done and it gets ticked; say a name and it is remembered.")
+            Text("Who you met, what you owe, what someone said, which drafts are ready. Say a promise is done and it gets ticked; say a name and it is remembered. Tap a chip below when you don't know what to ask.")
                 .font(.system(size: 15, design: .serif))
                 .foregroundStyle(Theme.inkSoft)
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(starters, id: \.self) { s in
-                    Button { ask(s) } label: {
-                        Text(s)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.ink)
+        }
+        .padding(.top, 8)
+    }
+
+    /// Two rows of things to say, always there, so a full evening never leaves you staring at an empty box.
+    private var suggestionRows: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHGrid(rows: [GridItem(.fixed(40), spacing: 8), GridItem(.fixed(40), spacing: 8)], alignment: .top, spacing: 8) {
+                ForEach(chips, id: \.self) { c in
+                    Button { ask(c) } label: {
+                        Text(c)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(suggested.contains(c) ? Theme.paper : Theme.ink)
+                            .lineLimit(1)
                             .padding(.horizontal, 14)
-                            .frame(height: 44)
-                            .background(Capsule().fill(Theme.paperDeep))
-                            .overlay(Capsule().stroke(Theme.rule, lineWidth: 0.5))
+                            .frame(height: 40)
+                            .background(Capsule().fill(suggested.contains(c) ? Theme.accent : Theme.paperDeep))
+                            .overlay(Capsule().stroke(Theme.rule, lineWidth: suggested.contains(c) ? 0 : 0.5))
                     }
                     .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
-        .padding(.top, 8)
+        .frame(height: 104)
     }
 
     private func bubble(_ text: String, mine: Bool) -> some View {
@@ -210,13 +231,14 @@ struct AskPage: View {
         thread[i].answer = answer
         thread[i].actions = (msg["actions"] as? [[String: Any]] ?? []).compactMap(apply)
         thread[i].pending = false
+        suggested = (msg["suggestions"] as? [String] ?? []).filter { !$0.isEmpty }
     }
 
     private func apply(_ a: [String: Any]) -> String? {
         switch a["type"] as? String {
         case "mark_done":
             guard let key = a["promise_key"] as? String, let p = live.promises[key] else { return nil }
-            live.donePromises.insert(key)
+            live.markDone(key)
             return "Ticked off: \(p.what)"
         case "add_word":
             guard let w = a["word"] as? String, !w.isEmpty else { return nil }
