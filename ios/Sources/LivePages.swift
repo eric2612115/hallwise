@@ -21,17 +21,62 @@ enum Page: Int, CaseIterable, Identifiable {
 // MARK: - Room
 
 struct RoomPage: View {
+    @ObservedObject var app: AppModel
     @ObservedObject var live: LiveModel
     @ObservedObject var settings: BadgeSettings
+    @Binding var showBadge: Bool
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             RadarView(live: live, offset: settings.yawOffset)
                 .padding(.horizontal, 8)
+            controls
             subtitle
             Spacer(minLength: 0)
         }
-        .padding(.top, 8)
+        .padding(.top, 4)
+    }
+
+    /// The one control that matters, in the middle where a thumb lands. Start flips back to the badge:
+    /// the phone goes on the chest, name out, and Hallwise listens from there.
+    @ViewBuilder
+    private var controls: some View {
+        if app.listening {
+            HStack(spacing: 14) {
+                bigButton(app.paused ? "Resume" : "Pause", icon: app.paused ? "play.fill" : "pause.fill",
+                          fill: Theme.paperDeep, text: Theme.ink) {
+                    app.paused ? app.resume() : app.pause()
+                }
+                bigButton("Stop", icon: "stop.fill", fill: Theme.live, text: Theme.paper) { app.stop() }
+            }
+            .padding(.horizontal, 24)
+        } else {
+            VStack(spacing: 8) {
+                bigButton("Start", icon: "mic.fill", fill: Theme.accent, text: Theme.paper) {
+                    app.start()
+                    withAnimation(.easeInOut(duration: 0.35)) { showBadge = true }
+                }
+                .padding(.horizontal, 60)
+                Text("Your badge comes back up. Hallwise listens from your chest.")
+                    .font(.system(size: 13, design: .serif))
+                    .foregroundStyle(Theme.inkSoft)
+            }
+        }
+    }
+
+    private func bigButton(_ title: String, icon: String, fill: Color, text: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(.system(size: 18, weight: .semibold))
+                Text(title).font(.system(size: 20, weight: .semibold))
+            }
+            .foregroundStyle(text)
+            .frame(maxWidth: .infinity)
+            .frame(height: 64)
+            .background(Capsule().fill(fill))
+            .overlay(Capsule().stroke(Theme.rule, lineWidth: fill == Theme.paperDeep ? 1 : 0))
+        }
+        .buttonStyle(.plain)
     }
 
     /// The last thing said, big enough to read on video, with its translation when there is one.
@@ -58,10 +103,6 @@ struct RoomPage: View {
             .background(RoundedRectangle(cornerRadius: 12).fill(Theme.paperDeep))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.rule, lineWidth: 0.5))
             .padding(.horizontal, 16)
-        } else {
-            Text(live.lines.isEmpty ? "Start, then walk up to someone." : "")
-                .font(.system(size: 15, design: .serif))
-                .foregroundStyle(Theme.inkSoft)
         }
     }
 }

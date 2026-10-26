@@ -16,6 +16,8 @@ final class BadgeCapture: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate
     var onAudio: ((Data) -> Void)?
     var onPose: ((_ tMs: Int, _ yaw: Double, _ pitch: Double, _ roll: Double) -> Void)?
     var onError: ((String) -> Void)?
+    /// While muted nothing leaves the phone (audio or pose); the local file keeps the full take.
+    var muted = false
     private(set) var recordingURL: URL?
 
     private let session = AVCaptureSession()
@@ -83,7 +85,7 @@ final class BadgeCapture: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate
         guard motion.isDeviceMotionAvailable else { return }
         motion.deviceMotionUpdateInterval = 0.1
         motion.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: OperationQueue()) { [weak self] data, _ in
-            guard let self, let a = data?.attitude else { return }
+            guard let self, !self.muted, let a = data?.attitude else { return }
             let tMs = self.clockLock.withLock { Int(Double(self.framesCaptured) / self.sampleRate * 1000) }
             let deg = 180 / Double.pi
             self.onPose?(tMs, a.yaw * deg, a.pitch * deg, a.roll * deg)
@@ -109,8 +111,10 @@ final class BadgeCapture: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate
             onFormat?(Format(sampleRate: Int(format.sampleRate), channels: channels, layout: layout))
         }
         try? file?.write(from: buffer)
-        onAudio?(interleavedInt16(buffer))
-        clockLock.withLock { framesCaptured += Int(frames) }
+        if !muted {
+            onAudio?(interleavedInt16(buffer))
+            clockLock.withLock { framesCaptured += Int(frames) }
+        }
     }
 
     private func openFile(_ format: AVAudioFormat) {

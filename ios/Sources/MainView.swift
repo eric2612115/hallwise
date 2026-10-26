@@ -16,7 +16,7 @@ struct MainView: View {
                 header
                 Group {
                     switch tab {
-                    case .room: RoomPage(live: app.live, settings: app.settings)
+                    case .room: RoomPage(app: app, live: app.live, settings: app.settings, showBadge: $showBadge)
                     case .people: PeoplePage(live: app.live, settings: app.settings)
                     case .owe: OwePage(live: app.live)
                     case .words: WordsPage(live: app.live, settings: app.settings)
@@ -55,19 +55,17 @@ struct MainView: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 8)
-            Button { app.listening ? app.stop() : app.start() } label: {
-                HStack(spacing: 8) {
-                    Circle().fill(app.listening ? Theme.live : Theme.paper).frame(width: 10, height: 10)
-                    Text(app.listening ? "Listening" : "Start")
-                        .font(.system(size: 17, weight: .semibold))
+            if app.listening {
+                HStack(spacing: 6) {
+                    Circle().fill(app.paused ? Theme.inkSoft : Theme.live).frame(width: 9, height: 9)
+                    Text(app.paused ? "paused" : "listening")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Theme.inkSoft)
                 }
-                .foregroundStyle(app.listening ? Theme.ink : Theme.paper)
-                .padding(.horizontal, 18)
-                .frame(height: 48)
-                .background(Capsule().fill(app.listening ? Theme.paperDeep : Theme.accent))
-                .overlay(Capsule().stroke(app.listening ? Theme.live : .clear, lineWidth: 1.5))
+                .padding(.horizontal, 12)
+                .frame(height: 32)
+                .background(Capsule().fill(Theme.paperDeep))
             }
-            .accessibilityLabel(app.listening ? "Stop listening" : "Start listening")
         }
         .padding(.horizontal, 16)
         .padding(.top, 6)

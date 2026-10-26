@@ -12,7 +12,7 @@ struct HallwiseApp: App {
                 PaperBackground()  // under the status bar and the home indicator too
                 // Two pages: the badge (worn, facing out) and the app. Swipe, or use the menu.
                 TabView(selection: $badgeShown) {
-                    BadgeView(settings: app.settings, listening: app.listening).tag(true)
+                    BadgeView(settings: app.settings).tag(true)
                     MainView(app: app, showBadge: $badgeShown).tag(false)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
@@ -26,6 +26,7 @@ struct HallwiseApp: App {
 /// Wires the microphones, the server and the live record together.
 final class AppModel: ObservableObject {
     @Published var listening = false
+    @Published var paused = false
     @ObservedObject var settings = BadgeSettings()
     let live = LiveModel()
     let link = ServerLink()
@@ -49,8 +50,23 @@ final class AppModel: ObservableObject {
 
     private var bag = Set<AnyCancellable>()
 
+    /// Pause keeps the recording open but sends nothing; resume carries on in the same recording.
+    func pause() {
+        paused = true
+        capture.muted = true
+        link.status = "paused"
+    }
+
+    func resume() {
+        paused = false
+        capture.muted = false
+        link.status = "listening"
+    }
+
     func start() {
         live.reset()
+        paused = false
+        capture.muted = false
         let settings = self.settings
         if !settings.followRecording.isEmpty {
             link.follow(base: settings.serverURL, recording: settings.followRecording)
@@ -81,6 +97,7 @@ final class AppModel: ObservableObject {
             link.close()
         }
         listening = false
+        paused = false
     }
 }
 

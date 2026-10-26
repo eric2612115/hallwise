@@ -2,9 +2,9 @@ import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 /// The face of the badge: a paper name card, readable from a metre away, with a QR contact card.
+/// Nothing else — no recording light, no app name — so it reads as a badge, not a device.
 struct BadgeView: View {
     @ObservedObject var settings: BadgeSettings
-    let listening: Bool
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -49,15 +49,7 @@ struct BadgeView: View {
                         .padding(.top, -14)
                 }
                 Spacer()
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(listening ? Theme.live : Theme.inkSoft.opacity(0.4))
-                        .frame(width: 9, height: 9)
-                    Text(listening ? "Hallwise is taking notes" : "Hallwise")
-                        .font(.system(size: 15, design: .serif))
-                        .foregroundStyle(Theme.inkSoft)
-                }
-                .padding(.bottom, 28)
+                Spacer(minLength: 28)
             }
             .padding(.horizontal, 32)
         }
