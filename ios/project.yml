@@ -1,0 +1,29 @@
+name: Hallwise
+options:
+  bundleIdPrefix: com.eric2612115
+  deploymentTarget:
+    iOS: "26.0"
+targets:
+  Hallwise:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: Hallwise
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UIStatusBarHidden: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSMicrophoneUsageDescription: Hallwise listens to the conversations you have, to remember who you met and what you promised.
+        NSMotionUsageDescription: Hallwise uses the badge's orientation to keep everyone's position steady while you turn.
+        NSLocalNetworkUsageDescription: Hallwise streams audio to your Hallwise server on this network.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.eric2612115.hallwise
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
