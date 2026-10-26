@@ -155,7 +155,7 @@ class MetaRealtimeAsr:
             self._turns[turn] = {"start_ms": t, "speaker": None}
             self.sink("speech_start", t, turn=turn)
         elif kind == "transcript":
-            self.sink("partial", t, turn=turn, text=event.get("transcript", ""))
+            self.sink("partial", t, turn=turn, text=event.get("transcript", "").strip())
         elif kind == "speaker":
             label = event.get("label")
             if turn is not None:
@@ -169,7 +169,7 @@ class MetaRealtimeAsr:
                 "turn",
                 t,
                 turn=turn,
-                text=event.get("transcript", ""),
+                text=event.get("transcript", "").strip(),
                 speaker=info.get("speaker"),
                 session=self._session,
                 start_ms=info.get("start_ms", t),
