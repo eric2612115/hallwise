@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The room around the badge, seen from above, ahead = up. Each person sits where their voice comes from,
-/// close voices on the inner ring, far ones at the edge, and lights while they talk. Positions are held in
-/// room coordinates by the server, so when the wearer turns the whole ring rotates and nobody drifts.
+/// The room around the badge, seen from above, ahead = up. Each person is a coloured dot where their voice
+/// comes from, close voices on the inner ring, far ones at the edge, lit while they talk. Positions are held
+/// in room coordinates by the server, so when the wearer turns the whole ring rotates and nobody drifts.
 struct RadarView: View {
     @ObservedObject var live: LiveModel
     let offset: Double  // the badge's forward calibration, degrees
@@ -17,7 +17,7 @@ struct RadarView: View {
         let id: String
         let person: LiveModel.Person?
         let label: String
-        let initials: String
+        let color: Color
         let bearing: Double  // degrees, 0 = ahead, positive = left
         let distance: Double // 0 = close, 1 = far
         let active: Bool     // talking now
@@ -39,7 +39,7 @@ struct RadarView: View {
     var body: some View {
         GeometryReader { geo in
             let size = min(geo.size.width, geo.size.height)
-            let c = CGPoint(x: geo.size.width / 2, y: size / 2)
+            let c = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
             let r = size * 0.42
             ZStack {
                 Canvas { ctx, _ in
@@ -106,25 +106,24 @@ struct RadarView: View {
     @ViewBuilder
     private func blipView(_ b: Blip) -> some View {
         if b.named {
-            let disc = ZStack {
+            let dot = ZStack {
                 // a ripple when this person just said something
                 if b.active {
                     Circle()
-                        .stroke(Theme.accent, lineWidth: 1.5)
-                        .frame(width: 48, height: 48)
+                        .stroke(b.color, lineWidth: 1.5)
+                        .frame(width: 30, height: 30)
                         .modifier(Ripple(trigger: rippleTurn))
                 }
-                Text(b.initials)
-                    .font(.system(size: b.active ? 18 : 15, weight: .semibold, design: .serif))
-                    .foregroundStyle(b.active ? Theme.paper : Theme.ink)
-                    .frame(width: b.active ? 48 : 36, height: b.active ? 48 : 36)
-                    .background(Circle().fill(b.active ? Theme.accent : Theme.paperDeep))
-                    .overlay(Circle().stroke(b.active || b.recent ? Theme.accent : Theme.inkSoft, lineWidth: 1.5))
-                    .shadow(color: b.active ? Theme.accent.opacity(0.5) : .clear, radius: 10)
+                Circle()
+                    .fill(b.color)
+                    .frame(width: b.active ? 22 : 16, height: b.active ? 22 : 16)
+                    .overlay(Circle().stroke(Theme.paper, lineWidth: 2))
+                    .overlay(Circle().stroke(b.active || b.recent ? b.color : .clear, lineWidth: 1.5).padding(-3))
+                    .shadow(color: b.active ? b.color.opacity(0.7) : .clear, radius: 10)
             }
-            .frame(width: 48, height: 48)
+            .frame(width: 32, height: 32)
             let label = Text(b.label)
-                .font(.system(size: 14, weight: .semibold, design: .serif))
+                .font(.system(size: 15, weight: .semibold, design: .serif))
                 .foregroundStyle(Theme.ink)
                 .shadow(color: Theme.paper, radius: 2)
                 .shadow(color: Theme.paper, radius: 1)
@@ -134,22 +133,23 @@ struct RadarView: View {
             Group {
                 switch b.side {
                 case .left:
-                    HStack(spacing: 4) { label.frame(width: w, alignment: .trailing); disc; Color.clear.frame(width: w, height: 1) }
+                    HStack(spacing: 4) { label.frame(width: w, alignment: .trailing); dot; Color.clear.frame(width: w, height: 1) }
                 case .right:
-                    HStack(spacing: 4) { Color.clear.frame(width: w, height: 1); disc; label.frame(width: w, alignment: .leading) }
+                    HStack(spacing: 4) { Color.clear.frame(width: w, height: 1); dot; label.frame(width: w, alignment: .leading) }
                 case .above:
-                    VStack(spacing: 2) { label.frame(width: w, height: h); disc; Color.clear.frame(width: 1, height: h) }
+                    VStack(spacing: 1) { label.frame(width: w, height: h); dot; Color.clear.frame(width: 1, height: h) }
                 case .below:
-                    VStack(spacing: 2) { Color.clear.frame(width: 1, height: h); disc; label.frame(width: w, height: h) }
+                    VStack(spacing: 1) { Color.clear.frame(width: 1, height: h); dot; label.frame(width: w, height: h) }
                 }
             }
             .contentShape(Rectangle())
         } else {
+            // a voice that has not introduced itself yet
             VStack(spacing: 4) {
                 Circle()
                     .fill(b.active ? Theme.accent : Theme.inkSoft.opacity(0.35))
                     .overlay(Circle().stroke(b.active ? Theme.accent : Theme.inkSoft.opacity(0.5), lineWidth: 1))
-                    .frame(width: b.active ? 20 : 14, height: b.active ? 20 : 14)
+                    .frame(width: b.active ? 18 : 12, height: b.active ? 18 : 12)
                     .shadow(color: b.active ? Theme.accent.opacity(0.5) : .clear, radius: 8)
                 if b.active {
                     Text("new voice")
@@ -162,8 +162,8 @@ struct RadarView: View {
     }
 
     /// Close voices on the inner ring, far ones at the edge. Named neighbours are spread apart until there is
-    /// room for a disc between them, so four people on your left read as four, not a pile; the true bearing is
-    /// kept for the arrow in the People list.
+    /// room between them, so four people on your left read as four, not a pile; the true bearing is kept for
+    /// the arrow in the People list.
     private func laidOut(r: CGFloat) -> [Blip] {
         var out = blips.map { b -> Blip in
             var b = b
@@ -173,7 +173,7 @@ struct RadarView: View {
         }
         let named = out.indices.filter { out[$0].named }.sorted { out[$0].bearing < out[$1].bearing }
         guard named.count > 1 else { return out }
-        let minGap = 28.0
+        let minGap = 22.0
         for _ in 0..<12 {
             for k in named.indices {
                 let i = named[k], j = named[(k + 1) % named.count]
@@ -193,21 +193,12 @@ struct RadarView: View {
     private var blips: [Blip] {
         var out: [Blip] = []
         var placedSpeakers: Set<String> = []
-        let people = live.peopleOrder.compactMap { live.people[$0] }
-        // One initial each; two only when two people share a first letter.
-        var firstLetters: [Character: Int] = [:]
-        for p in people { if let ch = p.name.first { firstLetters[ch, default: 0] += 1 } }
-        for p in people {
+        for p in live.peopleOrder.compactMap({ live.people[$0] }) {
             guard let b = live.relativeBearing(of: p, offset: offset) else { continue }
             placedSpeakers.formUnion(p.speakers)
-            let words = p.name.split(separator: " ").map(String.init)
-            let first = words.first ?? p.name
-            let shared = (first.first.map { firstLetters[$0] ?? 0 } ?? 0) > 1
-            let initials = shared
-                ? (words.count >= 2 ? words.prefix(2).compactMap(\.first).map(String.init).joined() : String(first.prefix(2)))
-                : String(first.prefix(1)).uppercased()
+            let first = p.name.split(separator: " ").first.map(String.init) ?? p.name
             out.append(Blip(
-                id: p.id, person: p, label: first, initials: initials, bearing: b,
+                id: p.id, person: p, label: first, color: live.color(for: p.id), bearing: b,
                 distance: live.distance(ofSpeakers: p.speakers),
                 active: p.speakers.contains(live.activeSpeaker ?? ""),
                 recent: p.speakers.contains(live.recentSpeaker ?? "")
@@ -215,7 +206,7 @@ struct RadarView: View {
         }
         for (speaker, az) in live.speakerAzimuth where !placedSpeakers.contains(speaker) && !live.ownerSpeakers.contains(speaker) {
             out.append(Blip(
-                id: speaker, person: nil, label: "", initials: "", bearing: live.relative(az, offset: offset),
+                id: speaker, person: nil, label: "", color: Theme.inkSoft, bearing: live.relative(az, offset: offset),
                 distance: live.distance(ofSpeakers: [speaker]),
                 active: speaker == live.activeSpeaker, recent: speaker == live.recentSpeaker
             ))

@@ -31,6 +31,9 @@ class EventLog:
             queue.put_nowait(line)
         return event
 
+    def events(self) -> list[dict[str, Any]]:
+        return [json.loads(line) for line in self._lines]
+
     def watch(self) -> tuple[list[str], asyncio.Queue[str | None]]:
         """Everything so far, plus a queue of what comes next (None once the recording ends)."""
         queue: asyncio.Queue[str | None] = asyncio.Queue()
@@ -54,3 +57,42 @@ def read_events(path: Path) -> list[dict[str, Any]]:
         return []
     with path.open(encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
+
+
+def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
+    """The latest picture in a log: people, promises, turns, translations. Removed items are gone, later
+    versions win. This is what the follow-up drafts are written from, live or from a file."""
+    people: dict[str, dict[str, Any]] = {}
+    promises: dict[str, dict[str, Any]] = {}
+    translations: dict[int, dict[str, Any]] = {}
+    kinds: dict[int, str] = {}
+    turns: list[dict[str, Any]] = []
+    owner: list[str] = []
+    for e in events:
+        t = e.get("type")
+        if t == "turn":
+            turns.append(e)
+        elif t == "turn_kind":
+            kinds[e["turn"]] = e["kind"]
+        elif t == "owner":
+            owner = list(e.get("speakers", []))
+        elif t == "person":
+            people[e["key"]] = e
+        elif t == "person_removed":
+            people.pop(e["key"], None)
+        elif t == "promise":
+            promises[e["key"]] = e
+        elif t == "promise_removed":
+            promises.pop(e["key"], None)
+        elif t == "translation":
+            translations[e["turn"]] = e
+        elif t == "translation_removed":
+            translations.pop(e["turn"], None)
+    return {
+        "owner_speakers": owner,
+        "people": list(people.values()),
+        "promises": list(promises.values()),
+        "turns": turns,
+        "turn_kinds": kinds,
+        "translations": translations,
+    }

@@ -86,6 +86,47 @@ SCHEMA: dict[str, Any] = _obj(
     room_topics={**_STR_LIST, "description": "short topics from ambient speech only; never names or quotes"},
 )
 
+NEXT_SCHEMA: dict[str, Any] = _obj(
+    moves={
+        "type": "array",
+        "items": _obj(
+            promise_key=_STR,
+            person_key={**_STR, "description": "who the move goes to"},
+            kind={"type": "string", "enum": ["message", "email", "calendar", "nudge"]},
+            language={**_STR, "description": "language of body, e.g. 'Japanese' or 'English'"},
+            subject={**_STR, "description": "email subject; empty for other kinds"},
+            body={**_STR, "description": "the message, ready to send, in `language`"},
+            body_english={**_STR, "description": "the same message in English; empty when body is English"},
+            when={**_STR, "description": "calendar kinds: proposed start, ISO 8601 with the owner's offset; else empty"},
+            duration_minutes={"type": "integer"},
+            attach={**_STR, "description": "'deck', 'one_pager', 'blurb' or '' — only ones the owner has"},
+            why={**_STR, "description": "one line: why this move, and for calendar what the time avoids"},
+        ),
+    },
+)
+
+NEXT_SYSTEM = """You are the assistant of the person who wore the badge (the owner). The event is over; write the
+follow-ups. You get the record of the conversations: people, promises, the transcript, the owner's busy windows for
+the coming week, and which links the owner can share.
+
+Write exactly one move per promise:
+- A promise the owner owes becomes a message to that person, ready to send: 2-4 sentences, warm and specific.
+  Name the thing promised and one concrete detail from what was said. No padding ("I hope this finds you well").
+  When a due date was agreed ("by Friday"), say so. Never invent facts, prices, names or dates.
+- A promise owed to the owner becomes kind "nudge": a short, friendly reminder the owner can send a few days later.
+- body is in the person's preferred_language when one is set, else English. body_english is the same message in
+  English, empty when body is already English. language names the language of body.
+- kind "calendar" when the promise is to meet, call, visit or demo. Pick a specific start from the owner's free
+  time: never inside a busy window, weekdays 10:00-18:00 in the owner's zone unless the conversation said
+  otherwise, at least one day after now, on the agreed day when one was agreed. 30 minutes unless stated. Put it
+  in `when` as ISO 8601 with the owner's offset; body is the invitation message; why says what the slot avoids.
+- kind "email" when the promise is to send a document, deck, link or introduction; fill subject.
+- attach: "deck" when the promise is about slides, a deck or a pitch; "one_pager" for a one-pager, overview or
+  intro document; "blurb" when they asked for a short bio or intro text; else "". Use only links the owner has.
+  Do not paste the link into body; the phone adds it.
+- Sign off with the owner's first name only."""
+
+
 SYSTEM = """You read a live transcript from a badge worn at a networking event and keep a precise record for the
 person wearing it (the owner).
 
@@ -145,7 +186,79 @@ def build_prompt(turns: list[Turn], owner_name: str, owner_company: str, vocabul
     return "\n".join(lines)
 
 
-LLM = Callable[[str, str], Awaitable[dict[str, Any]]]  # (system, user) -> JSON matching SCHEMA
+LLM = Callable[..., Awaitable[dict[str, Any]]]  # (system, user, schema=..., name=...) -> JSON matching the schema
+
+
+def build_next_prompt(
+    record: dict[str, Any],
+    *,
+    owner_name: str,
+    owner_company: str,
+    event: str = "",
+    venue: str = "",
+    now: str = "",
+    tz: str = "",
+    busy: list[list[str]] | None = None,
+    links: dict[str, str] | None = None,
+) -> str:
+    translations = record.get("translations", {})
+    kinds = record.get("turn_kinds", {})
+    lines = [
+        f"Owner: {owner_name or 'unknown'}" + (f", from {owner_company}" if owner_company else ""),
+        f"Now: {now or 'unknown'}" + (f" ({tz})" if tz else ""),
+        "Event: " + (", ".join(x for x in (event, venue) if x) or "unknown"),
+        "Owner busy (ISO ranges): " + ("; ".join(f"{a} to {b}" for a, b in (busy or [])) or "none"),
+        "Owner can share: " + (", ".join(sorted(k for k, v in (links or {}).items() if v)) or "nothing"),
+        "",
+        "People:",
+        *(
+            f"- {p['key']} | {p.get('name', '')}, {p.get('company', '')}"
+            + (f", {p['role']}" if p.get("role") else "")
+            + f" | preferred_language: {p.get('preferred_language') or 'not set'}"
+            for p in record.get("people", [])
+        ),
+        "",
+        "Promises:",
+        *(
+            f"- {q['key']} | owed_by: {q.get('owed_by', '')} | owed_to: {q.get('owed_to', '')} | what: {q.get('what', '')}"
+            + (f" | due: {q['due']}" if q.get("due") else "")
+            + (f" | replaces: {q['replaces']}" if q.get("replaces") else "")
+            + f" | turns: {', '.join(str(t) for t in q.get('evidence_turns', []))}"
+            for q in record.get("promises", [])
+        ),
+        "",
+        "Transcript (conversation turns):",
+    ]
+    for t in record.get("turns", []):
+        if kinds.get(t["turn"], "conversation") != "conversation":
+            continue
+        line = f"turn {t['turn']} [{t.get('speaker', '?')}]: {t.get('text', '')}"
+        tr = translations.get(t["turn"])
+        if tr:
+            line += f"  (English: {tr.get('english', '')})"
+        lines.append(line)
+    return "\n".join(lines)
+
+
+async def draft_next_moves(llm: LLM, record: dict[str, Any], **context: Any) -> list[dict[str, Any]]:
+    """One ready-to-send move per promise, from Muse Spark; keys normalised, attachments limited to what exists."""
+    if not record.get("promises"):
+        return []
+    result = await llm(NEXT_SYSTEM, build_next_prompt(record, **context), schema=NEXT_SCHEMA, name="hallwise_next_moves")
+    have = {k for k, v in (context.get("links") or {}).items() if v}
+    known = {q["key"] for q in record["promises"]}
+    moves = []
+    for m in result.get("moves", []):
+        m = dict(m)
+        m["promise_key"] = slug(m.get("promise_key", ""))
+        m["person_key"] = slug(m.get("person_key", ""))
+        if m["promise_key"] not in known:
+            continue
+        if m.get("attach") not in have:
+            m["attach"] = ""
+        m["duration_minutes"] = int(m.get("duration_minutes") or 30)
+        moves.append(m)
+    return moves
 
 
 def slug(text: str) -> str:
@@ -177,11 +290,13 @@ class SparkClient:
         self.last_usage: dict[str, Any] = {}
         self.last_seconds = 0.0
 
-    async def __call__(self, system: str, user: str) -> dict[str, Any]:
+    async def __call__(
+        self, system: str, user: str, schema: dict[str, Any] = SCHEMA, name: str = "hallwise_record"
+    ) -> dict[str, Any]:
         body = {
             "model": self.model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            "response_format": {"type": "json_schema", "json_schema": {"name": "hallwise_record", "schema": SCHEMA}},
+            "response_format": {"type": "json_schema", "json_schema": {"name": name, "schema": schema}},
             "reasoning_effort": self.effort,
         }
         started = time.monotonic()

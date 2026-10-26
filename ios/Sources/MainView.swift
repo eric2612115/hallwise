@@ -17,7 +17,7 @@ struct MainView: View {
                     switch tab {
                     case .room: RoomPage(app: app, live: app.live, settings: app.settings, showBadge: $showBadge)
                     case .people: PeoplePage(live: app.live, settings: app.settings)
-                    case .owe: OwePage(live: app.live)
+                    case .owe: OwePage(live: app.live, settings: app.settings)
                     case .words: WordsPage(live: app.live, settings: app.settings)
                     default: TranscriptPage(live: app.live)
                     }
@@ -150,6 +150,8 @@ struct MenuSheet: View {
     @ObservedObject var settings: BadgeSettings
     @Binding var showBadge: Bool
     @Environment(\.dismiss) private var dismiss
+    @State private var share: ShareItems?
+    @State private var copiedBlurb = false
 
     var body: some View {
         ZStack {
@@ -158,6 +160,12 @@ struct MenuSheet: View {
                 VStack(spacing: 18) {
                     appearance
                     badgeButton
+                    group("Your links", "What people ask for; the follow-ups attach them") {
+                        field("Deck", text: $settings.deckURL, placeholder: "https://…", keyboard: .URL)
+                        field("One-pager", text: $settings.onePagerURL, placeholder: "https://…", keyboard: .URL)
+                        field("Blurb", text: $settings.blurb, placeholder: "two lines about you", last: true)
+                    }
+                    shareRow
                     group("Your badge", "What people see on your chest") {
                         field("Name", text: $settings.ownerName)
                         field("Company", text: $settings.ownerCompany)
@@ -183,6 +191,43 @@ struct MenuSheet: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
+    }
+
+    /// One tap hands someone the deck, the one-pager or the blurb, through whatever app they use.
+    @ViewBuilder
+    private var shareRow: some View {
+        if !settings.links.isEmpty {
+            HStack(spacing: 8) {
+                if let deck = settings.links["deck"] {
+                    shareButton("Share deck", icon: "square.and.arrow.up") { share = ShareItems(items: [deck]) }
+                }
+                if let one = settings.links["one_pager"] {
+                    shareButton("Share one-pager", icon: "square.and.arrow.up") { share = ShareItems(items: [one]) }
+                }
+                if let blurb = settings.links["blurb"] {
+                    shareButton(copiedBlurb ? "Copied" : "Copy blurb", icon: copiedBlurb ? "checkmark" : "doc.on.doc") {
+                        UIPasteboard.general.string = blurb
+                        withAnimation { copiedBlurb = true }
+                    }
+                }
+            }
+            .sheet(item: $share) { ShareSheet(items: $0.items) }
+        }
+    }
+
+    private func shareButton(_ title: String, icon: String, run: @escaping () -> Void) -> some View {
+        Button(action: run) {
+            VStack(spacing: 5) {
+                Image(systemName: icon).font(.system(size: 20, weight: .semibold))
+                Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(Theme.accent)
+            .frame(maxWidth: .infinity)
+            .frame(height: 60)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.paperDeep))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.rule, lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
     }
 
     private var appearance: some View {

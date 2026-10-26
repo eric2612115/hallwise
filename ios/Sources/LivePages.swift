@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// The pages after the badge, one screen each: Room (the radar and the subtitle), People, Owe (promises),
+/// The pages after the badge, one screen each: Room (the radar and who you met), People, Owe (promises),
 /// Words (misheard words to settle), Talk (the transcript).
 enum Page: Int, CaseIterable, Identifiable {
     case badge, room, people, owe, words, transcript
@@ -51,11 +51,11 @@ struct RoomPage: View {
             }
             .padding(.horizontal, 8)
             controls
-            subtitle
+            met
             Spacer(minLength: 0)
         }
         .padding(.top, 4)
-        .sheet(item: $selected) { p in PersonDetail(person: p, live: live).presentationDetents([.medium, .large]) }
+        .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).presentationDetents([.medium, .large]) }
         .confirmationDialog("Stop listening?", isPresented: $confirmStop, titleVisibility: .visible) {
             Button("Stop", role: .destructive) { app.stop() }
             Button("Keep going", role: .cancel) {}
@@ -110,46 +110,34 @@ struct RoomPage: View {
         .buttonStyle(.plain)
     }
 
-    /// The last thing said, big enough to read on video, with its translation when there is one.
+    /// Who you have met tonight, newest first, with the one line that places them. Tap for the card.
     @ViewBuilder
-    private var subtitle: some View {
-        if let line = live.subtitle {
-            let isOwner = live.ownerSpeakers.contains(line.speaker)
-            let name = live.speakerName(line.speaker)
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Text(name.prefix(1).uppercased())
-                        .font(.system(size: 12, weight: .semibold, design: .serif))
-                        .foregroundStyle(Theme.paper)
-                        .frame(width: 24, height: 24)
-                        .background(Circle().fill(isOwner ? Theme.inkSoft : Theme.accent))
-                    Text(name.uppercased())
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(isOwner ? Theme.inkSoft : Theme.accent)
-                }
-                Text(line.text)
-                    .font(.system(size: 20, weight: .medium, design: .serif))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(3)
-                    .contentTransition(.opacity)
-                if let tr = live.translations[line.id] {
-                    Text(tr.english)
-                        .font(.system(size: 15, design: .serif))
-                        .italic()
-                        .foregroundStyle(Theme.inkSoft)
-                        .lineLimit(2)
-                    Text("\(tr.language) → English")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.inkSoft)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+    private var met: some View {
+        let people = live.peopleOrder.compactMap { live.people[$0] }
+        if !people.isEmpty {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                ForEach(Array(people.suffix(6).reversed())) { p in
+                    Button { selected = p } label: {
+                        HStack(spacing: 8) {
+                            Circle().fill(live.color(for: p.id)).frame(width: 10, height: 10)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(p.name)
+                                    .font(.system(size: 15, weight: .semibold, design: .serif))
+                                    .foregroundStyle(Theme.ink).lineLimit(1)
+                                Text([p.company, p.role].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.system(size: 12)).foregroundStyle(Theme.inkSoft).lineLimit(1)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 10)
+                        .frame(height: 46)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.paperDeep))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.paperDeep))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.rule, lineWidth: 0.5))
             .padding(.horizontal, 16)
-            .animation(.easeInOut(duration: 0.25), value: line.id)
+            .padding(.top, 2)
         }
     }
 }
@@ -174,7 +162,7 @@ struct PeoplePage: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .sheet(item: $selected) { p in PersonDetail(person: p, live: live).presentationDetents([.medium, .large]) }
+        .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).presentationDetents([.medium, .large]) }
     }
 }
 
@@ -190,10 +178,10 @@ struct PersonRow: View {
                 if let bearing = live.relativeBearing(of: person, offset: offset) {
                     Image(systemName: "location.north.fill")
                         .rotationEffect(.degrees(-bearing))
-                        .foregroundStyle(Theme.accent)
+                        .foregroundStyle(live.color(for: person.id))
                         .frame(width: 24, height: 24)
                 } else {
-                    Image(systemName: "person.fill").foregroundStyle(Theme.inkSoft).frame(width: 24, height: 24)
+                    Circle().fill(live.color(for: person.id)).frame(width: 12, height: 12).frame(width: 24, height: 24)
                 }
                 if talking {
                     Circle().fill(Theme.accent).frame(width: 8, height: 8)
@@ -227,6 +215,7 @@ struct PersonRow: View {
 struct PersonDetail: View {
     let person: LiveModel.Person
     @ObservedObject var live: LiveModel
+    @ObservedObject var settings: BadgeSettings
 
     var body: some View {
         ZStack {
@@ -249,7 +238,7 @@ struct PersonDetail: View {
                     .filter { $0.owedTo == person.id || $0.owedBy == person.id }
                 if !promises.isEmpty {
                     Section(header: PaperHeader(text: "Between you")) {
-                        ForEach(promises) { p in PromiseRow(promise: p, live: live) }
+                        ForEach(promises) { p in PromiseRow(promise: p, live: live, settings: settings) }
                     }
                     .listRowBackground(Theme.paperDeep)
                 }
@@ -277,6 +266,7 @@ struct PersonDetail: View {
 
 struct OwePage: View {
     @ObservedObject var live: LiveModel
+    @ObservedObject var settings: BadgeSettings
 
     var body: some View {
         let all = live.promiseOrder.compactMap { live.promises[$0] }
@@ -289,15 +279,15 @@ struct OwePage: View {
                 Text("No promises yet").foregroundStyle(Theme.inkSoft).listRowBackground(Color.clear)
             }
             if !mine.isEmpty {
-                Section(header: PaperHeader(text: "You owe")) { ForEach(mine) { p in PromiseRow(promise: p, live: live) } }
+                Section(header: PaperHeader(text: "You owe")) { ForEach(mine) { p in PromiseRow(promise: p, live: live, settings: settings) } }
                     .listRowBackground(Theme.paperDeep)
             }
             if !theirs.isEmpty {
-                Section(header: PaperHeader(text: "They owe you")) { ForEach(theirs) { p in PromiseRow(promise: p, live: live) } }
+                Section(header: PaperHeader(text: "They owe you")) { ForEach(theirs) { p in PromiseRow(promise: p, live: live, settings: settings) } }
                     .listRowBackground(Theme.paperDeep)
             }
             if !done.isEmpty {
-                Section(header: PaperHeader(text: "Done")) { ForEach(done) { p in PromiseRow(promise: p, live: live) } }
+                Section(header: PaperHeader(text: "Done")) { ForEach(done) { p in PromiseRow(promise: p, live: live, settings: settings) } }
                     .listRowBackground(Theme.paperDeep)
             }
         }
@@ -308,9 +298,12 @@ struct OwePage: View {
 struct PromiseRow: View {
     let promise: LiveModel.Promise
     @ObservedObject var live: LiveModel
+    @ObservedObject var settings: BadgeSettings
+    @State private var draft: LiveModel.Move?
 
     var body: some View {
         let done = live.donePromises.contains(promise.id)
+        let move = live.moves[promise.id]
         HStack(alignment: .top, spacing: 12) {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -346,8 +339,149 @@ struct PromiseRow: View {
                 }
             }
             .padding(.top, 10)
+            Spacer(minLength: 4)
+            if let move, !done {
+                // The follow-up is written; one tap to read it and send it.
+                Button { draft = move } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: move.kind == "calendar" ? "calendar.badge.plus" : "paperplane.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text(move.kind == "calendar" ? "Invite" : move.kind == "nudge" ? "Nudge" : "Draft")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(Theme.paper)
+                    .frame(width: 56, height: 52)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Theme.accent))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+            }
         }
         .padding(.vertical, 2)
+        .sheet(item: $draft) { m in
+            MoveSheet(move: m, promise: promise, live: live, settings: settings)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+}
+
+/// One follow-up, as the server wrote it: read it, copy it, share it to any app, or put the proposed time in
+/// the calendar. Nothing leaves the phone until the owner taps a channel.
+struct MoveSheet: View {
+    let move: LiveModel.Move
+    let promise: LiveModel.Promise
+    @ObservedObject var live: LiveModel
+    @ObservedObject var settings: BadgeSettings
+    @State private var share: ShareItems?
+    @State private var calendar = false
+    @State private var copied = false
+
+    private var person: String { live.name(for: move.personKey) }
+    private var attachment: String? { move.attach.isEmpty ? nil : settings.links[move.attach] }
+    private var text: String { [move.body, attachment].compactMap { $0 }.joined(separator: "\n\n") }
+    private var when: Date? { move.when.isEmpty ? nil : OwnerCalendar.parse(move.when) }
+
+    private var kindLine: String {
+        switch move.kind {
+        case "calendar": return "Invitation" + (move.language.isEmpty || move.language == "English" ? "" : " · \(move.language)")
+        case "email": return "Email" + (move.language.isEmpty || move.language == "English" ? "" : " · \(move.language)")
+        case "nudge": return "Nudge · send in a few days"
+        default: return "Message" + (move.language.isEmpty || move.language == "English" ? "" : " · \(move.language)")
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            PaperBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("To \(person)")
+                            .font(.system(size: 26, weight: .bold, design: .serif))
+                            .foregroundStyle(Theme.ink)
+                        Text(kindLine).font(.subheadline).foregroundStyle(Theme.inkSoft)
+                    }
+                    HStack(spacing: 6) {
+                        Image(systemName: "checklist").foregroundStyle(Theme.inkSoft)
+                        Text(promise.what + (promise.due.isEmpty ? "" : " · \(promise.due)"))
+                            .font(.system(size: 14)).foregroundStyle(Theme.inkSoft)
+                    }
+                    if !move.subject.isEmpty {
+                        Text(move.subject).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.ink)
+                    }
+                    Text(move.body)
+                        .font(.system(size: 18, design: .serif))
+                        .foregroundStyle(Theme.ink)
+                        .textSelection(.enabled)
+                    if !move.bodyEnglish.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(move.bodyEnglish).font(.system(size: 15, design: .serif)).italic().foregroundStyle(Theme.inkSoft)
+                            Text("\(move.language) → English, translated").font(.system(size: 12)).foregroundStyle(Theme.inkSoft)
+                        }
+                    }
+                    if let attachment {
+                        HStack(spacing: 8) {
+                            Image(systemName: "paperclip").foregroundStyle(Theme.accent)
+                            Text(attachment).font(.system(size: 14)).foregroundStyle(Theme.ink).lineLimit(1)
+                        }
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.paperDeep))
+                    }
+                    if let when {
+                        HStack(spacing: 8) {
+                            Image(systemName: "calendar").foregroundStyle(Theme.accent)
+                            Text(when, format: .dateTime.weekday(.wide).month().day().hour().minute())
+                                .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.ink)
+                            Text("· \(move.durationMinutes) min").font(.system(size: 14)).foregroundStyle(Theme.inkSoft)
+                        }
+                    }
+                    if !move.why.isEmpty {
+                        Text(move.why).font(.system(size: 13)).foregroundStyle(Theme.inkSoft)
+                    }
+                    VStack(spacing: 10) {
+                        HStack(spacing: 10) {
+                            action(copied ? "Copied" : "Copy", icon: copied ? "checkmark" : "doc.on.doc", fill: Theme.paperDeep, text: Theme.ink) {
+                                UIPasteboard.general.string = text
+                                withAnimation { copied = true }
+                            }
+                            action("Share", icon: "square.and.arrow.up", fill: Theme.accent, text: Theme.paper) {
+                                share = ShareItems(items: [text])
+                            }
+                        }
+                        if when != nil {
+                            action("Add to calendar", icon: "calendar.badge.plus", fill: Theme.ink, text: Theme.paper) { calendar = true }
+                        }
+                    }
+                    .padding(.top, 6)
+                }
+                .padding(20)
+                .padding(.top, 10)
+            }
+        }
+        .sheet(item: $share) { ShareSheet(items: $0.items) }
+        .sheet(isPresented: $calendar) {
+            if let when {
+                CalendarEditor(title: "\(person) · \(promise.what)", start: when, minutes: move.durationMinutes, notes: text)
+                    .ignoresSafeArea()
+            }
+        }
+    }
+
+    private func action(_ title: String, icon: String, fill: Color, text: Color, run: @escaping () -> Void) -> some View {
+        Button(action: run) {
+            HStack(spacing: 8) {
+                Image(systemName: icon).font(.system(size: 17, weight: .semibold))
+                Text(title).font(.system(size: 17, weight: .semibold))
+            }
+            .foregroundStyle(text)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(RoundedRectangle(cornerRadius: 14).fill(fill))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.rule, lineWidth: fill == Theme.paperDeep ? 1 : 0))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -478,7 +612,7 @@ struct TranscriptPage: View {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(live.speakerName(line.speaker))
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(filtered ? Theme.inkSoft.opacity(0.6) : (live.ownerSpeakers.contains(line.speaker) ? Theme.inkSoft : Theme.accent))
+                                .foregroundStyle(filtered ? Theme.inkSoft.opacity(0.6) : live.color(forSpeaker: line.speaker))
                                 .frame(width: 72, alignment: .leading)
                             Text(line.text)
                                 .font(.system(size: 16))

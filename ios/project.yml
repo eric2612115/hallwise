@@ -15,15 +15,39 @@ targets:
         UILaunchScreen: {}
         UIStatusBarHidden: true
         UIBackgroundModes: [audio]
+        NSSupportsLiveActivities: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSMicrophoneUsageDescription: Hallwise listens to the conversations you have, to remember who you met and what you promised.
         NSMotionUsageDescription: Hallwise uses the badge's orientation to keep everyone's position steady while you turn.
         NSLocalNetworkUsageDescription: Hallwise streams audio to your Hallwise server on this network.
+        NSCalendarsFullAccessUsageDescription: Hallwise reads your calendar so the times it proposes for follow-ups don't collide with what you already have.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+    dependencies:
+      - target: HallwiseBadge
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.eric2612115.hallwise
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+  HallwiseBadge:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget
+      - Sources/BadgeActivity.swift
+      - Sources/Theme.swift
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Hallwise Badge
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.eric2612115.hallwise.badge
         CODE_SIGN_STYLE: Automatic
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"

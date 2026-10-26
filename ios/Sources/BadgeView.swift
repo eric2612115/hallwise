@@ -1,4 +1,3 @@
-import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 /// The face of the badge: a paper name card, readable from a metre away, with a QR contact card.
@@ -34,7 +33,7 @@ struct BadgeView: View {
                 }
                 .multilineTextAlignment(.center)
                 Rectangle().fill(Theme.rule).frame(width: 120, height: 1)
-                if let qr = qrImage(settings.vCard) {
+                if let qr = badgeQR(settings.vCard) {
                     // Always dark on light so any phone can scan it, whatever the colour scheme.
                     Image(uiImage: qr)
                         .interpolation(.none)
@@ -58,17 +57,4 @@ struct BadgeView: View {
     private var initials: String {
         settings.ownerName.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined()
     }
-
-    private func qrImage(_ text: String) -> UIImage? {
-        let filter = CIFilter.qrCodeGenerator()
-        filter.message = Data(text.utf8)
-        filter.correctionLevel = "M"
-        guard let output = filter.outputImage,
-              let cg = CIContext().createCGImage(output, from: output.extent) else { return nil }
-        return UIImage(cgImage: cg)
-    }
-}
-
-extension Color {
-    init(hex: UInt32) { self.init(uiColor: UIColor(hex: hex)) }
 }

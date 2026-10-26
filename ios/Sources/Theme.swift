@@ -13,6 +13,18 @@ enum Theme {
     static let accent = Color(light: 0x2F7F72, dark: 0x6FB9AB)
     static let live = Color(light: 0xC8402F, dark: 0xE2644F)
 
+    /// One colour per person met, in the order they appeared; distinct on cream and on charcoal.
+    static let people: [Color] = [
+        Color(light: 0x2F7F72, dark: 0x6FB9AB),  // teal
+        Color(light: 0xC8702F, dark: 0xE89A5C),  // terracotta
+        Color(light: 0x7A4FA3, dark: 0xB08AD8),  // plum
+        Color(light: 0xB8862B, dark: 0xE0B45A),  // ochre
+        Color(light: 0x3B63A8, dark: 0x7FA3E0),  // indigo
+        Color(light: 0x5F8A3C, dark: 0x9BC46A),  // moss
+        Color(light: 0xB8475F, dark: 0xE07A91),  // rose
+        Color(light: 0x5B6B78, dark: 0x9FB0BE),  // slate
+    ]
+
     enum Appearance: String, CaseIterable {
         case system, light, dark
         var colorScheme: ColorScheme? {
@@ -31,6 +43,10 @@ extension Color {
             UIColor(hex: trait.userInterfaceStyle == .dark ? dark : light)
         })
     }
+}
+
+extension Color {
+    init(hex: UInt32) { self.init(uiColor: UIColor(hex: hex)) }
 }
 
 extension UIColor {

@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 import UIKit
 
@@ -31,6 +32,7 @@ final class AppModel: ObservableObject {
     let live = LiveModel()
     let link = ServerLink()
     private let capture = BadgeCapture()
+    private var badgeActivity: Activity<BadgeActivityAttributes>?
 
     init() {
         link.onEvent = { [weak self] event in self?.live.apply(event) }
@@ -69,28 +71,38 @@ final class AppModel: ObservableObject {
         live.reset()
         paused = false
         capture.muted = false
+        listening = true
+        showBadgeOnLockScreen()
         let settings = self.settings
         if !settings.followRecording.isEmpty {
             link.follow(base: settings.serverURL, recording: settings.followRecording)
-            listening = true
             return
         }
-        capture.onFormat = { [weak self] format in
-            let hello: [String: Any] = [
-                "sample_rate": format.sampleRate,
-                "channels": format.channels,
-                "layout": format.layout,
-                "device": "iPhone badge",
-                "owner_name": settings.ownerName,
-                "owner_company": settings.ownerCompany,
-                "keywords": settings.keywordList,
-                "event": settings.eventName,
-                "venue": settings.venue,
-            ]
-            self?.link.open(base: settings.serverURL, hello: hello)
+        Task { @MainActor in
+            // The week's busy windows ride along, so the times Hallwise proposes afterwards are free ones.
+            let busy = await OwnerCalendar.busyWindows()
+            let iso = ISO8601DateFormatter()
+            iso.timeZone = .current
+            capture.onFormat = { [weak self] format in
+                let hello: [String: Any] = [
+                    "sample_rate": format.sampleRate,
+                    "channels": format.channels,
+                    "layout": format.layout,
+                    "device": "iPhone badge",
+                    "owner_name": settings.ownerName,
+                    "owner_company": settings.ownerCompany,
+                    "keywords": settings.keywordList,
+                    "event": settings.eventName,
+                    "venue": settings.venue,
+                    "links": settings.links,
+                    "busy": busy,
+                    "tz": TimeZone.current.identifier,
+                    "now": iso.string(from: Date()),
+                ]
+                self?.link.open(base: settings.serverURL, hello: hello)
+            }
+            capture.start()
         }
-        capture.start()
-        listening = true
     }
 
     func stop() {
@@ -100,6 +112,33 @@ final class AppModel: ObservableObject {
         }
         listening = false
         paused = false
+        hideBadgeFromLockScreen()
+    }
+
+    /// The name card on the lock screen and in the Dynamic Island while listening: a pressed side button
+    /// or a pocket sleep must not turn the badge into a black slab. Ends with Stop.
+    private func showBadgeOnLockScreen() {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        let attributes = BadgeActivityAttributes(
+            name: settings.ownerName, company: settings.ownerCompany, title: settings.ownerTitle, vcard: settings.vCard
+        )
+        hideBadgeFromLockScreen()
+        do {
+            badgeActivity = try Activity.request(attributes: attributes, content: .init(state: .init(), staleDate: nil))
+        } catch {
+            link.status = "lock-screen badge: \(error.localizedDescription)"
+        }
+    }
+
+    private func hideBadgeFromLockScreen() {
+        let mine = badgeActivity
+        badgeActivity = nil
+        Task {
+            await mine?.end(nil, dismissalPolicy: .immediate)
+            for stale in Activity<BadgeActivityAttributes>.activities where stale.id != mine?.id {
+                await stale.end(nil, dismissalPolicy: .immediate)
+            }
+        }
     }
 }
 

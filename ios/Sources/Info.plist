@@ -25,12 +25,16 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Hallwise reads your calendar so the times it proposes for follow-ups don't collide with what you already have.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Hallwise streams audio to your Hallwise server on this network.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Hallwise listens to the conversations you have, to remember who you met and what you promised.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Hallwise uses the badge's orientation to keep everyone's position steady while you turn.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

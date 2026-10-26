@@ -150,3 +150,58 @@ def test_recording_reruns_extraction_until_every_turn_is_seen(tmp_path):
     assert "Coffee on Friday?" in llm.prompts[-1]  # the last run saw the last turn
     assert "Owner: Eric, from Vexi" in llm.prompts[0]
     assert events[-1]["type"] == "recording_end"
+
+
+def test_fold_record_keeps_latest_and_drops_removed():
+    from hallwise.events import fold_record
+
+    events = [
+        {"type": "turn", "t_ms": 1000, "turn": 1, "speaker": "1:A", "text": "I'm Sarah from Acme"},
+        {"type": "owner", "t_ms": 1000, "speakers": ["1:B"]},
+        {"type": "person", "t_ms": 1000, "key": "sarah-acme", "name": "Sara", "company": "Acme"},
+        {"type": "person", "t_ms": 2000, "key": "sarah-acme", "name": "Sarah", "company": "Acme"},
+        {"type": "promise", "t_ms": 2000, "key": "deck-to-sarah-acme", "owed_by": "owner", "owed_to": "sarah-acme", "what": "send the deck"},
+        {"type": "promise", "t_ms": 2000, "key": "gone", "owed_by": "owner", "owed_to": "sarah-acme", "what": "x"},
+        {"type": "promise_removed", "t_ms": 3000, "key": "gone"},
+        {"type": "translation", "t_ms": 3000, "turn": 1, "language": "French", "english": "hello"},
+    ]
+    r = fold_record(events)
+    assert [p["name"] for p in r["people"]] == ["Sarah"]
+    assert [q["key"] for q in r["promises"]] == ["deck-to-sarah-acme"]
+    assert r["owner_speakers"] == ["1:B"]
+    assert r["translations"][1]["english"] == "hello"
+    assert len(r["turns"]) == 1
+
+
+def test_next_moves_normalises_keys_and_limits_attachments():
+    from hallwise.extract import NEXT_SCHEMA, draft_next_moves
+
+    seen = {}
+
+    async def llm(system, user, schema=None, name=""):
+        seen["schema"] = schema
+        seen["user"] = user
+        return {"moves": [
+            {"promise_key": "Deck to Sarah-Acme", "person_key": "Sarah-Acme", "kind": "email", "language": "English",
+             "subject": "The deck", "body": "Here it is. Eric", "body_english": "", "when": "", "duration_minutes": 0,
+             "attach": "one_pager", "why": "promised"},
+            {"promise_key": "not-a-promise", "person_key": "x", "kind": "message", "language": "English", "subject": "",
+             "body": "?", "body_english": "", "when": "", "duration_minutes": 30, "attach": "", "why": ""},
+        ]}
+
+    record = {
+        "people": [{"key": "sarah-acme", "name": "Sarah", "company": "Acme", "preferred_language": ""}],
+        "promises": [{"key": "deck-to-sarah-acme", "owed_by": "owner", "owed_to": "sarah-acme", "what": "send the deck", "evidence_turns": [1]}],
+        "turns": [{"turn": 1, "speaker": "1:A", "text": "send me the deck"}],
+        "turn_kinds": {}, "translations": {},
+    }
+    moves = asyncio.run(draft_next_moves(
+        llm, record, owner_name="Eric", owner_company="Hallwise", now="2026-10-27T14:00:00+08:00", tz="Asia/Taipei",
+        busy=[["2026-10-28T10:00:00+08:00", "2026-10-28T11:00:00+08:00"]], links={"deck": "https://x/deck"},
+    ))
+    assert seen["schema"] is NEXT_SCHEMA
+    assert "Owner busy (ISO ranges): 2026-10-28T10:00:00+08:00 to 2026-10-28T11:00:00+08:00" in seen["user"]
+    assert "Owner can share: deck" in seen["user"]
+    assert [m["promise_key"] for m in moves] == ["deck-to-sarah-acme"]
+    assert moves[0]["attach"] == ""  # one_pager is not something the owner has
+    assert moves[0]["duration_minutes"] == 30

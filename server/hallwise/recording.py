@@ -20,8 +20,8 @@ import soxr
 
 from .asr import Asr
 from .direction import DirectionTracker, SpeakerPositions
-from .events import EventLog
-from .extract import Extractor, Turn
+from .events import EventLog, fold_record
+from .extract import Extractor, Turn, draft_next_moves
 
 ASR_RATE = 24_000
 LAYOUT_CHANNELS = {"mono": 1, "stereo": 2, "foa": 4}
@@ -41,6 +41,10 @@ class Hello:
     venue: str = ""
     language_bias: list[str] | None = None
     keywords: list[str] | None = None
+    busy: list[list[str]] | None = None  # the owner's calendar for the week, ISO ranges, for proposing times
+    links: dict[str, str] | None = None  # deck / one_pager / blurb the owner can hand over
+    tz: str = ""
+    now: str = ""  # the phone's clock at start, ISO 8601 with offset
     fake_script: list[dict[str, Any]] | None = field(default=None, repr=False)  # rig ground truth, offline only
 
     @classmethod
@@ -56,6 +60,10 @@ class Hello:
             venue=str(msg.get("venue", "")),
             language_bias=msg.get("language_bias"),
             keywords=msg.get("keywords"),
+            busy=msg.get("busy"),
+            links=msg.get("links"),
+            tz=str(msg.get("tz", "")),
+            now=str(msg.get("now", "")),
             fake_script=msg.get("fake_script"),
         )
         if hello.layout not in LAYOUT_CHANNELS:
@@ -197,6 +205,31 @@ class Recording:
         if self._extract_task is not None:
             await self._extract_task
         await self._extract()
+        await self._next_moves()
         self._wav.close()
         self.log.emit("recording_end", self.now_ms)
         self.log.close()
+
+    async def _next_moves(self) -> None:
+        """After the last extraction: one ready-to-send follow-up per promise, before the log closes, so a
+        phone still watching gets them the moment it stops."""
+        if self.extractor is None or not self.extractor.state.get("promises"):
+            return
+        try:
+            moves = await draft_next_moves(
+                self.extractor.llm,
+                fold_record(self.log.events()),
+                owner_name=self.hello.owner_name,
+                owner_company=self.hello.owner_company,
+                event=self.hello.event,
+                venue=self.hello.venue,
+                now=self.hello.now or time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                tz=self.hello.tz,
+                busy=self.hello.busy or [],
+                links=self.hello.links or {},
+            )
+        except Exception as err:  # drafts are a bonus; the record is already safe
+            self.log.emit("extract_error", self.now_ms, message=f"next moves: {err.__class__.__name__}: {err}"[:300])
+            return
+        for move in moves:
+            self.log.emit("next_move", self.now_ms, **move)

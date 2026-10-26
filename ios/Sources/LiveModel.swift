@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// The live record, rebuilt from the server's event stream.
 final class LiveModel: ObservableObject {
@@ -27,6 +28,22 @@ final class LiveModel: ObservableObject {
         let text: String
     }
 
+    /// A ready-to-send follow-up for one promise, drafted by the server when the recording ends.
+    struct Move: Identifiable {
+        var id: String { promiseKey }
+        let promiseKey: String
+        let personKey: String
+        let kind: String        // message, email, calendar, nudge
+        let language: String
+        let subject: String
+        let body: String
+        let bodyEnglish: String
+        let when: String        // ISO 8601, calendar kinds only
+        let durationMinutes: Int
+        let attach: String      // deck, one_pager, blurb or ""
+        let why: String
+    }
+
     struct Suspect: Identifiable {
         var id: String { "\(turn)-\(heard)" }
         let heard: String
@@ -46,6 +63,7 @@ final class LiveModel: ObservableObject {
     @Published var turnStart: [Int: Int] = [:]
     @Published var turnEnd: [Int: Int] = [:]
     @Published var suspects: [Suspect] = []
+    @Published var moves: [String: Move] = [:]  // by promise key
     @Published var topics: [String] = []
     @Published var translations: [Int: (language: String, english: String)] = [:]
     @Published var yaw: Double = 0  // the badge's current yaw
@@ -88,7 +106,7 @@ final class LiveModel: ObservableObject {
     func reset() {
         people = [:]; peopleOrder = []; promises = [:]; promiseOrder = []; speakerAzimuth = [:]; speakerLevel = [:]
         ownerSpeakers = []; lines = []; turnKind = [:]; turnStart = [:]; turnEnd = [:]
-        suspects = []; topics = []; translations = [:]
+        suspects = []; moves = [:]; topics = []; translations = [:]
         tMs = 0; lastSpeaker = nil; donePromises = []
     }
 
@@ -105,6 +123,18 @@ final class LiveModel: ObservableObject {
         let x = bearings.map { cos($0 * .pi / 180) }.reduce(0, +)
         let y = bearings.map { sin($0 * .pi / 180) }.reduce(0, +)
         return relative(atan2(y, x) * 180 / .pi, offset: offset)
+    }
+
+    /// The person's colour: the same dot on the radar, in the list and in the transcript.
+    func color(for key: String) -> Color {
+        guard let i = peopleOrder.firstIndex(of: key) else { return Theme.inkSoft }
+        return Theme.people[i % Theme.people.count]
+    }
+
+    func color(forSpeaker speaker: String) -> Color {
+        if ownerSpeakers.contains(speaker) { return Theme.inkSoft }
+        if let p = people.values.first(where: { $0.speakers.contains(speaker) }) { return color(for: p.id) }
+        return Theme.inkSoft
     }
 
     func name(for key: String) -> String {
@@ -197,6 +227,21 @@ final class LiveModel: ObservableObject {
             if let heard = e["heard"] as? String, let turn = e["turn"] as? Int {
                 suspects.removeAll { $0.heard == heard && $0.turn == turn }
             }
+        case "next_move":
+            guard let key = e["promise_key"] as? String, !key.isEmpty else { return }
+            moves[key] = Move(
+                promiseKey: key,
+                personKey: e["person_key"] as? String ?? "",
+                kind: e["kind"] as? String ?? "message",
+                language: e["language"] as? String ?? "",
+                subject: e["subject"] as? String ?? "",
+                body: e["body"] as? String ?? "",
+                bodyEnglish: e["body_english"] as? String ?? "",
+                when: e["when"] as? String ?? "",
+                durationMinutes: e["duration_minutes"] as? Int ?? 30,
+                attach: e["attach"] as? String ?? "",
+                why: e["why"] as? String ?? ""
+            )
         case "room_topics":
             topics = e["topics"] as? [String] ?? []
         default:

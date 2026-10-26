@@ -13,6 +13,14 @@ final class BadgeSettings: ObservableObject {
     @AppStorage("yawOffset") var yawOffset = 0.0     // degrees, calibrates the badge's forward direction
     @AppStorage("appearance") var appearance = Theme.Appearance.system.rawValue
     @AppStorage("followRecording") var followRecording = ""  // debug: watch this recording instead of capturing
+    @AppStorage("deckURL") var deckURL = ""        // the things people ask for, one tap to share
+    @AppStorage("onePagerURL") var onePagerURL = ""
+    @AppStorage("blurb") var blurb = ""            // two lines about you, for pasting
+
+    /// What the owner can hand over, by the names the server uses for attachments.
+    var links: [String: String] {
+        ["deck": deckURL, "one_pager": onePagerURL, "blurb": blurb].filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
 
     var colorScheme: ColorScheme? { Theme.Appearance(rawValue: appearance)?.colorScheme }
 
