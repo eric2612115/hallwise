@@ -126,3 +126,14 @@ def test_the_report_day_is_the_morning_after():
     tz = "Asia/Taipei"
     assert report_day(1793054436, tz) == "2026-10-27"  # 06:40: the same morning
     assert report_day(1793054436 + 14 * 3600, tz) == "2026-10-28"  # 20:40: tomorrow morning
+
+
+def test_the_automatic_run_after_a_recording_writes_the_report(tmp_path):
+    import asyncio
+
+    week(tmp_path, time.time())
+    reports = Reports(tmp_path, lambda: None, Researcher(tmp_path, None, off_reason="test"))
+    asyncio.run(reports.later("c-tonight", 0))
+    assert reports.get("c-tonight")["recording"] == "c-tonight"
+    asyncio.run(reports.later("nope", 0))  # nobody is waiting: a bad id is only logged
+    assert reports.get("nope") is None
