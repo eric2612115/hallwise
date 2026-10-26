@@ -4,30 +4,22 @@ import UIKit
 @main
 struct HallwiseApp: App {
     @StateObject private var app = AppModel()
-    @State private var page: Page = .badge
+    @State private var badgeShown = true
 
     var body: some Scene {
         WindowGroup {
             ZStack {
                 PaperBackground()  // under the status bar and the home indicator too
-                TabView(selection: $page) {
-                    BadgeView(settings: app.settings, listening: app.listening)
-                        .tag(Page.badge)
-                    chrome { RoomPage(live: app.live, settings: app.settings) }.tag(Page.room)
-                    chrome { PeoplePage(live: app.live, settings: app.settings) }.tag(Page.people)
-                    chrome { OwePage(live: app.live) }.tag(Page.owe)
-                    chrome { WordsPage(live: app.live, settings: app.settings) }.tag(Page.words)
-                    chrome { TranscriptPage(live: app.live) }.tag(Page.transcript)
+                // Two pages: the badge (worn, facing out) and the app. Swipe, or use the menu.
+                TabView(selection: $badgeShown) {
+                    BadgeView(settings: app.settings, listening: app.listening).tag(true)
+                    MainView(app: app, showBadge: $badgeShown).tag(false)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
             .preferredColorScheme(app.settings.colorScheme)
             .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
         }
-    }
-
-    private func chrome<Content: View>(@ViewBuilder _ content: @escaping () -> Content) -> some View {
-        LiveChrome(page: $page, app: app, link: app.link, settings: app.settings, content: content)
     }
 }
 
@@ -41,6 +33,7 @@ final class AppModel: ObservableObject {
 
     init() {
         link.onEvent = { [weak self] event in self?.live.apply(event) }
+        link.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
         capture.onAudio = { [weak self] data in self?.link.sendAudio(data) }
         capture.onPose = { [weak self] t, yaw, pitch, roll in
             self?.link.sendPose(tMs: t, yaw: yaw, pitch: pitch, roll: roll)
@@ -53,6 +46,8 @@ final class AppModel: ObservableObject {
             }
         }
     }
+
+    private var bag = Set<AnyCancellable>()
 
     func start() {
         live.reset()
@@ -88,3 +83,5 @@ final class AppModel: ObservableObject {
         listening = false
     }
 }
+
+import Combine
