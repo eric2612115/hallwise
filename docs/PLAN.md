@@ -141,6 +141,23 @@ Per-accent word error rate, names counted separately; speaker attribution with a
 position error per person while Eric turns, leans in and walks; stereo vs spatial audio; lanyard vs clip; turn classification (no incidental line may reach a person card or a promise); promise recall including corrections; suspect-word precision; name accuracy with one
 listener vs two, and before vs after memory. One scoreboard.
 
+## After the core: the diary
+
+Each recording is an entry: event name, venue, time (settings on the badge; shown in the list and the header).
+Next, in this order, once the core runs on the real phone:
+
+0. **The conversation map.** When the evening ends, one picture: the room from above, everyone you met pinned
+   where you met them (direction from the spatial audio, distance from loudness and how much room echo is in
+   their voice), the order you met them in, and what each conversation was about. The live radar is this map
+   being drawn; the recap is the finished drawing, exportable as an image to keep or share.
+1. **Your path through the room.** No watch needed: the phone's pedometer (steps, distance) plus its heading
+   give a dead-reckoned path indoors; GPS fixes the venue outdoors. Each person is pinned where you met them, so
+   the map answers "where did I meet her?" as well as "where is she now".
+2. **Edit a person.** Fix a name, add a photo taken at the event, notes, their handle; attach what you promised
+   (deck, URL, file) to the promise, so "send the deck" is a tap, not a search.
+3. **Share from the card.** If a handle is known (Telegram, email, LinkedIn), the follow-up draft opens there
+   ready to send; nothing is sent automatically.
+
 ## Cut first if time runs out
 
 1. Agentic follow-through beyond drafts (`.ics`, introductions).
