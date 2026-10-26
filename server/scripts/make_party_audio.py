@@ -26,9 +26,9 @@ second speaker label); hm_omega and jm_kumo get a presence lift (they render ver
 
 What the third changed: Siddharth says his name once, with his company ("Siddharth Raghunathan, Quill Mesh, we met
 at Blockchain Week"), so the badge can match him; Kenji's murmur is the phoneme version above, which the
-transcriber writes as 金曜日ね、メモしておこう。 alone and after his English, and it is no longer 3 dB down: from
-2.2 m in the room it came through about half the time even so, and only with languageBias en, fr, ja in the
-handshake (never without; see HALLWISE_LANGUAGE_BIAS in recording.py).
+transcriber writes as 金曜日ね、メモしておこう。 alone and after his English, and it is no longer 3 dB down. From
+2.2 m in the simulated room it is still lost: about half the time in a short session with languageBias en,fr,ja,
+never without, and never at the end of the whole take (see HALLWISE_LANGUAGE_BIAS in recording.py).
 """
 
 from __future__ import annotations

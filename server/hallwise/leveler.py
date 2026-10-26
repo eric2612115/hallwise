@@ -15,10 +15,12 @@ How, per 10 ms block:
 - the gain ramps across each block, and is cut at once when a block's peak would pass the ceiling.
 
 Slow on purpose. A first version followed every syllable (20 ms attack) and squashed the syllables against the
-room; from 2.2 m the recogniser then lost Kenji's Japanese aside in all of seven tries, against 7 of 12 without
-levelling. Moving at the pace of phrases, it lifts a far talker by ~5 dB relative to the wearer on the rehearsal
-mix, and Julien's introduction right after the wearer came through as a turn of its own in 4 of 4 tries (16 of 16
-across the variants tried), against 4 of 8 without levelling.
+room; in a short far-field scene the recogniser then lost Kenji's Japanese aside in all of seven tries, against
+7 of 12 without levelling. Moving at the pace of phrases, it lifts far talkers by 2-5 dB relative to the wearer
+on the rehearsal mix. What that does for the transcript is within the service's own variation so far: in a short
+scene Julien's introduction right after the wearer came through as a turn of its own in 4 of 4 tries against
+4 of 8 without, but over the whole rehearsal mix it was 2 of 9 against 3 of 8, and names were heard the same
+either way. HALLWISE_LEVELER=off (recording.py) turns it off.
 A Python loop over 100 blocks a second with a few numpy operations each: well under 1 % of real time.
 """
 

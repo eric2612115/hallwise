@@ -83,8 +83,9 @@ class Hello:
 
 def default_language_bias() -> list[str] | None:
     """HALLWISE_LANGUAGE_BIAS, e.g. "en,fr,ja": the languages the transcriber is told to expect when the badge's
-    hello names none (the app sends none). Without it, from across a room, Muse Voice Transcribe dropped a
-    Japanese aside after English every time; with en, fr, ja it wrote it about half the time."""
+    hello names none (the app sends none). Unset by default. In rehearsal, en,fr,ja brought Kenji's Japanese
+    aside back about half the time in a short session, but never after the rest of the evening (0 of 8 either
+    way), and it cost Siddharth's name, which the transcriber hears as Hindi (1 of 4 with it, 8 of 8 without)."""
     langs = [x.strip() for x in os.environ.get("HALLWISE_LANGUAGE_BIAS", "").split(",") if x.strip()]
     return langs or None
 
@@ -122,7 +123,8 @@ class Recording:
         self._resampler = (
             None if hello.sample_rate == ASR_RATE else soxr.ResampleStream(hello.sample_rate, ASR_RATE, 1, dtype="int16")
         )
-        self._leveler = Leveler(ASR_RATE)  # only the recogniser's copy; audio.wav is written before it
+        # Only the recogniser's copy; audio.wav is written before it. HALLWISE_LEVELER=off sends the mix as it came.
+        self._leveler = Leveler(ASR_RATE) if os.environ.get("HALLWISE_LEVELER", "on") != "off" else None
         self._frames = 0
         self._pending = b""
         self.direction = DirectionTracker(hello.sample_rate, hello.layout)
@@ -187,7 +189,7 @@ class Recording:
         if self._resampler is not None:
             mono = self._resampler.resample_chunk(mono)
         if len(mono):
-            pcm = self._leveler.process(mono).astype("<i2").tobytes()
+            pcm = (self._leveler.process(mono) if self._leveler else mono).astype("<i2").tobytes()
             if self._ask_asr is not None:
                 await self._ask_asr.send(pcm)  # the question is not part of the conversation
             else:
@@ -259,7 +261,7 @@ class Recording:
         if self._resampler is not None:
             tail = self._resampler.resample_chunk(np.zeros(0, dtype=np.int16), last=True)
             if len(tail):
-                await self.asr.send(self._leveler.process(tail).astype("<i2").tobytes())
+                await self.asr.send((self._leveler.process(tail) if self._leveler else tail).astype("<i2").tobytes())
         await self.asr.finish()
         if self._extract_task is not None:
             await self._extract_task

@@ -177,3 +177,19 @@ class FakeAsrStub:
 
     async def finish(self):
         pass
+
+
+def test_the_leveler_can_be_turned_off(tmp_path, monkeypatch):
+    monkeypatch.setenv("HALLWISE_LEVELER", "off")
+    asr = CapturingAsr()
+    rec = Recording(tmp_path, Hello(sample_rate=ASR_RATE, channels=1, layout="mono"), lambda sink, *, rate, hello: asr)
+    x = np.concatenate([talker(2, -17), talker(2, -29)]) + room(4, -50)
+    pcm = np.clip(np.round(x), -32768, 32767).astype("<i2").tobytes()
+
+    async def run():
+        await rec.start()
+        await rec.on_audio(pcm)
+        await rec.close()
+
+    asyncio.run(run())
+    assert bytes(asr.pcm) == pcm
