@@ -22,10 +22,10 @@ struct BadgeView: View {
                         .font(.system(size: 58, weight: .bold, design: .serif))
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.inkStrong)
                     Text(settings.ownerCompany)
                         .font(.system(size: 28, weight: .medium, design: .serif))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.inkStrong)
                     if !settings.ownerTitle.isEmpty {
                         Text(settings.ownerTitle)
                             .font(.system(size: 20, design: .serif))

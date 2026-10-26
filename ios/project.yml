@@ -14,6 +14,7 @@ targets:
         CFBundleDisplayName: Hallwise
         UILaunchScreen: {}
         UIStatusBarHidden: true
+        UIBackgroundModes: [audio]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSMicrophoneUsageDescription: Hallwise listens to the conversations you have, to remember who you met and what you promised.
         NSMotionUsageDescription: Hallwise uses the badge's orientation to keep everyone's position steady while you turn.

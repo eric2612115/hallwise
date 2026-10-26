@@ -43,6 +43,8 @@ final class LiveModel: ObservableObject {
     @Published var ownerSpeakers: Set<String> = []
     @Published var lines: [Line] = []
     @Published var turnKind: [Int: String] = [:]
+    @Published var turnStart: [Int: Int] = [:]
+    @Published var turnEnd: [Int: Int] = [:]
     @Published var suspects: [Suspect] = []
     @Published var topics: [String] = []
     @Published var translations: [Int: (language: String, english: String)] = [:]
@@ -54,6 +56,20 @@ final class LiveModel: ObservableObject {
     var activeSpeaker: String? {
         guard let last = lastSpeaker, last.untilMs >= tMs else { return nil }
         return last.speaker
+    }
+
+    /// Whoever spoke in the last twenty seconds or so: the "who just spoke" cue after the glow fades.
+    var recentSpeaker: String? {
+        guard let last = lastSpeaker, last.untilMs + 18_500 >= tMs else { return nil }
+        return last.speaker
+    }
+
+    /// Promises the owner ticked off on the phone.
+    @Published var donePromises: Set<String> = []
+
+    /// The line a suspect word was heard in, for context.
+    func line(forTurn turn: Int) -> Line? {
+        lines.first { $0.id == turn }
     }
 
     /// The latest conversation line, for the subtitle.
@@ -71,8 +87,9 @@ final class LiveModel: ObservableObject {
 
     func reset() {
         people = [:]; peopleOrder = []; promises = [:]; promiseOrder = []; speakerAzimuth = [:]; speakerLevel = [:]
-        ownerSpeakers = []; lines = []; turnKind = [:]; suspects = []; topics = []; translations = [:]
-        tMs = 0; lastSpeaker = nil
+        ownerSpeakers = []; lines = []; turnKind = [:]; turnStart = [:]; turnEnd = [:]
+        suspects = []; topics = []; translations = [:]
+        tMs = 0; lastSpeaker = nil; donePromises = []
     }
 
     /// A room bearing as seen from the badge now (degrees, 0 = ahead, positive = left).
@@ -103,9 +120,14 @@ final class LiveModel: ObservableObject {
         return "Someone"
     }
 
-    /// The owner dealt with a suspect word (kept, corrected or dismissed); it leaves the list.
+    /// The owner dealt with a suspect word (kept, corrected or dismissed); it leaves the list, and so does
+    /// its mirror image ("Margo → Margaux" settles "Margaux → Margo" too).
     func resolve(_ suspect: Suspect) {
-        suspects.removeAll { $0.id == suspect.id }
+        suspects.removeAll {
+            $0.id == suspect.id
+                || ($0.heard.caseInsensitiveCompare(suspect.likely) == .orderedSame
+                    && $0.likely.caseInsensitiveCompare(suspect.heard) == .orderedSame)
+        }
     }
 
     func apply(_ e: [String: Any]) {
@@ -115,7 +137,9 @@ final class LiveModel: ObservableObject {
             guard let turn = e["turn"] as? Int, let text = e["text"] as? String, !text.isEmpty else { return }
             let speaker = "\(e["session"] as? Int ?? 1):\(e["speaker"] as? String ?? "?")"
             lines.append(Line(id: turn, speaker: speaker, text: text))
-            if lines.count > 40 { lines.removeFirst(lines.count - 40) }
+            if lines.count > 60 { lines.removeFirst(lines.count - 60) }
+            turnStart[turn] = e["start_ms"] as? Int ?? tMs
+            turnEnd[turn] = e["end_ms"] as? Int ?? tMs
             lastSpeaker = (speaker, (e["end_ms"] as? Int ?? tMs) + 1500)
         case "translation":
             if let turn = e["turn"] as? Int {

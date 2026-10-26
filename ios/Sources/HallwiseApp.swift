@@ -27,7 +27,7 @@ struct HallwiseApp: App {
 final class AppModel: ObservableObject {
     @Published var listening = false
     @Published var paused = false
-    @ObservedObject var settings = BadgeSettings()
+    let settings = BadgeSettings()
     let live = LiveModel()
     let link = ServerLink()
     private let capture = BadgeCapture()
@@ -35,6 +35,8 @@ final class AppModel: ObservableObject {
     init() {
         link.onEvent = { [weak self] event in self?.live.apply(event) }
         link.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
+        settings.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
+        live.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
         capture.onAudio = { [weak self] data in self?.link.sendAudio(data) }
         capture.onPose = { [weak self] t, yaw, pitch, roll in
             self?.link.sendPose(tMs: t, yaw: yaw, pitch: pitch, roll: roll)

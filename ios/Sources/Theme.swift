@@ -7,6 +7,7 @@ enum Theme {
     static let paper = Color(light: 0xEDE8DC, dark: 0x1C1A17)
     static let paperDeep = Color(light: 0xE2DBC9, dark: 0x26231F)
     static let ink = Color(light: 0x2A2622, dark: 0xE8E2D6)
+    static let inkStrong = Color(light: 0x1A1613, dark: 0xFAF6EE)  // the badge name
     static let inkSoft = Color(light: 0x6E675E, dark: 0xA39B8F)
     static let rule = Color(light: 0xD3CBB9, dark: 0x35312B)
     static let accent = Color(light: 0x2F7F72, dark: 0x6FB9AB)

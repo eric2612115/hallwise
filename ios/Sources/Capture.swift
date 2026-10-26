@@ -34,8 +34,26 @@ final class BadgeCapture: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate
     func start() {
         AVCaptureDevice.requestAccess(for: .audio) { granted in
             guard granted else { self.onError?("Microphone permission denied"); return }
-            self.queue.async { self.configureAndRun() }
+            self.queue.async {
+                self.configureAudioSession()
+                self.configureAndRun()
+            }
         }
+    }
+
+    /// Recording must survive the lock button: the badge hangs on a chest for hours. With the audio
+    /// background mode in Info.plist, an active record-capable session keeps the microphone open when the
+    /// screen locks or the app goes to the background. Bluetooth input is never enabled, so connected AirPods
+    /// cannot take over the microphone.
+    private func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers])
+            try session.setActive(true)
+        } catch {
+            onError?("Audio session: \(error.localizedDescription)")
+        }
+        self.session.automaticallyConfiguresApplicationAudioSession = false
     }
 
     func stop() {
