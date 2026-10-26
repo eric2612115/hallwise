@@ -25,6 +25,6 @@ previous file ends, so one click plays both halves of an exchange.
 | 5 | 4 | Mac-1 (sofa 1, near cushion) | `mac1-margaux-03.wav` | Pre-seed, yes. Send me your one-pager. Bon, une page, avec des chiffres. | ERIC: “Margaux, are you investing this quarter?” | 5.5 s |
 | 6 | 5 | Mac-2 (sofa 1, far cushion) | `mac2-julien-03.wav` | Come by our office next week and show us the demo? Wednesday afternoon? | ERIC: “One page, with numbers. Tomorrow.” | 5.4 s |
 | 7 | Mac-3 waiter key | Mac-3 (dining table, east end) | `mac3-01-waiter.wav` | Something to drink? | as Eric walks past the table's west end, after ERIC: “Wednesday works.” | 1.9 s |
-| 8 | 6 | Mac-3 (dining table, east end) | `mac3-02-siddharth.wav` | Eric! Siddharth, Siddharth Raghunathan, Quill Mesh, from Blockchain Week. You know Kenji. | Eric at the table's west end, at least 3 s after cue 7; after ERIC: “I'm good, thanks.” | 6.1 s |
+| 8 | 6 | Mac-3 (dining table, east end) | `mac3-02-siddharth.wav` | Eric! Siddharth Raghunathan, Quill Mesh, we met at Blockchain Week. You know Kenji. | Eric at the table's west end, at least 3 s after cue 7; after ERIC: “I'm good, thanks.” | 5.7 s |
 | 9 | auto, 1.5 s after the previous cue ends | iPhone-K (sofa 2, south armrest, head height) | `iphoneK-kenji-01.wav` | Kenji Watanabe, Hoshizora Robotics. We keep running into each other. | cue 8 ends (Siddharth) | 5.7 s |
 | 10 | 7 | iPhone-K (sofa 2, south armrest, head height) | `iphoneK-kenji-02.wav` | Thursday is... no, Friday. Friday is better. 金曜日ね、メモしておこう。 | ERIC: “Kenji! The coffee. Thursday?” | 7.2 s |

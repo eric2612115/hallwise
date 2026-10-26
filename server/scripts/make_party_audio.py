@@ -11,8 +11,10 @@ Runs in the Kokoro venv (kokoro_onnx, numpy), not the server's. Writes:
     RIG/*.wav, RIG/CUES.md     with --rig: each device's own lines, dry, mono 48 kHz 16-bit, plus the TV's hall bed
 
 Every line is phonemized with espeak-ng (language-switch flags removed, so no "(en)" is spoken), with names in
-their own language's phonemes and light L2 shaping per persona, then voiced by Kokoro from the phonemes. espeak's
-Japanese reads kanji as "Chinese letter", so Japanese is written in kana.
+their own language's phonemes and light L2 shaping per persona, then voiced by Kokoro from the phonemes. Japanese
+is written out in phonemes, the way Kokoro's Japanese voices were trained: espeak reads kanji as "Chinese letter",
+and its kana reading drops ん and the long vowels (きんようび came out "kiyoubi"), which Muse Voice Transcribe heard
+as "起用めめ" or not at all.
 
 Each voice is placed by azimuth (0 = ahead, positive = wearer's left) and distance: the direct sound falls as 1/r,
 the room's diffuse tail (RT60 0.4 s, critical distance 1.2 m) does not, so a far talker is quieter and less
@@ -21,6 +23,12 @@ directional. Eric's voice comes from just above the badge: loud, near-omni.
 What the second rehearsal changed: Julien is am_michael in both languages (ff_siwis pitched down for French got a
 second speaker label); hm_omega and jm_kumo get a presence lift (they render very dark); Mac-3 and iPhone-K play
 6 dB louder (at the sofa's level the transcriber dropped their turns); hand-offs between devices are 1.0-1.8 s.
+
+What the third changed: Siddharth says his name once, with his company ("Siddharth Raghunathan, Quill Mesh, we met
+at Blockchain Week"), so the badge can match him; Kenji's murmur is the phoneme version above, which the
+transcriber writes as 金曜日ね、メモしておこう。 alone and after his English, and it is no longer 3 dB down: from
+2.2 m in the room it came through about half the time even so, and only with languageBias en, fr, ja in the
+handshake (never without; see HALLWISE_LANGUAGE_BIAS in recording.py).
 """
 
 from __future__ import annotations
@@ -108,15 +116,15 @@ TAKE: list[dict] = [
     {"who": "eric", "gap": 0.5, "parts": [("I'm good, thanks.", None)]},
     {"scene": "table", "tv_az": 70},
     {"who": "siddharth", "gap": 6.0, "cue": True, "click": "6", "note": "Eric at the table's west end, at least 3 s after cue 7; after ", "parts": [
-        ("Eric!", None), {"ph": "sˈɪdɑːɾt,", "text": "Siddharth,"}, {"ph": "sˈɪdɑːɾt ɾˌɑːɡʊnˈɑːtən,", "text": "Siddharth Raghunathan,"},
-        ("Quill Mesh, from Blockchain Week. You know Kenji.", None)]},
+        ("Eric!", None), {"ph": "sˈɪdɑːɾt ɾˌɑːɡʊnˈɑːtən,", "text": "Siddharth Raghunathan,"},
+        ("Quill Mesh, we met at Blockchain Week. You know Kenji.", None)]},
     {"who": "kenji", "gap": 1.5, "cue": True, "click": "chained", "parts": [
         {"ph": "kˈendʒi wˌatanˈabe,", "text": "Kenji Watanabe,"}, {"ph": "hˌoʊʃizˈoːɾə", "text": "Hoshizora"}, ("Robotics. We keep running into each other.", None)]},
     {"who": "eric", "gap": 6.5, "parts": [("It remembered both before I did.", None)]},
     {"who": "eric", "gap": 1.5, "parts": [("Kenji! The coffee. Thursday?", None)]},
     {"who": "kenji", "gap": 1.0, "cue": True, "click": "7", "parts": [
         ("Thursday is...", None), 0.7, ("no, Friday. Friday is better.", None), 0.9,
-        {"text": "きんようびね、メモしておこう。", "show": "金曜日ね、メモしておこう。", "lang": JA, "gain": -3, "speed": 0.95}]},
+        {"ph": "kʲiɴjoːbʲi ne, memo ɕite okoː.", "text": "金曜日ね、メモしておこう。", "lang": JA, "speed": 0.95}]},
     {"scene": "out", "tv_az": 150, "tail": 16.0},
 ]
 
