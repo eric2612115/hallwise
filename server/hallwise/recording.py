@@ -1,13 +1,16 @@
 """One live recording.
 
 Takes the badge's audio and orientation messages, keeps the original multichannel audio, feeds a mono mix to
-speech recognition, and writes everything to the recording's event log.
+speech recognition, and writes everything to the recording's event log. The recogniser's copy of the mix is
+levelled first (see leveler.py), so a guest two metres away is not lost next to the wearer's own voice; audio.wav
+keeps the audio exactly as it arrived.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 import uuid
 import wave
@@ -22,6 +25,7 @@ from .asr import Asr
 from .direction import DirectionTracker, SpeakerPositions
 from .events import EventLog, fold_record
 from .extract import Extractor, Turn, draft_next_moves
+from .leveler import Leveler
 from .people import history_event, match, people_index
 
 ASR_RATE = 24_000
@@ -76,6 +80,14 @@ class Hello:
         return hello
 
 
+def default_language_bias() -> list[str] | None:
+    """HALLWISE_LANGUAGE_BIAS, e.g. "en,fr,ja": the languages the transcriber is told to expect when the badge's
+    hello names none (the app sends none). Without it, from across a room, Muse Voice Transcribe dropped a
+    Japanese aside after English every time; with en, fr, ja it wrote it about half the time."""
+    langs = [x.strip() for x in os.environ.get("HALLWISE_LANGUAGE_BIAS", "").split(",") if x.strip()]
+    return langs or None
+
+
 def to_mono(frames: np.ndarray, layout: str) -> np.ndarray:
     """frames: (n, channels) int16 → (n,) int16 for speech recognition."""
     if layout == "stereo":
@@ -96,7 +108,9 @@ class Recording:
         self.dir.mkdir(parents=True)
         self.known = people_index(root, exclude=self.id)  # everyone met at earlier recordings
         self.hello = hello
+        bias = hello.language_bias or default_language_bias()
         meta = {k: v for k, v in hello.__dict__.items() if k != "fake_script"}
+        meta["asr_language_bias"] = bias
         self.started = time.time()
         (self.dir / "meta.json").write_text(json.dumps({"id": self.id, "started": self.started, **meta}))
         self.log = EventLog(self.dir / "events.jsonl")
@@ -107,6 +121,7 @@ class Recording:
         self._resampler = (
             None if hello.sample_rate == ASR_RATE else soxr.ResampleStream(hello.sample_rate, ASR_RATE, 1, dtype="int16")
         )
+        self._leveler = Leveler(ASR_RATE)  # only the recogniser's copy; audio.wav is written before it
         self._frames = 0
         self._pending = b""
         self.direction = DirectionTracker(hello.sample_rate, hello.layout)
@@ -115,7 +130,9 @@ class Recording:
         # it was spelled before.
         names = [e["name"] for e in self.known[:40] if e.get("name")]
         hello.keywords = list(dict.fromkeys((hello.keywords or []) + names))
-        self.asr = make_asr(self._on_asr, rate=ASR_RATE, hello=hello)
+        # The conversation's transcriber gets the server's default languages when the badge names none; a question
+        # asked by voice (start_ask) keeps the badge's own, so it is not steered away from the owner's language.
+        self.asr = make_asr(self._on_asr, rate=ASR_RATE, hello=replace(hello, language_bias=bias))
         self._make_asr = make_asr
         self._ask_asr: Asr | None = None  # while the owner holds to talk, audio goes here instead
         self._ask_turns: list[str] = []
@@ -162,7 +179,7 @@ class Recording:
         if self._resampler is not None:
             mono = self._resampler.resample_chunk(mono)
         if len(mono):
-            pcm = mono.astype("<i2").tobytes()
+            pcm = self._leveler.process(mono).astype("<i2").tobytes()
             if self._ask_asr is not None:
                 await self._ask_asr.send(pcm)  # the question is not part of the conversation
             else:
@@ -228,7 +245,7 @@ class Recording:
         if self._resampler is not None:
             tail = self._resampler.resample_chunk(np.zeros(0, dtype=np.int16), last=True)
             if len(tail):
-                await self.asr.send(tail.astype("<i2").tobytes())
+                await self.asr.send(self._leveler.process(tail).astype("<i2").tobytes())
         await self.asr.finish()
         if self._extract_task is not None:
             await self._extract_task
