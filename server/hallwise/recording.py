@@ -26,6 +26,7 @@ from .direction import DirectionTracker, SpeakerPositions
 from .events import EventLog, fold_record
 from .extract import Extractor, Turn, draft_next_moves
 from .leveler import Leveler
+from .hooks import Threads
 from .people import history_event, match, people_index
 
 ASR_RATE = 24_000
@@ -138,6 +139,13 @@ class Recording:
         self._ask_turns: list[str] = []
         self.extractor = make_extractor(hello) if make_extractor else None
         self._history_sent: set[str] = set()
+        # Open introductions and mentions from earlier evenings: a person who turns up gets a `hook` event, the
+        # reason to write that the room shows under their name and the drafts use at Stop.
+        try:
+            self.threads: Threads | None = Threads.load(root, exclude=self.id, before=self.started, tz=hello.tz)
+        except Exception:  # an unreadable old log must not stop a recording
+            self.threads = None
+        self._hooks_sent: set[tuple[str, str]] = set()
         if self.extractor is not None:
             self.extractor.known = [
                 e["name"] + (f", {e['company']}" if e["company"] else "") for e in self.known[:60]
@@ -230,6 +238,12 @@ class Recording:
             try:
                 for kind, t_ms, data in await self.extractor.run():
                     self.log.emit(kind, t_ms, **data)
+                    if kind == "person" and self.threads is not None:
+                        for hook in self.threads.for_person(data.get("name", ""), data.get("company", ""), data["key"]):
+                            if (data["key"], hook["title"]) not in self._hooks_sent:
+                                self._hooks_sent.add((data["key"], hook["title"]))
+                                # the event's own type is "hook"; what kind of hook it is rides as "kind"
+                                self.log.emit("hook", t_ms, **{("kind" if k == "type" else k): v for k, v in hook.items()})
                     if kind == "person" and data["key"] not in self._history_sent:
                         entry = match(self.known, data.get("name", ""), data.get("company", ""))
                         if entry is not None:

@@ -100,3 +100,44 @@ def test_a_thank_you_closes_an_introduction(tmp_path):
 def test_names_sound_alike_across_spellings():
     assert name_sound("Margaux") == name_sound("Margot")
     assert name_sound("Lefèvre") == name_sound("Lefevre")
+
+
+def test_a_person_turning_up_gets_their_hooks_and_the_drafts_use_them(tmp_path):
+    import json
+
+    import numpy as np
+    from fastapi.testclient import TestClient
+
+    from hallwise.app import create_app
+    from hallwise.extract import Extractor
+
+    week(tmp_path, time.time() - 600)
+    prompts = {}
+    margot = {"key": "margot-lefevre", "name": "Margot Lefèvre", "company": "", "role": "", "speakers": ["1:A"],
+              "preferred_language": "French", "introduced_by": "", "evidence_turns": [0]}
+    promise = {"key": "one-pager-to-margot-lefevre", "owed_by": "owner", "owed_to": "margot-lefevre",
+               "what": "one page with numbers", "due": "tomorrow", "replaces": "", "evidence_turns": [0]}
+
+    async def llm(system, user, schema=None, name=""):
+        prompts[name or "record"] = user
+        if name == "hallwise_next_moves":
+            return {"moves": []}
+        return {"owner_speakers": ["1:B"], "turns": [], "people": [margot], "mentioned": [], "promises": [promise],
+                "suspect_words": [], "translations": [], "room_topics": []}
+
+    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=lambda hello: Extractor(llm, "Eric", "Hallwise")))
+    with client.websocket_connect("/ingest") as ws:
+        ws.send_text(json.dumps({"sample_rate": 24_000, "channels": 1, "layout": "mono", "owner_name": "Eric",
+                                 "fake_script": [{"start_ms": 100, "end_ms": 600, "speaker": "A", "text": "Margot Lefèvre."}]}))
+        rid = ws.receive_json()["recording"]
+        ws.send_bytes(np.zeros(24_000, dtype=np.int16).tobytes())
+        ws.send_text(json.dumps({"type": "end"}))
+        ws.receive_json()
+
+    events = client.get(f"/api/recordings/{rid}/events").json()
+    hooks = [e for e in events if e["type"] == "hook"]
+    assert [(h["person_key"], h["title"].split(" · ")[0]) for h in hooks] == [("margot-lefevre", "Chloé's colleague")]
+    assert hooks[0]["kind"] == "mutual_connection"
+    assert hooks[0]["evidence"][0]["quote"].startswith("Chloé Martin, Corvane Capital. My colleague Margaux")
+    assert "Reasons to write" in prompts["hallwise_next_moves"]
+    assert "- margot-lefevre: Chloé's colleague" in prompts["hallwise_next_moves"]

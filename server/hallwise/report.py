@@ -23,8 +23,9 @@ from typing import Any, Callable
 
 from .ask import latest_moves
 from .events import fold_record, read_events
-from .extract import LLM
+from .extract import LLM, draft_next_moves
 from .hooks import Threads, find_hooks
+from .people import person_key
 from .research import Researcher, candidates
 
 REPORT_TTL_S = 3600
@@ -75,15 +76,18 @@ def assemble(
     checks = {r.get("record_key") or r["key"]: r for r in research.get("people", [])}
     skipped = {s.get("record_key") or s["key"]: s for s in research.get("skipped", [])}
 
+    index_of = {rk: ik for h in hooks for ik, rk in h.get("record_keys", {}).items()}
+
     def person(key: str, hook: dict[str, Any] | None = None) -> dict[str, Any]:
         p = people.get(key)
         if p is not None:
-            return {"key": key, "name": p.get("name", key), "company": p.get("company", ""),
+            return {"key": key, "index_key": index_of.get(key) or person_key(p.get("name", ""), p.get("company", "")),
+                    "name": p.get("name", key), "company": p.get("company", ""),
                     "language": p.get("preferred_language", ""), "tonight": True}
         if hook is not None:
             i = hook["people"].index(key) if key in hook["people"] else 0
-            return {"key": key, "name": hook["names"][i], "company": "", "language": "", "tonight": False}
-        return {"key": key, "name": key, "company": "", "language": "", "tonight": False}
+            return {"key": key, "index_key": hook["people"][i], "name": hook["names"][i], "company": "", "language": "", "tonight": False}
+        return {"key": key, "index_key": key, "name": key, "company": "", "language": "", "tonight": False}
 
     def check(key: str) -> dict[str, Any] | None:
         if key in checks:
@@ -169,6 +173,7 @@ def assemble(
             "unverified": len([r for r in checked if r.get("status") == "no_public_record"]),
         },
         "reach_out": reach,
+        "redrafted": [m["promise_key"] for m in moves if m.get("redrafted")],
         "introductions": [h for h in hooks if h["type"] == "introduction"],
         "checked": checked,
         "unchecked": research.get("skipped", []),
@@ -264,11 +269,39 @@ class Reports:
         else:
             try:
                 hooks, _ = await find_hooks(llm, self.data, rid, research.get("people", []), moves)
-                usage = dict(getattr(llm, "last_usage", {}) or {})
+                usage = _add(usage, getattr(llm, "last_usage", {}) or {})
             except Exception as err:  # the report still goes out, with the model-free hooks
                 hooks = threads_as_hooks(self.data, rid, record, meta)
                 note = f"hooks fell back to open introductions and mentions ({err.__class__.__name__})"
+            moves, redrafted = await self.redraft(llm, record, meta, moves, hooks)
+            if redrafted:
+                usage = _add(usage, getattr(llm, "last_usage", {}) or {})
         return assemble(rid, meta, record, moves, hooks, research, now=self.clock(), hooks_note=note, usage=usage)
+
+    async def redraft(
+        self, llm: LLM, record: dict[str, Any], meta: dict[str, Any], moves: list[dict[str, Any]], hooks: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """Drafts written at Stop without a reason to write (the recording had no `hook` events) are written
+        once more with the hooks the report found, so Margaux's can say Chloé suggested it. The rest stay."""
+        if record.get("hooks") or not moves:
+            return moves, False
+        by_person: dict[str, list[dict[str, Any]]] = {}
+        for h in hooks:
+            for rk in h.get("record_keys", {}).values():
+                by_person.setdefault(rk, []).append(h)
+        if not any(m.get("person_key") in by_person for m in moves):
+            return moves, False
+        try:
+            fresh = await draft_next_moves(
+                llm, {**record, "hooks": by_person},
+                owner_name=meta.get("owner_name", ""), owner_company=meta.get("owner_company", ""),
+                event=meta.get("event", ""), venue=meta.get("venue", ""), now=meta.get("now", ""), tz=meta.get("tz", ""),
+                busy=meta.get("busy") or [], links=meta.get("links") or {},
+            )
+        except Exception:  # the night's drafts are still good
+            return moves, False
+        new = {m["promise_key"]: {**m, "redrafted": True} for m in fresh if m.get("person_key") in by_person}
+        return [new.get(m.get("promise_key", ""), m) for m in moves], bool(new)
 
     async def later(self, rid: str, delay_s: float) -> None:
         """The automatic run, some minutes after a recording ends: by then the drafts are in."""
@@ -277,6 +310,10 @@ class Reports:
             await self.run(rid)
         except Exception as err:  # nobody is waiting on it; the POST can run it again
             print(f"report {rid}: {err.__class__.__name__}: {err}")
+
+
+def _add(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
+    return {k: int(a.get(k) or 0) + int(b.get(k) or 0) for k in ("prompt_tokens", "completion_tokens")}
 
 
 def report_delay_s() -> float | None:

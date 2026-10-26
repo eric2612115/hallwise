@@ -121,6 +121,10 @@ Write exactly one move per promise:
   take one from what someone else said in the transcript: when one guest says "we met at Blockchain Week", that is
   where the owner met that guest, not the person standing next to him. A person whose line says "met before: none"
   gets no mention of any earlier meeting.
+- Reasons to write: when a person has one listed (someone who mentioned them at an earlier evening, an
+  introduction the owner still owes, a question left open), the message may use it in one natural clause, in the
+  message's language ("Chloé told me you'd want to see this"; "and the introduction to Lena I still owe you").
+  Use only what the reason and its quote say; never add a relation, a reaction or a fact it does not give.
 - A promise owed to the owner becomes kind "nudge": a short, friendly reminder the owner can send a few days later.
 - body is in the person's preferred_language when one is set, else English. body_english is the same message in
   English, empty when body is already English. language names the language of body.
@@ -228,6 +232,12 @@ def build_next_prompt(
             for e in h.get("encounters", [])
         )
 
+    hook_lines = [
+        f"- {key}: {h.get('title', '')}" + (f" | {h['reason']}" if h.get("reason") else "")
+        + "".join(f" | “{e.get('quote', '')}”" for e in (h.get("evidence") or [])[:2] if e.get("quote"))
+        for key, hooks in (record.get("hooks") or {}).items() for h in hooks
+        if key in {p["key"] for p in record.get("people", [])}
+    ] or ["- none"]
     met_lines = [
         f"- {key}" + (f" ({h['name']})" if h.get("name") else "") + ": " + met(h) + (
             " | earlier promises: " + "; ".join(
@@ -264,6 +274,9 @@ def build_next_prompt(
         "",
         "Met before (earlier evenings with the owner, per person; a follow-up may refer to that person's own, and only those):",
         *met_lines,
+        "",
+        "Reasons to write (from earlier evenings, per person key; use one only for that person):",
+        *hook_lines,
         "",
         "Transcript (conversation turns):",
     ]

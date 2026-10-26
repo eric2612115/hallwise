@@ -11,9 +11,17 @@ from hallwise.research import Researcher
 JPEG = b"\xff\xd8\xff\xe0" + b"face" * 100
 
 
-def make_app(tmp_path, calls):
+def make_app(tmp_path, calls, prompts=None):
     async def llm(system, user, schema=None, name=""):
         calls.append(name)
+        if prompts is not None:
+            prompts[name] = user
+        if name == "hallwise_next_moves":
+            return {"moves": [{
+                "promise_key": "one-pager-to-margot-lefevre", "person_key": "margot-lefevre", "kind": "email",
+                "language": "French", "subject": "Une page", "body": "Bonjour Margot, Chloé m'a dit que vous voudriez voir ça. Eric",
+                "body_english": "Chloé told me you'd want to see this.", "when": "", "duration_minutes": 30, "attach": "",
+                "why": "", "remind_at": "2000-01-01T10:00:00+08:00", "nudge": "One-pager for Margot"}]}
         chloe = next(line.split(" | ")[0] for line in user.splitlines() if "My colleague Margaux" in line)
         intro = next(line.split(" | ")[0] for line in user.splitlines() if "introduce you two" in line)
         return {"hooks": [
@@ -37,20 +45,26 @@ def make_app(tmp_path, calls):
 
 def test_report_runs_stores_and_serves(tmp_path):
     week(tmp_path, time.time())
-    calls = []
-    client = make_app(tmp_path, calls)
+    calls, prompts = [], {}
+    client = make_app(tmp_path, calls, prompts)
     assert client.get("/api/report/latest").status_code == 404
     r = client.post("/api/report/run", params={"recording": "c-tonight"})
     assert r.status_code == 200, r.text
     report = r.json()
     assert report["cached"] is False and report["generated_at"] > 0
-    assert calls == ["search", "hallwise_hooks"]  # Kenji is looked up; Margot has no company to search
+    # Kenji is looked up (Margot has no company to search); the drafts written without a reason are written again
+    assert calls == ["search", "hallwise_hooks", "hallwise_next_moves"]
+    assert "margot-lefevre: Chloé's colleague | Chloé said her colleague Margaux" in prompts["hallwise_next_moves"]
+    assert report["redrafted"] == ["one-pager-to-margot-lefevre"]
     assert (tmp_path / "reports" / "c-tonight.json").exists()
 
     rows = {row["person"]["name"]: row for row in report["reach_out"]}
     margot = rows["Margot Lefèvre"]
     assert margot["hook"]["title"] == "Chloé's colleague"
     assert margot["followup"]["source"] == "next_move" and margot["followup"]["move"]["language"] == "French"
+    assert margot["followup"]["move"]["body"].startswith("Bonjour Margot, Chloé m'a dit")
+    kenji_move = rows["Kenji Watanabe"]["followup"]["move"]
+    assert kenji_move["body"] == "Coffee Friday? Eric" and "redrafted" not in kenji_move  # not in the new drafts: kept
     assert margot["check"]["status"] == "unchecked"
     assert rows["Kenji Watanabe"]["hook"]["type"] == "introduction"
     assert rows["Kenji Watanabe"]["check"]["status"] == "no_public_record"
@@ -63,9 +77,9 @@ def test_report_runs_stores_and_serves(tmp_path):
     assert report["summary"]["people"] == 2 and report["summary"]["languages"] == ["French"]
 
     again = client.post("/api/report/run", params={"recording": "c-tonight"}).json()
-    assert again["cached"] is True and calls == ["search", "hallwise_hooks"]  # within the hour: the stored one
+    assert again["cached"] is True and len(calls) == 3  # within the hour: the stored one
     forced = client.post("/api/report/run", params={"recording": "c-tonight", "force": 1}).json()
-    assert forced["cached"] is False and calls == ["search", "hallwise_hooks", "hallwise_hooks"]  # research came from cache
+    assert forced["cached"] is False and calls[3:] == ["hallwise_hooks", "hallwise_next_moves"]  # research came from cache
 
     assert client.get("/api/report/latest").json()["generated_at"] == forced["generated_at"]
     assert client.get("/api/report/c-tonight").json()["recording"] == "c-tonight"
