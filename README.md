@@ -1,0 +1,42 @@
+# Hallwise
+
+**Hallwise turns a loud networking event into everyone you met, what you promised them, and a follow-up in their
+language — live, from the phone you wear as your badge, with no voiceprints or faces.**
+
+You meet thirty people at an event and forget half of them by morning. Note-takers give you "Speaker 1,
+Speaker 2" and fall apart in a loud room. Hallwise names people from how they introduce themselves, hears where
+each voice comes from, and a second Meta model double-checks every name.
+
+Built for the Meta Global AI Developer Hackathon (Indie Developer track, "Build for Your World").
+
+## How it works
+
+- **One device.** An iPhone worn as your badge: its microphones capture spatial audio (where each voice comes
+  from), its gyroscope keeps every person's position fixed in the room while you turn or lean in to listen.
+- **Meta Voice Transcribe** transcribes live and separates speakers, primed with names and words from your
+  memory.
+- **Muse Spark** works out who is who from introductions, tracks promises (including "Thursday — no, Friday"),
+  flags words that look misheard, filters "thanks" and "excuse me", and drafts follow-ups in each person's
+  language.
+- **Muse Spark Open** is a second listener: it re-hears every name, and where the two Meta models disagree the
+  word is flagged for one-tap correction. Corrections become recognition hints for next time.
+
+## Repository
+
+```
+apps/web/        web UI: live dashboard, recap, judge demo
+server/          FastAPI: audio ingest, event log, SQLite
+pipeline/        transcribe, positions, classify, extract, second listener, follow-ups
+ios/             badge capture app (Swift)
+rig/             living-room test bench: scenes, voices, players
+harness/         scoring against scene ground truth
+tools/probe-ios/ microphone capability probe
+docs/            plan and architecture
+demo/            demo script
+```
+
+Work in progress during the hackathon (Oct 26 – Nov 4, 2026).
+
+## License
+
+AGPL-3.0. See [LICENSE](LICENSE).

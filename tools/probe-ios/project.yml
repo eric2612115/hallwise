@@ -1,0 +1,24 @@
+name: HallwiseProbe
+options:
+  bundleIdPrefix: com.eric2612115
+  deploymentTarget:
+    iOS: "26.0"
+targets:
+  HallwiseProbe:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: Hallwise Probe
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSMicrophoneUsageDescription: Records short test clips to check stereo and spatial audio capture.
+        NSMotionUsageDescription: Reads the phone's orientation to show which way it is facing.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.eric2612115.hallwise-probe
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
