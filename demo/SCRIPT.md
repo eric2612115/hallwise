@@ -28,10 +28,10 @@ below sofa 1. The take walks a clockwise U: friend's room → its door → sofa 
 ## Frame
 
 - Left 60%: the camera.
-- Right 40%: the app's **Room page**, screen-recorded from the iPhone 16 following the live recording (follow
+- Right 40%: the app's **Room page**, screen-recorded from the iOS Simulator on Mac-0 following the live recording (follow
   mode): the radar (ahead = up, each person a coloured dot where their voice comes from, lit while they talk, a
   ring when the badge has met them before) and the strip of who Eric has met. For Stop, the bedroom and the
-  map, the second phone switches to Ask, the bell and Map.
+  map, the follow view switches to Ask, the bell and Map.
 - Inserts from the dashboard on Mac-0 (screen-recorded) for lines that need reading: the French chat with its
   English under it marked *translated*, Margaux's aside, Kenji's murmur, the Words list.
 - The panels read only the server's event stream, never the rig's scene files.
@@ -79,7 +79,7 @@ one the badge will recognise tonight; at the afterparty he and Eric agreed to "t
 | TV, top wall | Mac-0 over HDMI: the hall bed, muted until the first click; also the Hallwise server, the dashboard (screen-recorded), the rig controller; the presenter is paired to it. |
 | Eric's room (lower left) | Where the closing is shot: in through its door, lamp on, the sofa in the room's top-right corner. |
 | Eric | iPhone 17 Pro worn as a badge on a magnetic lanyard mount (portrait, screen out, nothing covering the microphones), showing "Eric · Hallwise" on the paper card. Presenter in hand. |
-| Follow phone | iPhone 16 in follow mode on the TV cabinet, screen-recorded for the right panel; never in frame. |
+| Follow view | The Hallwise app in the iOS Simulator on Mac-0, in follow mode, recorded with `xcrun simctl io booted recordVideo`: the exact app screen, no second phone. The iPhone 16 is free to play Kenji. |
 | Camera | A friend's iPhone 18 Pro on a gimbal. The operator walks backwards ahead of Eric from the friend's room to Eric's door, pausing at the three corners (the door, the sofa's west end, the table's west end). Walk it once empty-handed first; the turns are tight. Its audio is only a sync reference. |
 
 ## Sound
@@ -265,7 +265,7 @@ End card (2:58–3:00).
   calibrated facing the camera.
 - Server: the four rehearsed evenings present and dated; `/api/people` lists sixteen people; Kenji's history
   shows two encounters.
-- Follow phone: follow mode on the new recording id as soon as Start is tapped (the dashboard shows it);
+- Follow view: the Simulator on Mac-0 switched to follow mode on the new recording id as soon as Start is tapped (the dashboard shows it);
   screen recording running.
 - Mac-3: the waiter file and Siddharth's file on separate presenter keys, in that order.
 - Mac-0: output device set to HDMI, muted until the first click; presenter keys captured globally; Do Not
@@ -286,8 +286,8 @@ End card (2:58–3:00).
 - Recognition is live but arrives with the first extraction run after the introduction, a few seconds later.
   Hold on Kenji until the ring appears before the "It remembered" line.
 - The drafts take five to ten seconds after Stop; hold the shot on Eric until the first chip lands.
-- The calendar editor must be prefilled on the follow phone, not the badge phone: for the take, tap Add to
-  calendar on the follow phone (same server, same drafts).
+- The calendar editor must be prefilled in the follow view, not on the badge phone: for the take, click Add to
+  calendar in the Simulator (same server, same drafts).
 - The photo at the door: one face, one person, so the match is trivial, but it takes about seven seconds; the
   first SAM call of the day can take nine. Take one warm-up photo before the take.
 - On the real iPhone, check once that a talker on the left lights the left dot with the badge hanging upside
