@@ -1,144 +1,183 @@
-# Hallwise demo — one take, five scenes, about 2:50
+# Hallwise demo — the payoff first, then the night, about 2:55
 
-Target about 2:50, leaving about 10 seconds under the three-minute limit. One continuous camera take through
-the living room, with an optional 4-second pre-roll before it. Scene timecodes below are pre-rehearsal; the two
-walks with filtered small talk push later scenes about 4 seconds later.
+Three minutes is the limit. The video opens on the result and only then shows how it happened, because a
+judge decides in the first fifteen seconds whether to keep watching. The party itself is one continuous
+camera take through the living room; the cold open and the closing are shot after it, on the same phone.
 
-The room is real: computers play the other people's voices, Eric talks live, and Hallwise gets one device —
-the badge on Eric's chest: its microphones hear where each voice comes from, its gyroscope tracks how Eric is
-turned. Everything on the panels is written and
-judged by the models in real time.
+The room is real: computers play the other guests' voices from where they would stand, Eric talks live, and
+Hallwise gets one device, the badge on Eric's chest. Everything on the panels is written by the models during
+the take; nothing is typed.
+
+## Shape
+
+| Time | Beat | What the viewer gets |
+|---|---|---|
+| 0:00–0:15 | Cold open | The morning after: four promises, drafts already written in French and English, a slot already on the calendar. "I typed nothing." |
+| 0:15–0:38 | The door | The badge on the chest, Start, a friend, the first promise. |
+| 0:43–1:40 | The sofa | Two French investors talking among themselves in French, an introduction, the switch to English, a one-pager promised, a meeting set. The centrepiece. |
+| 1:45–2:08 | The window | Kenji, a spelled-out surname, Thursday → no, Friday, a Japanese murmur. |
+| 2:08–2:35 | Stop | The drafts land. Margaux's in French. Julien's invite dodges Wednesday's 2 pm. Words to fix. |
+| 2:35–2:52 | Ask | Eric asks the badge out loud what he owes; it answers. |
+| 2:52–2:58 | End card | Models used, open source. |
 
 ## Frame
 
 - Left 60%: the camera take.
-- Right 40%: the app's **Room page**, screen-recorded from a second iPhone (the iPhone 16) that follows the live
-  recording in the app's follow mode, so the badge on Eric's chest keeps showing his name card while the video
-  shows what Hallwise hears: the radar (ahead = up; each person where their voice comes from, close voices on the
-  inner ring, the talker lit) and the subtitle with its translation. For the closing, the second phone switches to
-  People, Owe and Words.
-- The Room page reads only the server's event stream, never the rig's scene files.
-- Fallback if live capture fails: process after the take and caption the panels "Hallwise's output for this
-  recording, replayed at the moment each thing was said".
+- Right 40%: the app's **Room page**, screen-recorded from the iPhone 16 following the live recording (follow
+  mode), so the badge on Eric's chest keeps showing his name card while the viewer sees what Hallwise hears: the
+  radar (ahead = up, each person a coloured dot where their voice comes from, lit while they talk) and the strip
+  of who he has met. For Stop and Ask the second phone switches to Owe and Ask.
+- Inserts from the dashboard on Mac-0 (screen-recorded) for the lines that need reading: the French chat with
+  its English under it marked *translated*, Margaux's aside, Kenji's murmur, the Words list.
+- The panels read only the server's event stream, never the rig's scene files.
+- Fallback if live capture fails during the take: process the badge recording afterwards and caption the
+  panels "Hallwise's output for this recording, replayed at the moment each thing was said".
 
 ## On-screen text
 
-- End card: "Built with Muse Voice Transcribe · Muse Spark · Muse Spark Open. Voices: Kokoro.
-  Panels: Hallwise's live dashboard during this take."
+- Under the cold open: "Everyone except my friend and me is AI-generated. Voices: Kokoro."
+- End card: "Built with Muse Voice Transcribe · Muse Spark · Muse Spark Open. Open source, AGPL-3.0."
 
 Personas and companies are fictional. [FRIEND] and [FRIEND_CO] are a real friend's name and company.
+
+## Cast
+
+| Person | Where | Device | Voice |
+|---|---|---|---|
+| [FRIEND], [FRIEND_CO], wallets | Door (A) | live | their own |
+| Siddharth Raghunathan, Quillmesh, warehouse robots | Sofa, left (B1) | Mac-1 | `hm_omega`, Indian English shaping |
+| Margaux Lefèvre, Corvane Capital, pre-seed | Sofa, middle (B2) | Mac-2 | `ff_siwis` (French and English) |
+| Julien Caron, Corvane Capital, diligence | Sofa, middle-right (B2′) | Mac-2 second output, or Mac-3 | `ff_siwis` pitched down 4 semitones for French; `am_michael` with French shaping for English |
+| Wei Ling, Pandan Pay, hawker-stall payments | Sofa, right (B3) | Mac-3 | `zf_xiaoyi` |
+| Kenji Watanabe, Hoshizora Robotics | Window (C) | iPhone 16 (iPhone-K) | `jm_kumo` |
+| Waiter, MC, hall bed | TV | Mac-0 over HDMI | voices the cast doesn't use |
+
+Julien and Margaux sit together, so their two voices come from nearly the same spot; the radar spreads them
+apart, diarization tells them apart by voice. Rehearse this pair first (see Risks).
 
 ## Room
 
 | Spot | What is there |
 |---|---|
-| Door (A) | [FRIEND]. Scene 1. |
-| Sofa (B) | Mac-1, Mac-2, Mac-3 in a half circle about 1 m from Eric's mark: Siddharth, Margaux, Wei Ling. Scene 2. |
-| Window (C) | iPhone 16 (iPhone-K) at head height: Kenji. Scene 3. |
-| TV | Mac-0 sends the hall bed to it over HDMI. Mac-0 also runs the Hallwise server, the live dashboard (screen-recorded) and the rig controller; the presenter is paired to it. |
-| Eric | iPhone 17 Pro worn as a badge (portrait, screen out, always on: "Eric · Vexi" with the logo on a paper-like card), running the Hallwise capture app (spatial or stereo audio + the phone's orientation). Fallback: Safari `/record` page. Presenter in hand. |
+| Door (A) | [FRIEND]. |
+| Sofa (B) | Mac-1, Mac-2, Mac-3 in a half circle about 1 m from Eric's mark. |
+| Window (C) | iPhone-K at head height. |
+| TV | Mac-0: hall bed over HDMI; also the Hallwise server, the dashboard (screen-recorded), the rig controller; the presenter is paired to it. |
+| Eric | iPhone 17 Pro worn as a badge on a magnetic lanyard mount (portrait, screen out, nothing covering the microphones), showing "Eric · Hallwise" on the paper card. Presenter in hand. |
+| Follow phone | iPhone 16 in follow mode on a small stand by the TV, screen-recorded for the right panel. |
 | Camera | A friend's iPhone 18 Pro on a gimbal. The operator stays silent. Its own audio is only a sync reference. |
 
 ## Sound
 
 - The soundtrack is the badge's own recording (iPhone 17 Pro): exactly what Hallwise heard, Eric's voice
-  included. The capture app saves the full multichannel recording on the phone while it streams.
-- In post, the camera's scratch audio and the clap line the badge recording up with the picture.
-- Eric talks to the camera throughout, so the camera mostly faces him. The badge's four channels are decoded to
-  headphone stereo and mirrored left ↔ right for the whole video, so a voice on the right of the picture comes
-  from the right. Eric says so in the opening.
-- Opening caption: "🎧 Best with headphones." Caption under the opening line: "Everyone except my friend and me
-  is AI-generated."
-
-Background, all Kokoro, using voices the personas don't use: the hall bed on the TV for the whole take; group X
-(Mac-1/2/3) during scene 1; group Y (iPhone-K) during scenes 1–2; group Z (Mac-1/2/3) during scene 3. The background
-groups feed the room radar. A waiter's line and an optional MC announcement also come from the TV.
-
-Voices (Kokoro plus accent shaping, tuned by ear): Siddharth `hm_omega`, Margaux `ff_siwis`, Wei Ling `zf_xiaoyi`,
-Kenji `jm_kumo`. `[click]` is where Eric presses the presenter to cue the next synthetic lines.
+  included. The app keeps the full multichannel file on the phone while it streams.
+- In post, the camera's scratch audio and the clap line the badge recording up with the picture. The four
+  channels are decoded to headphone stereo; no on-camera mention of it.
+- Background, all Kokoro: the hall bed on the TV for the whole take; group X (Mac-1/2/3) during the door scene;
+  group Y (iPhone-K) during the door and sofa scenes; group Z (Mac-1/2/3) during the window scene. The background
+  groups feed the room topics. A waiter's line and an optional MC announcement also come from the TV.
+- `[click]` is where Eric presses the presenter to cue the next synthetic lines.
 
 ---
 
-## Pre-roll (0:00–0:04), optional, not part of the take
+## Cold open (0:00–0:15), shot after the take, kitchen counter, morning light
 
-The finished recap from the end of this take, frozen, with two lines of text:
-"Everyone I met at a loud event, what I promised, and a follow-up in their language — live, no voiceprints."
-"One take: 5 people, 4 accents, crowd noise → N/5 named, N/N promises caught." (numbers from the harness)
+Eric holds the phone in his hand, Owe page up. The camera is on the screen, then tilts to his face.
 
-## Scene 0 — Opening (0:04–0:19), at the door, to camera
+ERIC: Last night I met five people. I typed nothing. These are the follow-ups Hallwise wrote while I was
+still at the party. Margaux's is in French. Julien's meeting dodged my Wednesday two o'clock. Here's the night.
 
-The camera opens on the badge on Eric's chest, then tilts up to his face.
+Screen, in order, two seconds each: Owe with four promises and their Draft chips; Margaux's draft, French with
+English under it; Julien's invite, "Wednesday 16:00 · 30 min · avoids your 14:00 board call"; the calendar entry.
 
-ERIC: I meet thirty people at every event and forget half of them by morning. Tonight my living room is the
-event. Headphones on — we flipped left and right, so you hear the room from where you're sitting.
+Cut to the take.
 
-Panels: "memory: empty". The sound field shows only Eric's badge direction.
+## The door (0:15–0:38), door (A)
 
-## Scene 1 — [FRIEND], live (0:16–0:46), door (A)
+The camera opens on the badge on Eric's chest, name out, then tilts up to his face. Eric lifts the badge, taps
+Start, and lets it drop back; the card is still a card.
 
 The friend's lines are their own words, about 30 words in all; keep the scene to these five beats.
 
 1. [FRIEND] greets Eric.
 2. [FRIEND] gives name, company and one sentence on what they do.
-3. ERIC: I'm Eric. I make Hallwise — this badge.
+3. ERIC: I'm Eric, from Hallwise. This badge.
 4. ERIC: I'll send you our deck tonight.
 5. [FRIEND] says Eric should meet Siddharth, by the sofa.
 
 Panels:
-- [FRIEND] · [FRIEND_CO]; their icon appears in the sound field toward the door.
-- Eric's own label bound from "I'm Eric. I make Hallwise".
-- Suspect word: "Hallwise" (expected to come back as "Hall Wise" or "hallways").
-- Promise: deck → [FRIEND], tonight.
+- [FRIEND] · [FRIEND_CO] appears as a dot toward the door, lit while they talk.
+- Eric's own voice bound from "I'm Eric, from Hallwise".
+- Words: "Hallwise" (expected back as "Hall Wise" or "hallways").
+- Owe: deck → [FRIEND], tonight.
 - Mentioned, not met yet: Siddharth.
-- Room radar: first topics from group X, with no names attached.
+- Room topics: the first from group X, no names attached.
 
-Walk to the sofa (0:46–0:51). A waiter's voice from the TV side: "Something to drink?" ERIC (still walking):
+Walk to the sofa (0:38–0:43). A waiter's voice from the TV side: "Something to drink?" ERIC (still walking):
 "I'm good, thanks."
 
-Panel: a grey chip — "Filtered: small talk on the way, not part of any conversation." Nothing reaches the roster.
+Insert: the line in the transcript marked *filtered*. Nothing reaches the roster.
 
-## Scene 2 — the sofa, four people (0:49–1:37), sofa (B)
+## The sofa (0:43–1:40), sofa (B)
+
+Eric arrives mid-conversation. Margaux and Julien are talking to each other, in French, about yesterday's pitch.
+Siddharth and Wei Ling listen.
 
 [click]
-SIDDHARTH: — so the pilot basically paid for itself. Oh, hi! You must be Eric?
+MARGAUX (to Julien): Franchement, le deck d'hier, j'ai rien compris à leur modèle.
+JULIEN: Pareil. Vingt slides, zéro chiffre.
+
+Panels: two unnamed dots on the sofa side, the lines in the transcript as *ambient*, with their English under
+them marked *translated*: "Honestly, yesterday's deck, I didn't get their model at all." / "Same. Twenty slides,
+zero numbers." Nobody is a person yet; the room topics pick up "pitch decks".
+
+[click]
+SIDDHARTH: Oh, hi! You must be Eric? Margaux, Julien, this is Eric, from Hallwise. The badge.
 
 ERIC: That's me. Hi, everyone.
 
 [click]
-SIDDHARTH: I'm Siddharth — Siddharth Raghunathan. I run Quillmesh; we, um, schedule warehouse robots.
 MARGAUX: Margaux Lefèvre, Corvane Capital.
-WEI LING: Wei Ling, from Pandan Pay — payments for, uh, hawker stalls. In Singapore.
+JULIEN: Julien Caron. I'm with Margaux; I do the diligence.
+SIDDHARTH: And I'm Siddharth, Siddharth Raghunathan. I run Quillmesh; we, um, schedule warehouse robots.
+WEI LING: Wei Ling, from Pandan Pay. Payments for, uh, hawker stalls. In Singapore.
 
-(Eric leans in sideways, ear toward Mac-3, to hear her over the room. Her icon does not move.)
+(Eric leans in sideways, ear toward Mac-3, to hear her over the room. Her dot does not move.)
+
+Panels: the two grey dots become Margaux and Julien in their colours, from the introduction; Siddharth and Wei
+Ling appear as they speak. Margaux's card gets *French*. Words: "Raghunathan".
 
 ERIC: Margaux, are you investing this quarter?
 
 [click]
-MARGAUX: Pre-seed, yes. Send me your one-pager. (half to herself) Bon, ça c'est intéressant.
+MARGAUX: Pre-seed, yes. Send me your one-pager. (half to herself) Bon, une page, avec des chiffres.
 
-ERIC: Will do. Wei Ling — [FRIEND] builds wallets. I'll introduce you two.
+Insert: the aside, French, with "Right. One page, with numbers." under it, marked *translated*.
+
+ERIC: One page, with numbers. Tomorrow. Wei Ling, [FRIEND] builds wallets. I'll introduce you two.
 
 [click]
-SIDDHARTH: And Eric — we launch in — sorry, we pilot next week. Launch is March.
+JULIEN: Come by our office next week and show us the demo? Wednesday afternoon?
+
+ERIC: Wednesday works.
+
+[click]
+SIDDHARTH: And Eric, we launch in, sorry, we pilot next week. Launch is March.
 
 Panels:
-- Three people appear as they introduce themselves; three icons settle where each voice comes from and stay put
-  while Eric turns and leans in; each lights while that person talks.
-- Margaux's aside shows in the transcript with its English under it, marked "translated"; her card gets a
-  "French" tag, so her follow-up is drafted in French.
-- Promises: one-pager → Margaux; introduce Wei Ling ↔ [FRIEND].
-- Quillmesh: pilot next week, launch in March (the restart is resolved, not "launching now").
-- Suspect word: "Raghunathan" — "two Meta models heard this differently".
-- [FRIEND] linked to Wei Ling through the promised introduction.
+- Owe: one-pager → Margaux, tomorrow; introduce Wei Ling ↔ [FRIEND]; demo at Corvane with Julien, Wednesday
+  afternoon.
+- Quillmesh: pilot next week, launch in March (the restart resolved, not "launching now").
+- Five dots stay put where each voice came from while Eric turns and leans in.
 
-Walk to the window (1:37–1:42). ERIC (squeezing past the end of the sofa): "Sorry — excuse me." Filtered the same
-way. Optional: the MC on the TV, "The panel starts in five minutes in the main hall" → a "Stage" note, not a
-person.
+Walk to the window (1:40–1:45). ERIC (squeezing past the end of the sofa): "Sorry, excuse me." Filtered the
+same way. Optional: the MC on the TV, "The panel starts in five minutes in the main hall" → a *stage* line, not
+a person.
 
-## Scene 3 — the window (1:40–2:04), window (C)
+## The window (1:45–2:08), window (C)
 
 [click]
-KENJI: Ah, excuse me — Eric? Siddharth said you know trading systems.
+KENJI: Ah, excuse me. Eric? Siddharth said you know trading systems.
 
 ERIC: I do. Nice to meet you.
 
@@ -148,53 +187,78 @@ KENJI: Kenji Watanabe, Hoshizora Robotics. W, A, T, A, N, A, B, E.
 ERIC: Coffee on Thursday?
 
 [click]
-KENJI: Thursday is — no, Friday. Friday is better. (murmurs) 金曜日ね、メモしておこう。
+KENJI: Thursday is... no, Friday. Friday is better. (murmurs) 金曜日ね、メモしておこう。
 
 Panels:
-- Kenji bound, spelling confirmed by the spelled-out surname; "introduced by Siddharth"; his icon toward the window.
-- Promise: coffee with Kenji, **Friday** (Thursday dropped, with both quotes).
-- The murmur appears in Japanese with "Friday, then — I'll make a note" under it, marked translated; Kenji's
-  card gets a "Japanese" tag.
+- Kenji bound, spelling confirmed by the spelled-out surname; "introduced by Siddharth"; his dot toward the
+  window.
+- Owe: coffee with Kenji, **Friday**, with "Thursday" struck through.
+- Insert: the murmur in Japanese with "Friday, then. I'll make a note." under it, marked *translated*; Kenji's
+  card gets *Japanese*.
 
-Walk to the sofa and sit (2:04–2:07). Eric taps "Stop" on `/record`.
+Walk back to the sofa and sit (2:08). Eric lifts the badge, swipes, taps Stop, "Stop" again on the sheet.
 
-## Scene 4 — Closing (2:07–2:42), sofa
+## Stop (2:08–2:35), sofa
 
-Panels, in order, each given a moment:
-1. **Follow-ups**: five drafts — English to [FRIEND], Siddharth and Wei Ling (the introduction), French to Margaux
-   with the one-pager, Japanese to Kenji with a Friday invite — each in the language that person spoke. Eric taps "Approve"; approve saves the drafts and
-   the invite.
-2. **Words**: "Vexy" → Eric types "Vexi" and adds it to memory.
+The right panel switches to Owe. The Draft chips arrive one after another as the server finishes writing.
 
-ERIC: Two Meta models disagreed on these. I fix a word once — and next time it's a hint.
+ERIC (to camera, while they land): It wrote these just now.
 
-3. Eric taps "Re-run scene 1 with memory". The harness line on screen shows this take's real numbers: names right
-   with one listener, with two listeners, and with memory.
-4. Room radar: what the room talked about tonight.
+Right panel, each given a moment:
+1. Margaux's draft: French, English under it marked *translated*; it says one page with numbers, because that
+   is what was said; the one-pager link attached.
+2. Julien's invite: "Wednesday 16:00 · 30 min", why: "avoids your 14:00 board call". Eric taps Add to calendar;
+   the system editor opens prefilled; he taps Add.
+3. Kenji's: Japanese, Friday.
+4. Words: "Hall Wise → Hallwise", "Ragoo Nathan → Raghunathan". Eric taps Keep on both.
 
-ERIC (to camera): No voiceprints. No faces. Just the people I met — and what I owe them. Hallwise.
+ERIC: I fix a word once. Next time it's a hint.
 
-End card (2:42–2:45).
+## Ask (2:35–2:52), sofa, to camera
+
+Eric holds the mic button on the Ask page and speaks to the badge.
+
+ERIC: What do I owe tonight, and who did I say I'd introduce?
+
+The panel shows the question as heard, then the answer: four lines, one per promise, and the introduction of
+Wei Ling to [FRIEND]. Eric reads the last line out.
+
+ERIC: ...and I owe [FRIEND] a deck. Tonight. (looks at the camera) Hallwise.
+
+End card (2:52–2:58).
 
 ---
 
+## To build before the shoot
+
+- Ask by voice after Stop: today a spoken question rides the badge's audio stream, so it works only while
+  listening. The closing needs the phone's own microphone feeding `/ask/{recording}` once the recording is over.
+  Half a day. Until then, the Ask beat is shot before Stop, with Stop and the drafts as the last images.
+- A Wednesday 14:00–15:30 "Board call" on the badge phone's calendar, so the invite has something to dodge.
+- Deck and one-pager links set in the menu, so the drafts attach them.
+- Julien's voice: render the French lines with `ff_siwis` pitched down, the English with `am_michael` and French
+  shaping; check in rehearsal that diarization keeps him and Margaux apart.
+
 ## Before the take
 
-- iPhone: capture app open (badge screen on, input pinned to the built-in mics); badge clipped so it can't spin;
-  orientation calibrated facing the camera; Do Not Disturb, Guided Access on, auto-lock never. Web fallback:
-  Safari `/record`.
-- Mac-0: output device set to HDMI; presenter keys captured globally; Do Not Disturb; dashboard screen recording running; memory reset, dashboard
-  shows "memory: empty".
-- iPhone-K: auto-lock never, Guided Access, one tap to arm audio; every player shows a green heartbeat on the
-  controller.
-- Sync: Eric claps before the take starts; Mac-0 logs the clap. The iPhone recording is the video's soundtrack.
+- Badge phone: event "Living-room rehearsal" and venue cleared so the app fills them itself; words memory reset
+  to "Hallwise" only; links set; Do Not Disturb; the badge on its mount so it can't spin; forward offset
+  calibrated facing the camera.
+- Follow phone: follow mode on the new recording id as soon as Start is tapped (the dashboard shows it);
+  screen recording running.
+- Mac-0: output device set to HDMI; presenter keys captured globally; Do Not Disturb; dashboard screen
+  recording running.
+- iPhone-K: auto-lock never, one tap to arm audio; every player shows a green heartbeat on the controller.
+- Sync: Eric claps before the take starts; Mac-0 logs the clap. The badge recording is the video's soundtrack.
 - [FRIEND]: speaks English or Mandarin, not Taiwanese Hokkien; keeps to the five beats.
-- Rehearse once end to end and check the scoreboard before the final take.
+- Rehearse once end to end and read the Owe page before the final take.
 
 ## Risks
 
-- Live diarization must keep up in a noisy room; if not, use the replay fallback and its caption.
+- Margaux and Julien share a spot and a base voice. If diarization merges them, move Julien to Mac-3 and Wei
+  Ling to iPhone-K beside Kenji, and re-time the window scene.
 - Margaux's line must not start over Siddharth's introduction, or both may land on one speaker label.
-- The badge must be clipped so it can't spin; check the sound-field map in rehearsal.
-- The re-run in the closing must finish within a few seconds; if it does not, show the scoreboard from the
-  rehearsal run and say so.
+- The drafts take five to ten seconds after Stop; hold the shot on Eric until the first chip lands.
+- The calendar editor must be prefilled on the follow phone, not the badge phone: for the take, tap Add to
+  calendar on the follow phone (same server, same drafts).
+- Live diarization must keep up in a noisy room; if not, use the replay fallback and its caption.
