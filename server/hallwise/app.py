@@ -6,7 +6,7 @@
     /api/recordings/{id}/events one recording's event log
     /api/recordings/{id}/ask    a typed question about the recording, answered by Muse Spark
     /api/people                 everyone met across recordings, with each encounter and promise
-    /api/recordings/{id}/photo  a photo of the people around the badge; Muse Spark says which face is which
+    /api/recordings/{id}/photo  a photo of the people around the badge; SAM 3.1 finds the faces, Muse Spark says who is who
     /ask/{recording}            a spoken question: PCM in, Muse Voice Transcribe, then the same answer
 
 Run: ./run.sh (reads ../.env; HALLWISE_ASR=fake runs offline). Port 8790.
@@ -29,6 +29,7 @@ from .events import fold_record, read_events
 from .extract import Extractor, SparkClient
 from .people import people_index
 from .photo import match_photo, save_photo
+from .sam import SamClient
 from .events import EventLog
 from .recording import Hello, Recording
 
@@ -81,6 +82,7 @@ def create_app(
     live: dict[str, Recording] = {}
     key = os.environ.get("MODEL_API_KEY")
     spark = SparkClient(key, model=os.environ.get("HALLWISE_SPARK_MODEL", "muse-spark-1.3")) if key else None
+    sam = SamClient(key) if key and os.environ.get("HALLWISE_SAM", "on") != "off" else None  # off: Spark finds faces
 
     def record_of(rid: str) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
         """The record, the drafted moves and the meta of a recording, live or finished."""
@@ -190,16 +192,17 @@ def create_app(
 
     @app.post("/api/recordings/{rid}/photo")
     async def photo(rid: str, body: Photo) -> dict[str, Any]:
-        """A photo of the people around the badge: Spark says which face is which; the original is kept."""
+        """A photo of the people around the badge: SAM finds the faces (Spark when SAM cannot), Spark says which
+        face is which; the original is kept."""
         if spark is None:
             raise HTTPException(503, "MODEL_API_KEY is not set")
         root = data / "recordings" / rid
         if not (root / "meta.json").exists():
             raise HTTPException(404, "no such recording")
-        result = await match_photo(spark, body.image_b64, body.mime, body.people, body.hint)
+        result = await match_photo(spark, body.image_b64, body.mime, body.people, body.hint, sam=sam)
         name = save_photo(root, body.image_b64, body.mime)
         rec = live.get(rid)
-        event = {"file": name, "faces": result["faces"]}
+        event = {"file": name, "faces": result["faces"], "finder": result["finder"]}
         if rec is not None:
             rec.log.emit("photo", rec.now_ms, **event)
         else:
