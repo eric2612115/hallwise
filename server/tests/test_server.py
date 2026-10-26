@@ -99,7 +99,7 @@ def test_meta_events_map_onto_turns_with_speaker_and_times():
 
 
 def test_ingest_streams_a_recording_and_replays_its_events(tmp_path):
-    client = TestClient(create_app(tmp_path, asr="fake"))
+    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None))
     script = [
         {"start_ms": 200, "end_ms": 900, "speaker": "A", "text": "Hi, I'm Sarah from Acme."},
         {"start_ms": 1000, "end_ms": 1800, "speaker": "B", "text": "I'm Eric, from Vexi."},

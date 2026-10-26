@@ -6,6 +6,7 @@ speech recognition, and writes everything to the recording's event log.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 import uuid
@@ -19,6 +20,7 @@ import soxr
 
 from .asr import Asr
 from .events import EventLog
+from .extract import Extractor, Turn
 
 ASR_RATE = 24_000
 LAYOUT_CHANNELS = {"mono": 1, "stereo": 2, "foa": 4}
@@ -32,6 +34,8 @@ class Hello:
     channels: int
     layout: str  # "mono", "stereo", or "foa" (ambisonics, ACN order, SN3D: W Y Z X)
     device: str = ""
+    owner_name: str = ""
+    owner_company: str = ""
     language_bias: list[str] | None = None
     keywords: list[str] | None = None
     fake_script: list[dict[str, Any]] | None = field(default=None, repr=False)  # rig ground truth, offline only
@@ -43,6 +47,8 @@ class Hello:
             channels=int(msg["channels"]),
             layout=str(msg["layout"]),
             device=str(msg.get("device", "")),
+            owner_name=str(msg.get("owner_name", "")),
+            owner_company=str(msg.get("owner_company", "")),
             language_bias=msg.get("language_bias"),
             keywords=msg.get("keywords"),
             fake_script=msg.get("fake_script"),
@@ -64,7 +70,13 @@ def to_mono(frames: np.ndarray, layout: str) -> np.ndarray:
 
 
 class Recording:
-    def __init__(self, root: Path, hello: Hello, make_asr: Callable[..., Asr]):
+    def __init__(
+        self,
+        root: Path,
+        hello: Hello,
+        make_asr: Callable[..., Asr],
+        make_extractor: Callable[[Hello], Extractor | None] | None = None,
+    ):
         self.id = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]
         self.dir = root / "recordings" / self.id
         self.dir.mkdir(parents=True)
@@ -82,6 +94,9 @@ class Recording:
         self._frames = 0
         self._pending = b""
         self.asr = make_asr(self._on_asr, rate=ASR_RATE, hello=hello)
+        self.extractor = make_extractor(hello) if make_extractor else None
+        self._extract_task: asyncio.Task[None] | None = None
+        self._extracted_upto = 0  # how many turns the latest finished run had seen
 
     @property
     def now_ms(self) -> int:
@@ -127,6 +142,29 @@ class Recording:
 
     def _on_asr(self, type: str, t_ms: int, **data: Any) -> None:
         self.log.emit(type, t_ms, **data)
+        if type == "turn" and self.extractor is not None and data.get("text"):
+            self.extractor.add_turn(
+                Turn(
+                    turn=data["turn"],
+                    speaker=f"{data.get('session', 1)}:{data.get('speaker') or '?'}",
+                    start_ms=data["start_ms"],
+                    end_ms=data["end_ms"],
+                    text=data["text"],
+                )
+            )
+            if self._extract_task is None or self._extract_task.done():
+                self._extract_task = asyncio.get_running_loop().create_task(self._extract())
+
+    async def _extract(self) -> None:
+        """Run until the latest run has seen every turn; a turn arriving mid-run triggers one more run."""
+        while self.extractor is not None and self._extracted_upto < len(self.extractor.turns):
+            seen = len(self.extractor.turns)
+            try:
+                for kind, t_ms, data in await self.extractor.run():
+                    self.log.emit(kind, t_ms, **data)
+            except Exception as err:  # a failed run must not stop the recording
+                self.log.emit("extract_error", self.now_ms, message=f"{err.__class__.__name__}: {err}"[:300])
+            self._extracted_upto = seen
 
     async def close(self) -> None:
         if self._resampler is not None:
@@ -134,6 +172,9 @@ class Recording:
             if len(tail):
                 await self.asr.send(tail.astype("<i2").tobytes())
         await self.asr.finish()
+        if self._extract_task is not None:
+            await self._extract_task
+        await self._extract()
         self._wav.close()
         self.log.emit("recording_end", self.now_ms)
         self.log.close()

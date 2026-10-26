@@ -13,18 +13,47 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 
 from .asr import make_asr_factory
 from .events import read_events
+from .extract import Extractor, SparkClient
 from .recording import Hello, Recording
 
 
-def create_app(data_dir: Path | None = None, asr: str | None = None) -> FastAPI:
+def spark_extractor_factory() -> Callable[[Hello], Extractor | None] | None:
+    """Muse Spark extraction when HALLWISE_EXTRACT is "spark" (the default whenever MODEL_API_KEY is set)."""
+    key = os.environ.get("MODEL_API_KEY")
+    mode = os.environ.get("HALLWISE_EXTRACT", "spark" if key else "off")
+    if mode == "off":
+        return None
+    if mode != "spark" or not key:
+        raise RuntimeError("HALLWISE_EXTRACT=spark needs MODEL_API_KEY")
+    model = os.environ.get("HALLWISE_SPARK_MODEL", "muse-spark-1.3")
+    effort = os.environ.get("HALLWISE_SPARK_EFFORT", "low")
+
+    def make(hello: Hello) -> Extractor:
+        return Extractor(
+            SparkClient(key, model=model, effort=effort),
+            owner_name=hello.owner_name,
+            owner_company=hello.owner_company,
+            vocabulary=hello.keywords or [],
+        )
+
+    return make
+
+
+def create_app(
+    data_dir: Path | None = None,
+    asr: str | None = None,
+    make_extractor: Callable[[Hello], Extractor | None] | None | str = "env",
+) -> FastAPI:
     data = Path(data_dir or os.environ.get("HALLWISE_DATA", "data"))
     make_asr = make_asr_factory(asr or os.environ.get("HALLWISE_ASR", "fake"))
+    if make_extractor == "env":
+        make_extractor = spark_extractor_factory()
     app = FastAPI(title="Hallwise")
     live: dict[str, Recording] = {}
 
@@ -36,7 +65,7 @@ def create_app(data_dir: Path | None = None, asr: str | None = None) -> FastAPI:
         except (ValueError, KeyError, TypeError, json.JSONDecodeError) as err:
             await ws.close(code=1008, reason=str(err)[:120])
             return
-        rec = Recording(data, hello, make_asr)
+        rec = Recording(data, hello, make_asr, make_extractor)
         live[rec.id] = rec
         await rec.start()
         await ws.send_json({"type": "ready", "recording": rec.id})
