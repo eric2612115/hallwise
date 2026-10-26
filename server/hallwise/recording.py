@@ -19,6 +19,7 @@ import numpy as np
 import soxr
 
 from .asr import Asr
+from .direction import DirectionTracker, SpeakerPositions
 from .events import EventLog
 from .extract import Extractor, Turn
 
@@ -93,6 +94,8 @@ class Recording:
         )
         self._frames = 0
         self._pending = b""
+        self.direction = DirectionTracker(hello.sample_rate, hello.layout)
+        self.speaker_positions = SpeakerPositions()
         self.asr = make_asr(self._on_asr, rate=ASR_RATE, hello=hello)
         self.extractor = make_extractor(hello) if make_extractor else None
         self._extract_task: asyncio.Task[None] | None = None
@@ -125,6 +128,7 @@ class Recording:
         self._wav.writeframes(chunk)
         frames = np.frombuffer(chunk, dtype="<i2").reshape(-1, self.hello.channels)
         self._frames += len(frames)
+        self.direction.add(frames)
         mono = to_mono(frames, self.hello.layout)
         if self._resampler is not None:
             mono = self._resampler.resample_chunk(mono)
@@ -132,16 +136,15 @@ class Recording:
             await self.asr.send(mono.astype("<i2").tobytes())
 
     def on_pose(self, msg: dict[str, Any]) -> None:
-        self.log.emit(
-            "device_pose",
-            int(msg.get("t_ms", self.now_ms)),
-            yaw=msg.get("yaw"),
-            pitch=msg.get("pitch"),
-            roll=msg.get("roll"),
-        )
+        t_ms = int(msg.get("t_ms", self.now_ms))
+        if msg.get("yaw") is not None:
+            self.direction.add_pose(t_ms, float(msg["yaw"]))
+        self.log.emit("device_pose", t_ms, yaw=msg.get("yaw"), pitch=msg.get("pitch"), roll=msg.get("roll"))
 
     def _on_asr(self, type: str, t_ms: int, **data: Any) -> None:
         self.log.emit(type, t_ms, **data)
+        if type == "turn":
+            self._locate(data)
         if type == "turn" and self.extractor is not None and data.get("text"):
             self.extractor.add_turn(
                 Turn(
@@ -154,6 +157,20 @@ class Recording:
             )
             if self._extract_task is None or self._extract_task.done():
                 self._extract_task = asyncio.get_running_loop().create_task(self._extract())
+
+    def _locate(self, turn: dict[str, Any]) -> None:
+        """Where this turn came from, and where its speaker stands in the room so far."""
+        where = self.direction.direction(turn["start_ms"], turn["end_ms"])
+        if where is None:
+            return
+        speaker = f"{turn.get('session', 1)}:{turn.get('speaker') or '?'}"
+        self.log.emit("position", turn["end_ms"], turn=turn["turn"], speaker=speaker, **where)
+        if where["azimuth_room"] is not None:
+            placed = self.speaker_positions.update(
+                speaker, where["azimuth_room"], where["confidence"], turn["end_ms"] - turn["start_ms"]
+            )
+            if placed is not None:
+                self.log.emit("speaker_position", turn["end_ms"], speaker=speaker, **placed)
 
     async def _extract(self) -> None:
         """Run until the latest run has seen every turn; a turn arriving mid-run triggers one more run."""
