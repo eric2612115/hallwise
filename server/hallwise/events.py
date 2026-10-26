@@ -110,8 +110,9 @@ def read_events(path: Path) -> list[dict[str, Any]]:
 
 
 def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
-    """The latest picture in a log: people, promises, turns, translations. Removed items are gone, later
-    versions win. This is what the follow-up drafts are written from, live or from a file."""
+    """The latest picture in a log: people, promises, turns, translations, who was mentioned, and the hooks (reasons
+    to reach out found across evenings). Removed items are gone, later versions win.
+    This is what the follow-up drafts are written from, live or from a file."""
     people: dict[str, dict[str, Any]] = {}
     promises: dict[str, dict[str, Any]] = {}
     translations: dict[int, dict[str, Any]] = {}
@@ -119,10 +120,19 @@ def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
     turns: list[dict[str, Any]] = []
     owner: list[str] = []
     history: dict[str, dict[str, Any]] = {}
+    mentions: dict[str, dict[str, Any]] = {}
+    hooks: dict[str, list[dict[str, Any]]] = {}
     for e in events:
         t = e.get("type")
         if t == "person_history":
             history[e["key"]] = e
+        elif t == "mention":
+            mentions[str(e.get("name", "")).lower()] = e
+        elif t == "mention_removed":
+            mentions.pop(str(e.get("name", "")).lower(), None)
+        elif t == "hook":
+            same = hooks.setdefault(e.get("person_key", ""), [])
+            same[:] = [h for h in same if h.get("title") != e.get("title")] + [e]
         elif t == "turn":
             turns.append(e)
         elif t == "turn_kind":
@@ -149,4 +159,6 @@ def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
         "turn_kinds": kinds,
         "translations": translations,
         "history": history,
+        "mentions": list(mentions.values()),
+        "hooks": hooks,
     }

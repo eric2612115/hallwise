@@ -56,7 +56,9 @@ def people_index(data: Path, exclude: str | None = None) -> list[dict[str, Any]]
                         "direction": "owner_owes" if q.get("owed_by") == "owner" else ("they_owe" if q.get("owed_to") == "owner" else "between_others"),
                     })
     out = list(index.values())
+    faces = data / "faces"
     for entry in out:
+        entry["face"] = (faces / f"{entry['key']}.jpg").exists()
         entry["encounters"].sort(key=lambda e: e["started"], reverse=True)
         entry["promises"].sort(key=lambda e: e["started"], reverse=True)
     out.sort(key=lambda e: e["encounters"][0]["started"] if e["encounters"] else 0, reverse=True)
@@ -95,6 +97,7 @@ def history_event(
 
     return {
         "key": record_key,
+        "index_key": entry["key"],  # where their face and their research are kept
         "name": entry["name"],
         "company": entry["company"],
         "encounters": [

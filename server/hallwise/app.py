@@ -8,6 +8,9 @@
     /api/recordings/{id}/ask    a typed question about the recording, answered by Muse Spark
     /api/people                 everyone met across recordings, with each encounter and promise
     /api/recordings/{id}/photo  a photo of the people around the badge; SAM 3.1 finds the faces, Muse Spark says who is who
+    /api/people/{key}/face      a person's face, kept across evenings (POST a JPEG, GET it back)
+    /api/report/run?recording=  the morning report: research, hooks, follow-ups (cached for an hour; force=1 rebuilds)
+    /api/report/latest          the newest morning report; /api/report/{id} one recording's
     /ask/{recording}            a spoken question: PCM in, Muse Voice Transcribe, then the same answer
 
 Run: ./run.sh (reads ../.env; HALLWISE_ASR=fake runs offline). Port 8790.
@@ -15,13 +18,18 @@ Run: ./run.sh (reads ../.env; HALLWISE_ASR=fake runs offline). Port 8790.
 
 from __future__ import annotations
 
+import asyncio
+import base64
+import binascii
 import json
 import os
+import re
 from contextlib import aclosing
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -29,7 +37,9 @@ from .ask import answer, latest_moves
 from .asr import MetaRealtimeAsr, make_asr_factory
 from .events import fold_record, read_events, replay
 from .extract import Extractor, SparkClient
-from .people import people_index
+from .people import match, people_index
+from .report import Reports, report_delay_s
+from .research import Researcher
 from .photo import match_photo, save_photo
 from .sam import SamClient
 from .events import EventLog
@@ -71,10 +81,29 @@ def spark_extractor_factory() -> Callable[[Hello], Extractor | None] | None:
     return make
 
 
+FACE_KEY = re.compile(r"^[0-9a-z][0-9a-z-]{0,119}$")
+FACE_MAX_BYTES = 5_000_000
+
+
+def face_bytes(raw: bytes, content_type: str) -> bytes:
+    """A face upload: a JPEG body, or JSON {"image_b64": ...}. Anything that is not a JPEG is refused."""
+    if content_type.startswith("application/json"):
+        try:
+            raw = base64.b64decode(json.loads(raw)["image_b64"], validate=False)
+        except (ValueError, KeyError, TypeError, binascii.Error):
+            raise HTTPException(400, "expected {\"image_b64\": ...}")
+    if len(raw) > FACE_MAX_BYTES:
+        raise HTTPException(413, "face too large")
+    if not raw.startswith(b"\xff\xd8"):
+        raise HTTPException(415, "a face is a JPEG")
+    return raw
+
+
 def create_app(
     data_dir: Path | None = None,
     asr: str | None = None,
     make_extractor: Callable[[Hello], Extractor | None] | None | str = "env",
+    reports: Reports | None = None,
 ) -> FastAPI:
     data = Path(data_dir or os.environ.get("HALLWISE_DATA", "data"))
     make_asr = make_asr_factory(asr or os.environ.get("HALLWISE_ASR", "fake"))
@@ -85,6 +114,16 @@ def create_app(
     key = os.environ.get("MODEL_API_KEY")
     spark = SparkClient(key, model=os.environ.get("HALLWISE_SPARK_MODEL", "muse-spark-1.3")) if key else None
     sam = SamClient(key) if key and os.environ.get("HALLWISE_SAM", "on") != "off" else None  # off: Spark finds faces
+    if reports is None:
+        hooks_model = os.environ.get("HALLWISE_SPARK_MODEL", "muse-spark-1.3")
+        hooks_effort = os.environ.get("HALLWISE_HOOKS_EFFORT", "medium")
+        reports = Reports(
+            data,
+            lambda: SparkClient(key, model=hooks_model, effort=hooks_effort, timeout=180) if key else None,
+            Researcher.from_env(data),
+        )
+    auto_report = report_delay_s() if key else None
+    background: set[asyncio.Task[None]] = set()  # the automatic report runs, kept until they finish
 
     def record_of(rid: str) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
         """The record, the drafted moves and the meta of a recording, live or finished."""
@@ -155,6 +194,10 @@ def create_app(
         finally:
             await rec.close()
             live.pop(rec.id, None)
+            if auto_report is not None:
+                task = asyncio.get_running_loop().create_task(reports.later(rec.id, auto_report))
+                background.add(task)
+                task.add_done_callback(background.discard)
         try:
             await ws.send_json({"type": "closed", "recording": rec.id})
             await ws.close()
@@ -228,6 +271,55 @@ def create_app(
     def people(exclude: str | None = None) -> list[dict[str, Any]]:
         """Everyone the owner has met, across recordings, newest encounter first."""
         return people_index(data, exclude)
+
+    @app.post("/api/people/{key}/face")
+    async def put_face(key: str, request: Request) -> dict[str, Any]:
+        """Keep a face for a person across evenings, under their people-index key."""
+        if not FACE_KEY.match(key):
+            raise HTTPException(400, "not a person key")
+        jpeg = face_bytes(await request.body(), request.headers.get("content-type", ""))
+        faces = data / "faces"
+        faces.mkdir(parents=True, exist_ok=True)
+        tmp = faces / f"{key}.tmp"
+        tmp.write_bytes(jpeg)
+        tmp.replace(faces / f"{key}.jpg")
+        return {"key": key, "bytes": len(jpeg)}
+
+    @app.get("/api/people/{key}/face")
+    def get_face(key: str, name: str = "", company: str = "") -> FileResponse:
+        """A person's face; with name and company, the face of whoever the index matches them to."""
+        if not FACE_KEY.match(key):
+            raise HTTPException(400, "not a person key")
+        path = data / "faces" / f"{key}.jpg"
+        if not path.exists() and name:
+            entry = match(people_index(data), name, company)
+            if entry is not None and FACE_KEY.match(entry["key"]):
+                path = data / "faces" / f"{entry['key']}.jpg"
+        if not path.exists():
+            raise HTTPException(404, "no face for this person")
+        return FileResponse(path, media_type="image/jpeg")
+
+    @app.post("/api/report/run")
+    async def run_report(recording: str, force: int = 0) -> dict[str, Any]:
+        """Research, hooks, the report. Within an hour of the last build the stored one comes back."""
+        try:
+            return await reports.run(recording, force=bool(force))
+        except KeyError:
+            raise HTTPException(404, "no such recording")
+
+    @app.get("/api/report/latest")
+    def latest_report() -> dict[str, Any]:
+        report = reports.latest()
+        if report is None:
+            raise HTTPException(404, "no report yet")
+        return report
+
+    @app.get("/api/report/{rid}")
+    def get_report(rid: str) -> dict[str, Any]:
+        report = reports.get(rid)
+        if report is None:
+            raise HTTPException(404, "no report for this recording")
+        return report
 
     @app.get("/api/recordings/{rid}/events")
     def recording_events(rid: str) -> list[dict[str, Any]]:
