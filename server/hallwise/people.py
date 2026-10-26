@@ -78,18 +78,24 @@ def match(index: list[dict[str, Any]], name: str, company: str) -> dict[str, Any
     return None
 
 
-def history_event(entry: dict[str, Any], record_key: str, exclude: str | None = None) -> dict[str, Any]:
-    """The person_history payload: where the owner met them before and what passed between them."""
+def history_event(
+    entry: dict[str, Any], record_key: str, exclude: str | None = None, before: float | None = None
+) -> dict[str, Any]:
+    """The person_history payload: where the owner met them before this recording and what passed between
+    them. `before` is this recording's start, so a later evening never counts as "before"."""
+    def earlier(x: dict[str, Any]) -> bool:
+        return x["recording"] != exclude and (before is None or x.get("started", 0) < before)
+
     return {
         "key": record_key,
         "name": entry["name"],
         "company": entry["company"],
         "encounters": [
             {k: e[k] for k in ("recording", "event", "venue", "started", "introduced_by")}
-            for e in entry["encounters"] if e["recording"] != exclude
+            for e in entry["encounters"] if earlier(e)
         ],
         "promises": [
             {k: q[k] for k in ("recording", "event", "started", "what", "due", "direction")}
-            for q in entry["promises"] if q["recording"] != exclude
+            for q in entry["promises"] if earlier(q)
         ],
     }

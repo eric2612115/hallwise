@@ -37,3 +37,16 @@ def test_people_index_merges_the_same_person_across_recordings(tmp_path):
     h = history_event(match(known, "Lena Novak", ""), "lena-novak", exclude="b")
     assert h["key"] == "lena-novak" and h["encounters"][0]["event"] == "Afterparty"
     assert h["promises"][0]["direction"] == "owner_owes"
+
+
+def test_history_counts_only_earlier_evenings(tmp_path):
+    now = time.time()
+    write_recording(tmp_path, "early", "Dinner", now - 3 * 86400,
+                    [{"key": "k", "name": "Kenji Watanabe", "company": "Hoshizora", "role": "", "preferred_language": ""}])
+    write_recording(tmp_path, "late", "Rehearsal", now,
+                    [{"key": "k", "name": "Kenji Watanabe", "company": "Hoshizora", "role": "", "preferred_language": ""}])
+    write_recording(tmp_path, "mid", "Meetup", now - 86400,
+                    [{"key": "k", "name": "Kenji Watanabe", "company": "Hoshizora", "role": "", "preferred_language": ""}])
+    entry = match(people_index(tmp_path, exclude="mid"), "Kenji Watanabe", "Hoshizora")
+    h = history_event(entry, "k", exclude="mid", before=now - 86400)
+    assert [e["event"] for e in h["encounters"]] == ["Dinner"]

@@ -36,7 +36,7 @@ struct AskPage: View {
             out.append("What did \(live.speakerName(last.speaker)) say?")
         }
         if let w = live.suspects.first { out.append("Remember \(w.likely)") }
-        out += ["What do I owe?", "Who did I meet?", "What's due tonight?", "Any drafts ready?", "我今晚答應了誰什麼？"]
+        out += ["What did I promise?", "Who did I meet?", "What's due tonight?", "Any drafts ready?", "我今晚答應了誰什麼？"]
         var seen: Set<String> = []
         return out.filter { seen.insert($0).inserted }
     }

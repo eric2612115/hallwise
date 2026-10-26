@@ -68,9 +68,12 @@ def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
     kinds: dict[int, str] = {}
     turns: list[dict[str, Any]] = []
     owner: list[str] = []
+    history: dict[str, dict[str, Any]] = {}
     for e in events:
         t = e.get("type")
-        if t == "turn":
+        if t == "person_history":
+            history[e["key"]] = e
+        elif t == "turn":
             turns.append(e)
         elif t == "turn_kind":
             kinds[e["turn"]] = e["kind"]
@@ -95,4 +98,5 @@ def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
         "turns": turns,
         "turn_kinds": kinds,
         "translations": translations,
+        "history": history,
     }

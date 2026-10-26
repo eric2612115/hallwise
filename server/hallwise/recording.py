@@ -96,7 +96,8 @@ class Recording:
         self.dir.mkdir(parents=True)
         self.hello = hello
         meta = {k: v for k, v in hello.__dict__.items() if k != "fake_script"}
-        (self.dir / "meta.json").write_text(json.dumps({"id": self.id, "started": time.time(), **meta}))
+        self.started = time.time()
+        (self.dir / "meta.json").write_text(json.dumps({"id": self.id, "started": self.started, **meta}))
         self.log = EventLog(self.dir / "events.jsonl")
         self._wav = wave.open(str(self.dir / "audio.wav"), "wb")
         self._wav.setnchannels(hello.channels)
@@ -211,7 +212,9 @@ class Recording:
                         entry = match(self.known, data.get("name", ""), data.get("company", ""))
                         if entry is not None:
                             self._history_sent.add(data["key"])
-                            self.log.emit("person_history", t_ms, **history_event(entry, data["key"], exclude=self.id))
+                            history = history_event(entry, data["key"], exclude=self.id, before=self.started)
+                            if history["encounters"]:
+                                self.log.emit("person_history", t_ms, **history)
             except Exception as err:  # a failed run must not stop the recording
                 self.log.emit("extract_error", self.now_ms, message=f"{err.__class__.__name__}: {err}"[:300])
             self._extracted_upto = seen

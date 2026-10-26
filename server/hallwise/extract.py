@@ -212,6 +212,17 @@ def build_next_prompt(
 ) -> str:
     translations = record.get("translations", {})
     kinds = record.get("turn_kinds", {})
+    met_lines = [
+        f"- {key}: " + "; ".join(
+            (e.get("event") or "an earlier evening") + (f" ({_day(e.get('started'))})" if e.get("started") else "")
+            for e in h.get("encounters", [])
+        ) + (
+            " | earlier promises: " + "; ".join(
+                f"{q.get('what', '')}" + (f" ({q.get('due')})" if q.get("due") else "") for q in h.get("promises", [])
+            ) if h.get("promises") else ""
+        )
+        for key, h in record.get("history", {}).items()
+    ] or ["- none"]
     lines = [
         f"Owner: {owner_name or 'unknown'}" + (f", from {owner_company}" if owner_company else ""),
         f"Now: {now or 'unknown'}" + (f" ({tz})" if tz else ""),
@@ -236,6 +247,9 @@ def build_next_prompt(
             for q in record.get("promises", [])
         ),
         "",
+        "Met before (earlier evenings with the same person; a follow-up may refer to them naturally):",
+        *met_lines,
+        "",
         "Transcript (conversation turns):",
     ]
     for t in record.get("turns", []):
@@ -247,6 +261,13 @@ def build_next_prompt(
             line += f"  (English: {tr.get('english', '')})"
         lines.append(line)
     return "\n".join(lines)
+
+
+def _day(started: Any) -> str:
+    try:
+        return time.strftime("%b %-d", time.localtime(float(started)))
+    except (TypeError, ValueError):
+        return ""
 
 
 async def draft_next_moves(llm: LLM, record: dict[str, Any], **context: Any) -> list[dict[str, Any]]:
