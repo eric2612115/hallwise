@@ -262,3 +262,37 @@ def test_next_prompt_spells_out_the_days_ahead_and_where_next_week_starts():
     assert "Fri 2026-10-30," in days and "Mon 2026-11-02 (next week starts)" in days and "Wed 2026-11-04" in days
     assert '"next week, Wednesday" is the Wednesday of that week' in " ".join(NEXT_SYSTEM.split())
     assert not [line for line in build_next_prompt(record, owner_name="", owner_company="").splitlines() if line.startswith("Days")]
+
+
+def test_drafts_never_describe_what_an_attachment_contains():
+    """Leo's draft said the deck "includes the face-photo flow"; nobody said so. The rule against it, in the words
+    the model reads."""
+    from hallwise.extract import NEXT_SYSTEM
+
+    rule = " ".join(NEXT_SYSTEM.split())
+    assert "say what is attached or shown, never what it contains" in rule
+    assert ("Do not describe the contents of a deck, one-pager, link, demo or product, or what it \"includes\", "
+            "\"covers\" or \"shows\", beyond what was said in the transcript") in rule
+    assert '"the deck includes the face-photo flow" when nobody said so is an invented fact' in rule
+
+
+def test_a_provisional_met_before_never_reaches_the_drafts():
+    from hallwise.events import fold_record
+    from hallwise.extract import build_next_prompt
+
+    sid = {"key": "sid", "name": "Siddharth Raghunathan", "company": "Quill Mesh",
+           "encounters": [{"event": "Blockchain Week side event", "started": 1792756800.0}], "promises": []}
+    events = [
+        {"type": "person", "t_ms": 1, "key": "sid", "name": "Siddharth Raghunathan", "company": "Quill Mesh"},
+        {"type": "person_history", "t_ms": 1, **sid, "speaker": "1:F", "provisional": True},
+        {"type": "hook", "t_ms": 1, "person_key": "sid", "title": "Tomás's friend · Oct 23", "provisional": True},
+    ]
+    record = fold_record(events)
+    assert "Blockchain Week" not in build_next_prompt(record, owner_name="Eric", owner_company="Hallwise")
+    withdrawn = fold_record(events + [
+        {"type": "person_history_removed", "t_ms": 2, "key": "sid", "speaker": "1:F", "reason": "not confirmed"},
+        {"type": "hook_removed", "t_ms": 2, "person_key": "sid", "title": "Tomás's friend · Oct 23"},
+    ])
+    assert withdrawn["history"] == {} and withdrawn["hooks"] == {"sid": []}
+    confirmed = fold_record(events + [{"type": "person_history", "t_ms": 3, **sid}])
+    assert "met before: Blockchain Week side event" in build_next_prompt(confirmed, owner_name="Eric", owner_company="")

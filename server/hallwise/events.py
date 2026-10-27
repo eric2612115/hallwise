@@ -126,6 +126,8 @@ def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
         t = e.get("type")
         if t == "person_history":
             history[e["key"]] = e
+        elif t == "person_history_removed":  # a provisional "met before" that Muse Spark did not confirm
+            history.pop(e.get("key", ""), None)
         elif t == "mention":
             mentions[str(e.get("name", "")).lower()] = e
         elif t == "mention_removed":
@@ -133,6 +135,9 @@ def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
         elif t == "hook":
             same = hooks.setdefault(e.get("person_key", ""), [])
             same[:] = [h for h in same if h.get("title") != e.get("title")] + [e]
+        elif t == "hook_removed":
+            same = hooks.get(e.get("person_key", ""), [])
+            same[:] = [h for h in same if h.get("title") != e.get("title")]
         elif t == "turn":
             turns.append(e)
         elif t == "turn_kind":

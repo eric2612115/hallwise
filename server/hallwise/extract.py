@@ -116,6 +116,9 @@ Write exactly one move per promise:
 - A promise the owner owes becomes a message to that person, ready to send: 2-4 sentences, warm and specific.
   Name the thing promised and one concrete detail from what was said. No padding ("I hope this finds you well").
   When a due date was agreed ("by Friday"), say so. Never invent facts, prices, names or dates.
+- Attachments and products: say what is attached or shown, never what it contains. Do not describe the contents of
+  a deck, one-pager, link, demo or product, or what it "includes", "covers" or "shows", beyond what was said in the
+  transcript: "the deck includes the face-photo flow" when nobody said so is an invented fact.
 - Earlier meetings: mention one only when it is listed for that same person, under their own key in "Met before"
   (their People line repeats it), and name it as listed. Never borrow another person's earlier meetings, and never
   take one from what someone else said in the transcript: when one guest says "we met at Blockchain Week", that is
@@ -224,7 +227,8 @@ def build_next_prompt(
 ) -> str:
     translations = record.get("translations", {})
     kinds = record.get("turn_kinds", {})
-    history = record.get("history", {})
+    # a provisional "met before" (a name heard, not yet confirmed by Muse Spark) never reaches a draft
+    history = {k: h for k, h in record.get("history", {}).items() if not h.get("provisional")}
 
     def met(h: dict[str, Any]) -> str:
         return "; ".join(
