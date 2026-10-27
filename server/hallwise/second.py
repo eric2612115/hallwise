@@ -338,7 +338,7 @@ def compare(spark: dict[str, Any], other: dict[str, Any], upto_turn: int) -> Com
             unmatched_s.remove(q)
 
     def who(key: str) -> str:
-        return "you" if key == "owner" else spark_names.get(key, key.lstrip("?").replace("-", " ").title())
+        return "you" if key == "owner" else (spark_names.get(key) or key.lstrip("?").replace("-", " ").title())
 
     def reading(what: str, due: str, owed_by: str, owed_to: str) -> str:
         """'our deck · tonight · to Leo Wong', 'intro to his CTO · from Leo Wong'."""

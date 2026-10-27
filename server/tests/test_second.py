@@ -107,6 +107,10 @@ def test_a_promise_to_someone_spark_never_listed_still_matches_by_key():
         cmp = compare(spark, other, upto_turn=26)
         assert "promise:coffee-to-kenji-watanabe-hoshizora-robotics" in cmp.confirmed, owed_to
         assert cmp.disagreements == {}, owed_to
+    # and when Open does not have it, the row still names who it is owed to
+    alone = compare(spark, {"people": [], "promises": [], "suspect_words": []}, upto_turn=26)
+    assert alone.disagreements["promise:coffee-to-kenji-watanabe-hoshizora-robotics:exists"]["a"]["text"] == (
+        "coffee · Friday · to Kenji Watanabe Hoshizora Robotics")
 
 
 def test_wording_similarity():
