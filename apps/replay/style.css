@@ -645,6 +645,24 @@ mark.suspect {
 .map .node text { font-family: var(--serif); font-size: 13px; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
 .map .node.tonight text { font-weight: 700; }
 .map .dim { opacity: 0.12; }
+/* the week's places: drawn on the paper, no map underneath */
+.places { margin: 0; border: 1px solid var(--rule); border-radius: var(--radius); background: color-mix(in srgb, var(--paper-raised) 60%, transparent); overflow: hidden; }
+.places-map { display: block; width: 100%; height: auto; }
+.places figcaption { padding: 0 14px 10px; font-size: 0.78rem; color: var(--ink-soft); }
+.places-map .grid { stroke: var(--ink-soft); stroke-opacity: 0.28; stroke-width: 1; stroke-dasharray: 1 4; }
+.places-map .path { fill: none; stroke: var(--ink-soft); stroke-width: 1.5; stroke-dasharray: 5 6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
+.places-map .scale path { fill: none; stroke: var(--ink-soft); stroke-width: 1.2; }
+.places-map .scale text, .places-map .north text { font-family: var(--mono); font-size: 10px; fill: var(--ink-soft); }
+.places-map .north path { fill: var(--ink-soft); }
+.places-map .spot { cursor: pointer; transition: opacity 0.3s; outline: none; }
+.places-map .spot circle.dot { stroke: var(--paper); stroke-width: 2; }
+.places-map .spot circle.ring { fill: none; stroke-width: 1.5; }
+.places-map .spot text { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
+.places-map .spot text.name { font-family: var(--sans); font-size: 12px; font-weight: 600; fill: var(--ink); }
+.places-map .spot text.date { font-family: var(--mono); font-size: 10px; fill: var(--ink-soft); }
+.places-map .spot.tonight text.name { font-weight: 700; }
+.places-map .spot:focus-visible circle.dot { stroke: var(--accent); stroke-width: 3; }
+.places-map .dim { opacity: 0.18; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 0.78rem; color: var(--ink-soft); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ink-soft); }

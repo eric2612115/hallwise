@@ -495,7 +495,7 @@
     'app', 'radar', 'radar-static', 'blips', 'wearer', 'wearer-mark', 'new-voice', 'new-voice-label', 'radar-note',
     'captions', 'people', 'intro', 'evening-name', 'evening-meta', 'evening-stats', 'play-big', 'play-len',
     'audio-note', 'skip-end', 'skip-end-2', 'transcript', 'promises', 'suspects', 'suspects-box', 'after',
-    'waiting', 'moves', 'week', 'week-sub', 'chips', 'map', 'foot-id', 'bar', 'pp', 'pp-icon', 'time', 'scrub',
+    'waiting', 'moves', 'week', 'week-sub', 'chips', 'places-box', 'places', 'places-note', 'map', 'foot-id', 'bar', 'pp', 'pp-icon', 'time', 'scrub',
     'track', 'segs', 'fill', 'head', 'lane-person', 'lane-promise', 'lane-translation', 'tip', 'toast', 'pick',
     'theme', 'theme-label', 'brand', 'mute', 'mute-waves', 'mute-cross',
   ].forEach((id) => { els[id] = $(id); });
@@ -1219,7 +1219,7 @@
       if (!enc.length) continue;
       enc.sort((a, b) => (a.started || 0) - (b.started || 0));
       for (const e of enc) {
-        if (!events.has(e.recording)) events.set(e.recording, { id: e.recording, name: e.event || 'Untitled evening', venue: e.venue || '', started: e.started || 0, people: [] });
+        if (!events.has(e.recording)) events.set(e.recording, { id: e.recording, name: e.event || 'Untitled evening', venue: e.venue || '', place: e.place || null, started: e.started || 0, people: [] });
       }
       people.push({ ...p, enc, hubs: [...new Set(enc.map((e) => e.recording))] });
     }
@@ -1230,6 +1230,8 @@
       p.tonight = p.hubs.includes(P.id);
       for (const h of p.hubs) events.get(h).people.push(p);
     }
+    const own = events.get(P.id);
+    if (own && !own.place && P.rec.meta && P.rec.meta.place) own.place = P.rec.meta.place;
     const days = Math.round((until - since) / 86400) || 7;
     els['week-sub'].textContent = `Everyone met in the ${word(days) === String(days) ? days : word(days)} days up to tonight: ${people.length} ${plural(people.length, 'person', 'people')} at ${evList.length} ${plural(evList.length, 'event')}, from the people index.`;
 
@@ -1360,8 +1362,118 @@
         `<title>${esc(`${p.name}${p.company ? ', ' + p.company : ''}. Met at ${where}.`)}</title></g>`;
     }
     svg.innerHTML = s;
+    drawPlaces(evList);
     weekDrawn = true;
     applyWeekFilter();
+  }
+
+  // ---------------------------------------------------------------- the week's places
+  /** Where each evening was, drawn on the paper with no map underneath: the export rounds every place to two
+   *  decimals (about a kilometre), the page projects them flat, one dot per evening sized by the people met there,
+   *  and a dashed line joins them in date order. Nothing is fetched. */
+  function drawPlaces(evList) {
+    const svg = els.places;
+    const spots = evList.filter((e) => e.place && Number.isFinite(Number(e.place.lat)) && Number.isFinite(Number(e.place.lon)));
+    els['places-box'].hidden = !spots.length;
+    if (!spots.length) { svg.innerHTML = ''; return; }
+    const W = Math.max(300, Math.round(svg.parentElement.clientWidth || 900));
+    const narrow = W < 640;
+
+    // a flat projection around the middle of the week: a degree of longitude is cos(latitude) of a degree of latitude
+    const lats = spots.map((e) => Number(e.place.lat)), lons = spots.map((e) => Number(e.place.lon));
+    const lat0 = (Math.min(...lats) + Math.max(...lats)) / 2, lon0 = (Math.min(...lons) + Math.max(...lons)) / 2;
+    const kx = Math.cos((lat0 * Math.PI) / 180);
+    const MIN_SPAN = 0.03;  // degrees: a week in one neighbourhood still reads as places, not one blot
+    const spanX = Math.max((Math.max(...lons) - Math.min(...lons)) * kx, MIN_SPAN);
+    const spanY = Math.max(Math.max(...lats) - Math.min(...lats), MIN_SPAN);
+    const pad = { l: narrow ? 46 : 90, r: narrow ? 46 : 90, t: 50, b: 50 };
+    // as tall as the week's shape needs at this width, within a strip's limits
+    const H = Math.round(clamp(((W - pad.l - pad.r) * spanY) / spanX + pad.t + pad.b, narrow ? 230 : 220, narrow ? 360 : 300));
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('height', String(H));
+    const k = Math.min((W - pad.l - pad.r) / spanX, (H - pad.t - pad.b) / spanY);
+    const px = (lon) => W / 2 + (lon - lon0) * kx * k;
+    const py = (lat) => H / 2 - (lat - lat0) * k;
+
+    let s = '';
+    // the rounding grid: each cell is one place as published, about a kilometre a side
+    const step = 0.01;
+    const lonA = lon0 - W / 2 / (kx * k), lonB = lon0 + W / 2 / (kx * k);
+    const latA = lat0 - H / 2 / k, latB = lat0 + H / 2 / k;
+    if ((lonB - lonA) / step < 80 && (latB - latA) / step < 80) {
+      for (let lon = Math.ceil(lonA / step) * step; lon < lonB; lon += step) s += `<line class="grid" x1="${px(lon).toFixed(1)}" y1="0" x2="${px(lon).toFixed(1)}" y2="${H}"/>`;
+      for (let lat = Math.ceil(latA / step) * step; lat < latB; lat += step) s += `<line class="grid" x1="0" y1="${py(lat).toFixed(1)}" x2="${W}" y2="${py(lat).toFixed(1)}"/>`;
+    }
+    // a kilometre, and north
+    const km = k / 111.32;
+    s += `<g class="scale" transform="translate(16 ${H - 16})"><path d="M0 -5V0H${km.toFixed(1)}V-5"/><text x="${(km + 6).toFixed(1)}" y="0">1 km</text></g>`;
+    s += `<g class="north" transform="translate(${W - 20} 22)"><path d="M0 -9L4 3L0 1L-4 3Z"/><text y="16" text-anchor="middle">N</text></g>`;
+
+    for (const e of spots) { e.px = px(Number(e.place.lon)); e.py = py(Number(e.place.lat)); e.r = 5 + 2.6 * Math.sqrt(e.people.length); }
+    // the week as a path, in date order
+    if (spots.length > 1) {
+      s += `<path class="path" d="${spots.map((e, i) => `${i ? 'L' : 'M'}${e.px.toFixed(1)} ${e.py.toFixed(1)}`).join('')}"/>`;
+    }
+    // labels: around the dot, the first spot clear of every dot, every label so far and the edges; when none is
+    // clear, the one that overlaps least
+    const boxes = spots.map((e) => ({ x0: e.px - e.r - 2, x1: e.px + e.r + 2, y0: e.py - e.r - 2, y1: e.py + e.r + 2 }));
+    const overlap = (b) => {
+      let a = Math.max(0, 4 - b.x0) * 40 + Math.max(0, b.x1 - (W - 4)) * 40 + Math.max(0, 4 - b.y0) * 40 + Math.max(0, b.y1 - (H - 4)) * 40;
+      for (const o of boxes) a += Math.max(0, Math.min(b.x1, o.x1) - Math.max(b.x0, o.x0)) * Math.max(0, Math.min(b.y1, o.y1) - Math.max(b.y0, o.y0));
+      return a;
+    };
+    const labelled = [];
+    for (const e of spots) {
+      const tonight = e.id === P.id;
+      const name = truncate(e.name, narrow ? 17 : 28);
+      const w2 = wallDate(e.started, P.tzOffset);
+      // narrow: the chips' short date; the ring says tonight
+      const date = narrow ? `${DAYS[w2.wd]} ${w2.d} · ${e.people.length} met` : `${dayLabel(w2)} · ${e.people.length} met${tonight ? ' · tonight' : ''}`;
+      const tw = Math.max(name.length * 6.7, date.length * 6.1);
+      const gap = e.r + 6, d = e.r * 0.7;
+      const tries = [
+        { a: 'middle', x: e.px, y: e.py - gap - 16 },          // above: name, then date, ending over the dot
+        { a: 'middle', x: e.px, y: e.py + gap + 11 },          // below
+        { a: 'start', x: e.px + gap, y: e.py - 3 },            // right
+        { a: 'end', x: e.px - gap, y: e.py - 3 },              // left
+        { a: 'start', x: e.px + d, y: e.py - gap - 16 },       // above, leaning right
+        { a: 'end', x: e.px - d, y: e.py - gap - 16 },         // above, leaning left
+        { a: 'start', x: e.px + d, y: e.py + gap + 11 },       // below, leaning right
+        { a: 'end', x: e.px - d, y: e.py + gap + 11 },         // below, leaning left
+      ];
+      const boxOf = (t) => {
+        const x0 = t.a === 'middle' ? t.x - tw / 2 : t.a === 'start' ? t.x : t.x - tw;
+        return { x0, x1: x0 + tw, y0: t.y - 12, y1: t.y + 16 };
+      };
+      let best = null, bestScore = Infinity;
+      for (const t of tries) {
+        const score = overlap(boxOf(t));
+        if (score < bestScore) { best = t; bestScore = score; }
+        if (score === 0) break;
+      }
+      boxes.push(boxOf(best));
+      labelled.push({ e, name, date, t: best });
+    }
+    for (const { e, name, date, t } of labelled) {
+      const tonight = e.id === P.id;
+      s += `<g class="spot${tonight ? ' tonight' : ''}" data-ev="${esc(e.id)}" tabindex="0" role="button" aria-label="${esc(`${e.name}, ${dayLabel(wallDate(e.started, P.tzOffset))}, ${e.people.length} met${tonight ? ', tonight' : ''}`)}">` +
+        (tonight ? `<circle class="ring" cx="${e.px.toFixed(1)}" cy="${e.py.toFixed(1)}" r="${(e.r + 4).toFixed(1)}" stroke="${pcol(e.colour)}"/>` : '') +
+        `<circle class="dot" cx="${e.px.toFixed(1)}" cy="${e.py.toFixed(1)}" r="${e.r.toFixed(1)}" fill="${pcol(e.colour)}"/>` +
+        `<text class="name" x="${t.x.toFixed(1)}" y="${t.y.toFixed(1)}" text-anchor="${t.a}">${esc(name)}</text>` +
+        `<text class="date" x="${t.x.toFixed(1)}" y="${(t.y + 13).toFixed(1)}" text-anchor="${t.a}">${esc(date)}</text>` +
+        `<title>${esc(`${e.name}${e.place.name ? ', ' + e.place.name : ''}: ${e.people.length} ${plural(e.people.length, 'person', 'people')} met`)}</title></g>`;
+    }
+    svg.innerHTML = s;
+    svg.querySelectorAll('.spot').forEach((g) => {
+      const toggle = () => { weekFilter = weekFilter === g.dataset.ev ? null : g.dataset.ev; applyWeekFilter(); };
+      g.addEventListener('click', toggle);
+      g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggle(); } });
+    });
+    const missing = evList.length - spots.length;
+    els['places-note'].textContent = (spots.length > 1
+      ? 'Where each evening was, to about a kilometre: dots grow with the people met, the dashed line is the week in date order.'
+      : 'Where the evening was, to about a kilometre.') +
+      (missing ? ` ${word(missing)[0].toUpperCase() + word(missing).slice(1)} ${plural(missing, 'evening')} without a place ${missing === 1 ? 'is' : 'are'} left off.` : '');
   }
 
   function applyWeekFilter() {
@@ -1369,6 +1481,10 @@
     els.chips.querySelectorAll('.chip').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.id || null) === f)));
     els.map.querySelectorAll('.node').forEach((n) => n.classList.toggle('dim', !!f && !n.dataset.evs.split(' ').includes(f)));
     els.map.querySelectorAll('.edge, .intro-edge, .hub').forEach((n) => n.classList.toggle('dim', !!f && n.dataset.ev !== f));
+    els.places.querySelectorAll('.spot').forEach((n) => {
+      n.classList.toggle('dim', !!f && n.dataset.ev !== f);
+      n.setAttribute('aria-pressed', String(f === n.dataset.ev));
+    });
   }
 
   // ---------------------------------------------------------------- transport
