@@ -8,6 +8,9 @@ The argument is a recording id (looked up in $HALLWISE_DATA/recordings, default 
 recording folder. Writes <out>/<id>.json and <out>/<id>.mp3, and adds the recording to <out>/index.json, which
 the page reads first. The newest export becomes the page's default unless --keep-default is given.
 
+Places: every `place` in the export (the recording's own, and each encounter's in the people index) is rounded
+to two decimals, about a kilometre; the page is public and the server keeps the precise fix.
+
 Audio: the W (omni) channel of a four-channel badge recording, loudness-normalised, 64 kbps mono (lower for very
 long recordings, so the file stays under --max-audio-mb). A silent or missing WAV exports no audio, and the page
 runs on a clock instead.
@@ -33,6 +36,7 @@ sys.path.insert(0, str(SERVER))
 
 from hallwise.events import read_events  # noqa: E402
 from hallwise.people import match, people_index  # noqa: E402
+from hallwise.places import public_places  # noqa: E402
 
 FORMAT = 1
 WEEK_DAYS = 7
@@ -244,7 +248,7 @@ def main() -> None:
     duration_ms = max(end_ms, audio["duration_ms"] if audio else 0)
     people = snapshot_people(data, folder, rid, started, args.week_days)
 
-    payload = {
+    payload = public_places({
         "format": FORMAT,
         "id": rid,
         "exported": time.time(),
@@ -253,12 +257,13 @@ def main() -> None:
         "audio": audio,
         "events": slim,
         "people_index": people,
-    }
+    })
+    meta = payload["meta"]
     target = out / f"{rid}.json"
     target.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
     update_index(out, {
         "id": rid, "file": target.name, "event": meta.get("event", ""), "venue": meta.get("venue", ""),
-        "started": started, "duration_ms": duration_ms, "audio": bool(audio),
+        "place": meta.get("place"), "started": started, "duration_ms": duration_ms, "audio": bool(audio),
     }, make_default=not args.keep_default)
 
     kinds: dict[str, int] = {}

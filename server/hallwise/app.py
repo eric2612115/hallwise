@@ -38,6 +38,7 @@ from .asr import MetaRealtimeAsr, make_asr_factory
 from .events import fold_record, read_events, replay
 from .extract import Extractor, SparkClient
 from .people import match, people_index
+from .places import parse_place
 from .report import Reports, report_delay_s
 from .research import Researcher
 from .photo import match_photo, save_photo
@@ -243,6 +244,7 @@ def create_app(
         metas = [json.loads(p.read_text()) for p in root.glob("*/meta.json")]
         for meta in metas:
             meta["live"] = meta["id"] in live
+            meta["place"] = parse_place(meta.get("place"), name=meta.get("venue", ""))
         return sorted(metas, key=lambda m: m["started"], reverse=True)
 
     @app.post("/api/recordings/{rid}/photo")

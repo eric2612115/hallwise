@@ -28,6 +28,7 @@ from .extract import Extractor, Turn, draft_next_moves
 from .leveler import Leveler
 from .hooks import Threads
 from .people import history_event, match, people_index
+from .places import parse_place
 
 ASR_RATE = 24_000
 LAYOUT_CHANNELS = {"mono": 1, "stereo": 2, "foa": 4}
@@ -45,6 +46,7 @@ class Hello:
     owner_company: str = ""
     event: str = ""  # which event and where, so a list of recordings reads like a diary
     venue: str = ""
+    place: dict[str, Any] | None = None  # {name, lat, lon}: the phone's one location fix at Start, as it took it
     language_bias: list[str] | None = None
     keywords: list[str] | None = None
     busy: list[list[str]] | None = None  # the owner's calendar for the week, ISO ranges, for proposing times
@@ -64,6 +66,7 @@ class Hello:
             owner_company=str(msg.get("owner_company", "")),
             event=str(msg.get("event", "")),
             venue=str(msg.get("venue", "")),
+            place=parse_place(msg.get("place"), name=str(msg.get("venue", ""))),
             language_bias=msg.get("language_bias"),
             keywords=msg.get("keywords"),
             busy=msg.get("busy"),
@@ -72,6 +75,8 @@ class Hello:
             now=str(msg.get("now", "")),
             fake_script=msg.get("fake_script"),
         )
+        if hello.place and not hello.venue:  # older readers of the recording only look at venue
+            hello.venue = hello.place["name"]
         if hello.layout not in LAYOUT_CHANNELS:
             raise ValueError(f"layout must be one of {sorted(LAYOUT_CHANNELS)}")
         if hello.channels != LAYOUT_CHANNELS[hello.layout]:

@@ -12,6 +12,7 @@ from typing import Any
 
 from .events import fold_record, read_events
 from .extract import slug
+from .places import parse_place
 
 
 def person_key(name: str, company: str) -> str:
@@ -31,6 +32,7 @@ def people_index(data: Path, exclude: str | None = None) -> list[dict[str, Any]]
             continue
         record = fold_record(read_events(meta_path.parent / "events.jsonl"))
         names = {p["key"]: p.get("name", p["key"]) for p in record["people"]}
+        place = parse_place(meta.get("place"), name=meta.get("venue", ""))
         for p in record["people"]:
             key = person_key(p.get("name", ""), p.get("company", ""))
             if not slug(p.get("name", "")):
@@ -44,7 +46,7 @@ def people_index(data: Path, exclude: str | None = None) -> list[dict[str, Any]]
                     entry[field] = value
             entry["encounters"].append({
                 "recording": rid, "event": meta.get("event", ""), "venue": meta.get("venue", ""),
-                "started": meta.get("started", 0.0),
+                "place": place, "started": meta.get("started", 0.0),
                 "introduced_by": names.get(p.get("introduced_by", ""), "" if p.get("introduced_by", "") != "owner" else ""),
                 "record_key": p["key"],
             })

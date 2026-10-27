@@ -4,10 +4,12 @@
                                         [--script turns.json] [--keywords "Vexi,Raghunathan"] [--speed 1]
                                         [--deck URL] [--one-pager URL] [--blurb URL]
                                         [--busy START/END ...] [--tz Asia/Taipei] [--now ISO|auto]
+                                        [--place LAT,LON]
 
 --deck, --one-pager, --blurb, --busy, --tz and --now go in the hello as the phone sends them, so the follow-ups
 drafted when the recording closes can attach the links and avoid the busy windows. --now auto is this machine's
-clock with its UTC offset.
+clock with its UTC offset. --place is the phone's location fix at Start, named by --venue, so the recording has a
+pin on the Places map.
 
 The WAV must be 16-bit PCM: 1 channel (mono), 2 (stereo) or 4 (first-order ambisonics, ACN/SN3D).
 """
@@ -69,6 +71,9 @@ async def main(args: argparse.Namespace) -> None:
         hello["tz"] = args.tz
     if args.now:
         hello["now"] = datetime.now().astimezone().isoformat(timespec="seconds") if args.now == "auto" else args.now
+    if args.place:
+        lat, lon = (float(x) for x in args.place.split(","))
+        hello["place"] = {"name": args.venue, "lat": lat, "lon": lon}
 
     async with websockets.connect(f"{args.server}/ingest", max_size=None) as ws:
         await ws.send(json.dumps(hello))
@@ -108,4 +113,5 @@ if __name__ == "__main__":
     parser.add_argument("--busy", nargs="*", default=[], help="busy windows, ISO START/END pairs with offsets")
     parser.add_argument("--tz", default="", help="the owner's time zone, e.g. Asia/Taipei")
     parser.add_argument("--now", default="", help="the phone's clock at start, ISO 8601 with offset, or 'auto'")
+    parser.add_argument("--place", default="", help="the phone's location fix, LAT,LON; --venue names it")
     asyncio.run(main(parser.parse_args()))
