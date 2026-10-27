@@ -32,7 +32,7 @@ struct MainView: View {
             }
         }
         .sheet(isPresented: $showMenu) {
-            MenuSheet(settings: app.settings, showBadge: $showBadge, showTranscript: $showTranscript,
+            MenuSheet(settings: app.settings, levels: app.levels, showBadge: $showBadge, showTranscript: $showTranscript,
                       onReportSoon: { app.scheduleReportSoon() })
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -237,6 +237,7 @@ extension BigTabBar {
 /// Appearance first, because it is the one people reach for; then the badge, then tonight, then the plumbing.
 struct MenuSheet: View {
     @ObservedObject var settings: BadgeSettings
+    @ObservedObject var levels: CaptureLevels
     @Binding var showBadge: Bool
     @Binding var showTranscript: Bool
     var onReportSoon: () -> Void = {}
@@ -279,6 +280,8 @@ struct MenuSheet: View {
                         field("Follow", text: $settings.followRecording, placeholder: "recording id, no capture", keyboard: .URL)
                         paceRow
                         keepCopyRow
+                        captureSetupRow
+                        levelsRow
                         reportSoonRow
                     }
                 }
@@ -466,6 +469,84 @@ struct MenuSheet: View {
         .tint(Theme.accent)
         .padding(.horizontal, 14)
         .frame(height: 64)
+        .overlay(alignment: .top) { Rectangle().fill(Theme.rule).frame(height: 0.5).padding(.leading, 14) }
+    }
+
+    /// Who sets up the audio session for the microphones; takes effect at the next Start.
+    private var captureSetupRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 12) {
+                Text("Capture setup")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Theme.inkSoft)
+                    .fixedSize()
+                Spacer(minLength: 8)
+                Menu {
+                    Picker("Capture setup", selection: $settings.captureSetup) {
+                        ForEach(CaptureSetup.allCases) { Text($0.title).tag($0.rawValue) }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(settings.captureSetupChoice.title).lineLimit(1).minimumScaleFactor(0.7)
+                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 12, weight: .semibold))
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+                }
+                .accessibilityLabel("Capture setup, \(settings.captureSetupChoice.title)")
+            }
+            Text(settings.captureSetupChoice.detail + " Applied at Start.")
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .overlay(alignment: .top) { Rectangle().fill(Theme.rule).frame(height: 0.5).padding(.leading, 14) }
+    }
+
+    /// Each microphone channel's level, once a second, so a dead channel shows without a debugger.
+    private var levelsRow: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text("Channel levels")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Theme.inkSoft)
+                Spacer()
+                if let l = levels.latest {
+                    Text(levels.live ? "setup \(l.setup.letter) · live" : "setup \(l.setup.letter) · last take")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(levels.live ? Theme.accent : Theme.inkSoft)
+                }
+            }
+            if let l = levels.latest {
+                Text(l.micLine)
+                    .font(.system(size: 16, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                if let sent = l.sentMismatchLine {
+                    Text(sent + " (differs from the mic)")
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Theme.live)
+                } else if l.sent == nil && levels.live {
+                    Text("paused, nothing sent").font(.system(size: 13)).foregroundStyle(Theme.inkSoft)
+                }
+                Text(l.format).font(.system(size: 12, design: .monospaced)).foregroundStyle(Theme.inkSoft)
+                Text(l.audioSession).font(.system(size: 12, design: .monospaced)).foregroundStyle(Theme.inkSoft)
+            } else {
+                Text(levels.live ? "Waiting for the microphones…" : "Start listening to see each microphone channel, once a second.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.inkSoft)
+            }
+            if let note = levels.note {
+                Text(note).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.live)
+            }
+        }
+        .textSelection(.enabled)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .top) { Rectangle().fill(Theme.rule).frame(height: 0.5).padding(.leading, 14) }
     }
 

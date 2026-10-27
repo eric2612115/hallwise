@@ -22,6 +22,7 @@ final class BadgeSettings: ObservableObject {
     @AppStorage("followRecording") var followRecording = ""  // debug: watch this recording instead of capturing
     @AppStorage("replayPace") var replayPace = 1.0  // debug: a finished recording followed plays at this speed; 0 = all at once
     @AppStorage("keepLocalAudio") var keepLocalAudio = false  // debug: a raw copy of each take on this phone, kept 7 days
+    @AppStorage("captureSetup") var captureSetup = CaptureSetup.standard.rawValue  // debug: who sets up the audio session, applied at Start
     @AppStorage("deckURL") var deckURL = ""        // the things people ask for, one tap to share
     @AppStorage("onePagerURL") var onePagerURL = ""
     @AppStorage("blurb") var blurb = ""            // two lines about you, for pasting
@@ -43,6 +44,8 @@ final class BadgeSettings: ObservableObject {
     }
 
     var colorScheme: ColorScheme? { Theme.Appearance(rawValue: appearance)?.colorScheme }
+
+    var captureSetupChoice: CaptureSetup { CaptureSetup(rawValue: captureSetup) ?? .standard }
 
     var keywordList: [String] {
         keywords.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }

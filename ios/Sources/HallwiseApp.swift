@@ -35,6 +35,9 @@ final class AppModel: ObservableObject {
     let live = LiveModel()
     let link = ServerLink()
     let voiceAsk = VoiceAsk()
+    /// Debug: each microphone channel's level, once a second. Not forwarded to `objectWillChange`, so only the
+    /// row that shows it redraws.
+    let levels = CaptureLevels()
     private let capture = BadgeCapture()
     private var badgeActivity: Activity<BadgeActivityAttributes>?
     private let whereabouts = Whereabouts()
@@ -49,6 +52,12 @@ final class AppModel: ObservableObject {
         link.onRejected = { [weak self] in self?.keyRejected() }
         DispatchQueue.global(qos: .utility).async { BadgeCapture.tidyLocalCopies() }
         capture.onAudio = { [weak self] data in self?.link.sendAudio(data) }
+        capture.onLevels = { [weak self] reading in
+            DispatchQueue.main.async { self?.levels.latest = reading }
+        }
+        capture.onNote = { [weak self] text in
+            DispatchQueue.main.async { self?.levels.note = text }
+        }
         capture.onPose = { [weak self] t, heading, pitch, roll, inverted in
             self?.link.sendPose(tMs: t, yaw: heading, pitch: pitch, roll: roll, inverted: inverted)
             DispatchQueue.main.async { self?.live.yaw = heading }
@@ -107,6 +116,7 @@ final class AppModel: ObservableObject {
         paused = false
         capture.muted = false
         capture.keepLocalCopy = settings.keepLocalAudio
+        capture.setup = settings.captureSetupChoice
         listening = true
         showBadgeOnLockScreen()
         let settings = self.settings
@@ -158,6 +168,9 @@ final class AppModel: ObservableObject {
                 }
                 self?.link.open(base: settings.serverURL, hello: hello)
             }
+            levels.latest = nil
+            levels.note = nil
+            levels.live = true
             capture.start()
         }
         return true
@@ -169,6 +182,7 @@ final class AppModel: ObservableObject {
         guard listening else { return }
         if settings.followRecording.isEmpty {
             capture.stop()
+            levels.live = false
             if link.canAskByVoice { link.close() }  // the record socket was turned down after /ingest opened
         } else {
             link.unfollow()
@@ -183,6 +197,7 @@ final class AppModel: ObservableObject {
         MorningNotice.scheduleMorning(recording: currentRecording ?? "")
         if settings.followRecording.isEmpty {
             capture.stop()
+            levels.live = false
             link.close()
         } else {
             link.unfollow()
@@ -217,6 +232,14 @@ final class AppModel: ObservableObject {
             }
         }
     }
+}
+
+/// Debug: the latest per-channel reading from the capture, kept after Stop so the last take can still be read.
+final class CaptureLevels: ObservableObject {
+    @Published var latest: ChannelLevels?
+    @Published var live = false
+    /// The last thing the capture session reported: stopped with an error, interrupted, resumed.
+    @Published var note: String?
 }
 
 import Combine
