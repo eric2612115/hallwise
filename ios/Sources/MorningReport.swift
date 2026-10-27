@@ -292,7 +292,7 @@ struct MorningReportView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
-                .padding(.top, 24)
+                .padding(.top, 8)
                 .padding(.bottom, 40)
             }
         }
@@ -305,8 +305,7 @@ struct MorningReportView: View {
         }
         .sheet(item: $draft) { d in
             MoveSheet(move: d.move, promise: d.promise, live: live, settings: settings, personName: d.person, hook: d.hook)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+                .closableSheet()
         }
     }
 

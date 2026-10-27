@@ -34,18 +34,15 @@ struct MainView: View {
         .sheet(isPresented: $showMenu) {
             MenuSheet(settings: app.settings, levels: app.levels, showBadge: $showBadge, showTranscript: $showTranscript,
                       onReportSoon: { app.scheduleReportSoon() })
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+                .closableSheet()
         }
         .sheet(isPresented: $showNotices) {
             NoticesSheet(live: app.live, settings: app.settings, onWords: { tab = .words }, onReport: { app.openReport(nil) })
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+                .closableSheet([.medium, .large])
         }
         .sheet(isPresented: $showReport) {
             MorningReportView(app: app, live: app.live, settings: app.settings, recording: app.reportRecording)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+                .closableSheet()
         }
         .onChange(of: app.reportRequests) { _, _ in
             // the bell, or the eight o'clock notification: one sheet at a time
@@ -60,13 +57,12 @@ struct MainView: View {
                     Text("Transcript")
                         .font(.system(size: 20, weight: .semibold, design: .serif))
                         .foregroundStyle(Theme.ink)
-                        .padding(.top, 18).padding(.bottom, 8)
+                        .padding(.top, 2).padding(.bottom, 8)
                     TranscriptPage(live: app.live)
                 }
             }
             .preferredColorScheme(app.settings.colorScheme)
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+            .closableSheet()
         }
     }
 
@@ -286,7 +282,7 @@ struct MenuSheet: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 22)
+                .padding(.top, 6)
                 .padding(.bottom, 32)
             }
             .scrollDismissesKeyboard(.interactively)

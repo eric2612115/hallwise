@@ -79,7 +79,7 @@ struct NoticesSheet: View {
                             .background(Capsule().fill(Theme.accent))
                     }
                 }
-                .padding(.horizontal, 20).padding(.top, 22).padding(.bottom, 8)
+                .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 8)
                 reportRow
                     .padding(.horizontal, 20).padding(.bottom, 6)
                 if live.notices.isEmpty {
@@ -106,8 +106,7 @@ struct NoticesSheet: View {
         .preferredColorScheme(settings.colorScheme)
         .sheet(item: $draft) { d in
             MoveSheet(move: d.move, promise: d.promise, live: live, settings: settings, hook: live.hooks(for: d.move.personKey).first)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+                .closableSheet()
         }
     }
 

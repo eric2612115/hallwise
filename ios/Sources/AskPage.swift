@@ -96,8 +96,7 @@ struct AskPage: View {
         }
         .sheet(item: $draft) { d in
             MoveSheet(move: d.move, promise: d.promise, live: live, settings: settings)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+                .closableSheet()
         }
     }
 

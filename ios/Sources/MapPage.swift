@@ -165,8 +165,8 @@ struct MapPage: View {
                     .task { await directory.load(base: settings.serverURL) }
             }
         }
-        .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).presentationDetents([.medium, .large]) }
-        .sheet(item: $selectedKnown) { p in KnownPersonSheet(person: p, settings: settings).presentationDetents([.medium, .large]) }
+        .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).closableSheet([.medium, .large]) }
+        .sheet(item: $selectedKnown) { p in KnownPersonSheet(person: p, settings: settings).closableSheet([.medium, .large]) }
     }
 }
 
@@ -834,6 +834,7 @@ struct KnownPersonSheet: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .contentMargins(.top, 4, for: .scrollContent)
         }
         .preferredColorScheme(settings.colorScheme)
     }

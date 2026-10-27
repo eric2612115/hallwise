@@ -86,7 +86,7 @@ struct PhotoMatchSheet: View {
                 Text("Who's who")
                     .font(.system(size: 24, weight: .bold, design: .serif))
                     .foregroundStyle(Theme.ink)
-                    .padding(.top, 18)
+                    .padding(.top, 2)
                 GeometryReader { geo in
                     let fit = fitted(photo.size, in: geo.size)
                     ZStack(alignment: .topLeading) {

@@ -94,15 +94,14 @@ struct RoomPage: View {
             }
             .sheet(item: $taken) { t in
                 PhotoMatchSheet(photo: t.image, app: app, live: live, settings: settings)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+                    .closableSheet()
             }
             controls
             met
             Spacer(minLength: 0)
         }
         .padding(.top, 4)
-        .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).presentationDetents([.medium, .large]) }
+        .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).closableSheet([.medium, .large]) }
         .confirmationDialog("Stop listening?", isPresented: $confirmStop, titleVisibility: .visible) {
             Button("Stop", role: .destructive) { app.stop() }
             Button("Keep going", role: .cancel) {}
@@ -274,8 +273,8 @@ struct PeoplePage: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .task { await directory.load(base: settings.serverURL) }
-        .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).presentationDetents([.medium, .large]) }
-        .sheet(item: $selectedKnown) { p in KnownPersonSheet(person: p, settings: settings).presentationDetents([.medium, .large]) }
+        .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).closableSheet([.medium, .large]) }
+        .sheet(item: $selectedKnown) { p in KnownPersonSheet(person: p, settings: settings).closableSheet([.medium, .large]) }
     }
 }
 
@@ -404,6 +403,7 @@ struct PersonDetail: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .contentMargins(.top, 4, for: .scrollContent)
         }
         .preferredColorScheme(settings.colorScheme)
     }
@@ -604,8 +604,7 @@ struct PromiseRow: View {
         .padding(.vertical, 2)
         .sheet(item: $draft) { m in
             MoveSheet(move: m, promise: promise, live: live, settings: settings, hook: live.hooks(for: m.personKey).first)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+                .closableSheet()
         }
     }
 }
@@ -716,7 +715,6 @@ struct MoveSheet: View {
                     .padding(.top, 6)
                 }
                 .padding(20)
-                .padding(.top, 10)
             }
         }
         .preferredColorScheme(settings.colorScheme)
