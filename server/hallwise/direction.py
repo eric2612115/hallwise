@@ -5,6 +5,15 @@ azimuth θ (counter-clockwise from the X axis) arrives as W = s, X = s·cos θ, 
 (Σ W·X, Σ W·Y) over a turn therefore points at whoever was talking, relative to the phone. Adding the phone's yaw
 at that moment gives a bearing in the room, which stays put when the wearer turns or leans in to listen.
 
+Which way "X" points depends on who made the audio. The rig and the rehearsal audio are in the screen frame: +X is
+the screen normal, "ahead" is the screen side, and a positive azimuth is the wearer's left. An iPhone's own
+`.firstOrderAmbisonics` is in Apple's camera frame, built for filming: +X points out of the BACK of the phone, where
+the rear camera looks, so front and back come out swapped (measured on an iPhone 17 Pro: the screen side at ±175°,
+the back at -10°, in a take with the phone standing still). That is a half turn about the vertical axis (X and Y
+negate, Z stays), so a `camera` frame is rotated by 180° before anything else; a source on the phone's left stays
+on its left because the half turn also turns the left itself round. Which frame a recording is in is the hello's
+`foa_frame` (recording.py).
+
 The badge's "yaw" is the direction its screen faces (taken from the attitude matrix, not Euler yaw, which locks up
 on an upright phone). A phone hanging top-down on its lanyard is turned 180° about the screen normal, so its left
 and right swap: its poses say `inverted`, and the azimuth it hears is negated back into the wearer's frame before
@@ -22,6 +31,9 @@ from dataclasses import dataclass, field
 import numpy as np
 
 BLOCK_MS = 20
+
+# How far the microphones' azimuth is turned to reach the screen frame, per `foa_frame`.
+FRAME_ROTATION = {"screen": 0.0, "camera": 180.0}
 
 
 def wrap(degrees: float) -> float:
@@ -41,8 +53,11 @@ def circular_mean(angles: list[float], weights: list[float]) -> tuple[float, flo
 
 
 class DirectionTracker:
-    def __init__(self, sample_rate: int, layout: str):
+    def __init__(self, sample_rate: int, layout: str, frame: str = "screen"):
+        if frame not in FRAME_ROTATION:
+            raise ValueError(f"foa frame must be one of {sorted(FRAME_ROTATION)}")
         self.layout = layout
+        self.frame = frame
         self.block = sample_rate * BLOCK_MS // 1000
         self._carry = np.zeros((0, 4))
         self._ix: list[float] = []
@@ -105,7 +120,8 @@ class DirectionTracker:
             return None
         ix = float(np.array(self._ix[i0:i1])[loud].sum())
         iy = float(np.array(self._iy[i0:i1])[loud].sum())
-        device = math.degrees(math.atan2(iy, ix))
+        # The one place the audio's own frame becomes the screen frame; everything after it is in the screen frame.
+        device = math.degrees(math.atan2(iy, ix)) + FRAME_ROTATION[self.frame]
         inverted = self.inverted(start_ms, end_ms)
         if inverted:
             device = -device  # top-down, the microphones' left is the wearer's right

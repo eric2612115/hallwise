@@ -1,4 +1,5 @@
 import asyncio
+import json
 import math
 
 import numpy as np
@@ -195,8 +196,10 @@ def test_an_upright_badge_hearing_a_talker_on_the_right_puts_them_on_the_right()
     assert where["azimuth_room"] == pytest.approx(-30, abs=5)
 
 
-def run_recording(tmp_path, foa: np.ndarray, script: list[dict], poses: list[dict]) -> list[dict]:
-    hello = Hello(sample_rate=RATE, channels=4, layout="foa", fake_script=script)
+def run_recording(
+    tmp_path, foa: np.ndarray, script: list[dict], poses: list[dict], hello: Hello | None = None
+) -> list[dict]:
+    hello = hello or Hello(sample_rate=RATE, channels=4, layout="foa", fake_script=script)
     rec = Recording(tmp_path, hello, lambda sink, *, rate, hello: FakeAsr(sink, rate=rate, script=hello.fake_script))
 
     async def run():
@@ -261,3 +264,169 @@ def test_poses_without_the_inverted_field_mean_upright(tmp_path):
     assert position["azimuth_room"] == pytest.approx(70, abs=5)
     (pose,) = [e for e in events if e["type"] == "device_pose"]
     assert "inverted" not in pose
+
+
+# --- an iPhone's own ambisonics is in Apple's camera frame: +X out of the back of the phone ---------------------------
+
+
+def camera_axes(foa: np.ndarray) -> np.ndarray:
+    """The same sound as the iPhone's `.firstOrderAmbisonics` reports it: Apple's camera frame, +X out of the back, so
+    X and Y change sign and W and Z stay (columns W, Y, Z, X)."""
+    return foa * np.array([1.0, -1.0, 1.0, -1.0])
+
+
+def angle_off(found: float, expected: float) -> float:
+    return abs(wrap(found - expected))
+
+
+def badge_hello(script: list[dict] | None = None, **fields) -> Hello:
+    """The hello as the app sends it (a dict over the socket), through the same parser."""
+    msg = {"sample_rate": RATE, "channels": 4, "layout": "foa", "device": "iPhone badge", **fields}
+    return Hello.parse({**msg, "fake_script": script} if script else msg)
+
+
+def meta_of(tmp_path) -> dict:
+    (folder,) = (tmp_path / "recordings").iterdir()
+    return json.loads((folder / "meta.json").read_text())
+
+
+@pytest.mark.parametrize("wearer_azimuth", [0, 180, 90, -90, 60, -135])
+def test_camera_frame_audio_puts_a_talker_where_they_stand_relative_to_the_screen(wearer_azimuth):
+    # 0 = out of the screen, 180 = out of the back, + = the phone's left looking out of the screen.
+    tracker = DirectionTracker(RATE, "foa", "camera")
+    foa = camera_axes(encode(voice(1.5), wearer_azimuth) + diffuse(1.5, 0.02))
+    tracker.add(to_int16(foa))
+    tracker.add_pose(0, 0.0)
+    where = tracker.direction(0, 1500)
+    assert angle_off(where["azimuth_device"], wearer_azimuth) < 5, where
+    assert angle_off(where["azimuth_room"], wearer_azimuth) < 5, where
+    assert where["confidence"] > 0.7
+
+
+def test_the_take_measured_on_the_phone_reads_front_at_zero_and_back_at_a_half_turn():
+    # The calibration take: the phone standing still, the owner walking round it. Read as the screen frame, the
+    # screen side came out near ±175° and the back near -10°; as the camera frame they are near 5° and 170°.
+    front, back = 175.0, -10.0
+    for frame, front_expected, back_expected in (("screen", 175, -10), ("camera", -5, 170)):
+        tracker = DirectionTracker(RATE, "foa", frame)
+        tracker.add(to_int16(encode(voice(1.0), front) + diffuse(1.0, 0.02)))
+        tracker.add(to_int16(encode(voice(1.0), back) + diffuse(1.0, 0.02)))
+        a, b = tracker.direction(0, 1000), tracker.direction(1000, 2000)
+        assert angle_off(a["azimuth_device"], front_expected) < 5
+        assert angle_off(b["azimuth_device"], back_expected) < 5
+
+
+def test_the_screen_frame_is_the_default_and_leaves_the_audio_as_it_is():
+    default, screen = DirectionTracker(RATE, "foa"), DirectionTracker(RATE, "foa", "screen")
+    signal = to_int16(encode(voice(1.0), 135) + diffuse(1.0, 0.02))
+    for tracker in (default, screen):
+        tracker.add(signal)
+        tracker.add_pose(0, 0.0)
+    assert default.direction(0, 1000) == screen.direction(0, 1000)
+    assert angle_off(screen.direction(0, 1000)["azimuth_device"], 135) < 5
+
+
+def test_an_unknown_frame_is_refused():
+    with pytest.raises(ValueError, match="foa frame"):
+        DirectionTracker(RATE, "foa", "world")
+
+
+@pytest.mark.parametrize(
+    "msg, frame",
+    [
+        ({"device": "iPhone badge"}, "camera"),  # what the app sends today: no field, no app update
+        ({"device": "iPhone badge", "foa_frame": None}, "camera"),
+        ({"device": "iPhone badge", "foa_frame": "camera"}, "camera"),
+        ({"device": "iPhone badge", "foa_frame": "screen"}, "screen"),  # said outright, so it wins
+        ({"device": "simulator"}, "screen"),  # stream_wav.py and the rig
+        ({"device": "simulator", "foa_frame": "camera"}, "camera"),
+        ({"device": "simulator", "foa_frame": "screen"}, "screen"),
+        ({}, "screen"),
+    ],
+)
+def test_the_hello_names_the_frame_or_the_device_decides(msg, frame):
+    base = {"sample_rate": RATE, "channels": 4, "layout": "foa"}
+    assert Hello.parse({**base, **msg}).foa_frame == frame
+
+
+def test_a_hello_with_an_unknown_frame_is_refused():
+    with pytest.raises(ValueError, match="foa_frame"):
+        Hello.parse({"sample_rate": RATE, "channels": 4, "layout": "foa", "foa_frame": "world"})
+
+
+@pytest.mark.parametrize(
+    "fields, frame",
+    [({}, "camera"), ({"foa_frame": "screen"}, "screen"), ({"device": "simulator"}, "screen")],
+)
+def test_the_recording_keeps_the_frame_it_used_in_meta(tmp_path, fields, frame):
+    run_recording(tmp_path, np.zeros((RATE, 4), dtype=np.int16), [], [], hello=badge_hello(**fields))
+    assert meta_of(tmp_path)["foa_frame"] == frame
+
+
+def test_a_recording_without_a_device_in_the_hello_keeps_the_screen_frame_in_meta(tmp_path):
+    run_recording(tmp_path, np.zeros((RATE, 4), dtype=np.int16), [], [])
+    assert meta_of(tmp_path)["foa_frame"] == "screen"
+
+
+def two_talkers() -> tuple[np.ndarray, list[dict]]:
+    """A at the wearer's front, B behind them, C on the left, D on the right (screen-frame audio, one turn each)."""
+    gap = np.zeros((int(0.5 * RATE), 4))
+    parts, script = [], []
+    for i, (who, az) in enumerate((("A", 0), ("B", 180), ("C", 90), ("D", -90))):
+        parts += [encode(voice(1.0), az), gap]
+        script.append({"start_ms": i * 1500, "end_ms": i * 1500 + 1000, "speaker": who, "text": f"This is {who}."})
+    return np.concatenate(parts) + diffuse(6.0, 0.01), script
+
+
+def test_recording_places_the_screen_side_ahead_and_the_back_behind_for_an_iphone_badge(tmp_path):
+    foa, script = two_talkers()
+    hello = badge_hello(script)  # no foa_frame, as the app sends it
+    events = run_recording(tmp_path, to_int16(camera_axes(foa)), script, [{"t_ms": 0, "yaw": 0.0}], hello=hello)
+    placed = {e["speaker"]: e["azimuth"] for e in events if e["type"] == "speaker_position"}
+    assert angle_off(placed["1:A"], 0) < 5
+    assert angle_off(placed["1:B"], 180) < 5
+    assert placed["1:C"] == pytest.approx(90, abs=5)  # the phone's left looking out of the screen: positive
+    assert placed["1:D"] == pytest.approx(-90, abs=5)
+
+
+def test_recording_leaves_simulator_audio_in_the_screen_frame(tmp_path):
+    # The rehearsal and rig audio is synthesised in the screen frame and streamed with device "simulator".
+    foa, script = two_talkers()
+    hello = badge_hello(script, device="simulator")
+    events = run_recording(tmp_path, to_int16(foa), script, [{"t_ms": 0, "yaw": 0.0}], hello=hello)
+    placed = {e["speaker"]: e["azimuth"] for e in events if e["type"] == "speaker_position"}
+    assert angle_off(placed["1:A"], 0) < 5
+    assert angle_off(placed["1:B"], 180) < 5
+    assert placed["1:C"] == pytest.approx(90, abs=5)
+    assert placed["1:D"] == pytest.approx(-90, abs=5)
+
+
+@pytest.mark.parametrize("inverted", [False, True])
+def test_a_camera_frame_badge_hanging_upside_down_still_puts_left_on_the_left(tmp_path, inverted):
+    # A on the wearer's left at 50°, B on the right at -40°, C straight behind; the wearer faces 20° in the room.
+    gap = np.zeros((int(0.5 * RATE), 4))
+    screen = np.concatenate(
+        [encode(voice(1.0), heard(50, inverted)), gap, encode(voice(1.0), heard(-40, inverted)), gap,
+         encode(voice(1.0), heard(180, inverted)), gap]
+    )
+    script = [
+        {"start_ms": 0, "end_ms": 1000, "speaker": "A", "text": "Hi, I'm Sarah."},
+        {"start_ms": 1500, "end_ms": 2500, "speaker": "B", "text": "I'm Eric."},
+        {"start_ms": 3000, "end_ms": 4000, "speaker": "C", "text": "And I'm Leo."},
+    ]
+    poses = [
+        {"type": "pose", "t_ms": t, "yaw": 20.0, "pitch": 88.0, "roll": 0.0, "inverted": inverted}
+        for t in range(0, 4500, 100)
+    ]
+    events = run_recording(
+        tmp_path, to_int16(camera_axes(screen) + diffuse(4.5, 0.01)), script, poses, hello=badge_hello(script)
+    )
+    placed = {e["speaker"]: e["azimuth"] for e in events if e["type"] == "speaker_position"}
+    assert placed["1:A"] == pytest.approx(70, abs=5)  # left of the wearer: positive
+    assert placed["1:B"] == pytest.approx(-20, abs=5)  # right of the wearer: negative
+    assert angle_off(placed["1:C"], 200) < 5  # behind the wearer, who faces 20°
+    positions = [e for e in events if e["type"] == "position"]
+    assert {e["inverted"] for e in positions} == {inverted}
+    device = {e["speaker"]: e["azimuth_device"] for e in positions}
+    assert device["1:A"] == pytest.approx(50, abs=5) and device["1:B"] == pytest.approx(-40, abs=5)
+    assert angle_off(device["1:C"], 180) < 5

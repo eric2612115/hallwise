@@ -22,7 +22,7 @@ import numpy as np
 import soxr
 
 from .asr import Asr
-from .direction import DirectionTracker, SpeakerPositions
+from .direction import FRAME_ROTATION, DirectionTracker, SpeakerPositions
 from .events import EventLog, fold_record
 from .extract import Extractor, Turn, build_prompt, draft_next_moves
 from .leveler import Leveler
@@ -34,6 +34,7 @@ from .places import parse_place
 
 ASR_RATE = 24_000
 LAYOUT_CHANNELS = {"mono": 1, "stereo": 2, "foa": 4}
+IPHONE_BADGE = "iPhone badge"  # what the app's hello says for `device`
 MAX_HINT_NAMES = 40
 MAX_HINT_COMPANIES = 20
 
@@ -68,7 +69,18 @@ class Hello:
     links: dict[str, str] | None = None  # deck / one_pager / blurb the owner can hand over
     tz: str = ""
     now: str = ""  # the phone's clock at start, ISO 8601 with offset
+    # Whose axes the FOA is in (direction.py): "screen", +X out of the screen, as the rig and rehearsal audio are; or
+    # "camera", Apple's frame, +X out of the back, which is what an iPhone's own ambisonics uses. Left out, an
+    # "iPhone badge" is "camera" (the app sends no field, so it needs no update) and anything else is "screen".
+    # What is stored here, and in meta.json, is the frame used.
+    foa_frame: str = ""
     fake_script: list[dict[str, Any]] | None = field(default=None, repr=False)  # rig ground truth, offline only
+
+    def __post_init__(self) -> None:
+        if not self.foa_frame:
+            self.foa_frame = "camera" if self.device == IPHONE_BADGE else "screen"
+        if self.foa_frame not in FRAME_ROTATION:
+            raise ValueError(f"foa_frame must be one of {sorted(FRAME_ROTATION)}")
 
     @classmethod
     def parse(cls, msg: dict[str, Any]) -> "Hello":
@@ -88,6 +100,7 @@ class Hello:
             links=msg.get("links"),
             tz=str(msg.get("tz", "")),
             now=str(msg.get("now", "")),
+            foa_frame="" if msg.get("foa_frame") is None else str(msg["foa_frame"]),
             fake_script=msg.get("fake_script"),
         )
         if hello.place and not hello.venue:  # older readers of the recording only look at venue
@@ -148,7 +161,7 @@ class Recording:
         self._leveler = Leveler(ASR_RATE) if os.environ.get("HALLWISE_LEVELER", "on") != "off" else None
         self._frames = 0
         self._pending = b""
-        self.direction = DirectionTracker(hello.sample_rate, hello.layout)
+        self.direction = DirectionTracker(hello.sample_rate, hello.layout, hello.foa_frame)
         self.speaker_positions = SpeakerPositions()
         # Names from earlier evenings go to the transcriber as hints, so a hard surname is heard the way
         # it was spelled before, and their companies after them.
