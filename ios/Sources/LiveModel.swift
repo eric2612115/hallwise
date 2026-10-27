@@ -11,6 +11,76 @@ final class LiveModel: ObservableObject {
         var language: String
         var introducedBy: String
         var speakers: [String]
+        /// Named from the people index the moment they said who they are, before Muse Spark confirmed it.
+        var provisional = false
+    }
+
+    /// Where Muse Spark and Muse Spark Open, reading the same transcript, heard a name or a promise differently.
+    struct Disagreement: Identifiable {
+        struct Reading { let by: String; let text: String }
+        let id: String
+        let kind: String     // person, promise
+        let field: String    // name, company, due, exists
+        let key: String      // the person or promise key; empty for a promise only Muse Spark Open heard
+        let speaker: String
+        let turn: Int
+        let a: Reading       // Muse Spark
+        let b: Reading       // Muse Spark Open
+        let owedBy: String
+        let owedTo: String
+        let what: String
+        let due: String
+
+        init?(_ e: [String: Any]) {
+            guard let id = e["id"] as? String else { return nil }
+            func reading(_ x: Any?) -> Reading {
+                let d = x as? [String: Any] ?? [:]
+                return Reading(by: d["by"] as? String ?? "", text: d["text"] as? String ?? "")
+            }
+            self.id = id
+            kind = e["kind"] as? String ?? "person"
+            field = e["field"] as? String ?? "name"
+            key = e["key"] as? String ?? ""
+            speaker = e["speaker"] as? String ?? ""
+            turn = e["turn"] as? Int ?? -1
+            a = reading(e["a"])
+            b = reading(e["b"])
+            owedBy = e["owed_by"] as? String ?? ""
+            owedTo = e["owed_to"] as? String ?? ""
+            what = e["what"] as? String ?? ""
+            due = e["due"] as? String ?? ""
+        }
+    }
+
+    @Published var confirmed: Set<String> = []        // "person:<key>", "promise:<key>": both Meta models agree
+    @Published var disagreements: [Disagreement] = []
+
+    func isConfirmed(person key: String) -> Bool { confirmed.contains("person:" + key) }
+    func isConfirmed(promise key: String) -> Bool { confirmed.contains("promise:" + key) }
+
+    /// The owner settled a disagreement on the phone: keep one reading (or a typed one) and drop the row.
+    func settle(_ d: Disagreement, with text: String?) {
+        disagreements.removeAll { $0.id == d.id }
+        guard let text else { return }
+        switch (d.kind, d.field) {
+        case ("person", "name"): people[d.key]?.name = text
+        case ("person", "company"): people[d.key]?.company = text
+        case ("promise", "due"):
+            if var p = promises[d.key] {
+                if p.due != text { p.replaces = p.due }
+                p.due = text
+                promises[d.key] = p
+            }
+        case ("promise", "exists"):
+            if text.isEmpty {
+                if !d.key.isEmpty { markDone(d.key) }  // "no promise": off the open list, still under Done
+            } else if d.key.isEmpty {
+                let key = "open:" + d.id
+                if promises[key] == nil { promiseOrder.append(key) }
+                promises[key] = Promise(id: key, what: d.what, due: d.due, replaces: "", owedTo: d.owedTo, owedBy: d.owedBy)
+            }
+        default: break
+        }
     }
 
     struct Promise: Identifiable {
@@ -233,9 +303,11 @@ final class LiveModel: ObservableObject {
                                   detail: p.what + due, kind: .send, promiseKey: key))
             }
         }
-        if !suspects.isEmpty {
-            out.append(Notice(id: "words", title: suspects.count == 1 ? "One word to confirm" : "\(suspects.count) words to confirm",
-                              detail: suspects.prefix(3).map(\.likely).joined(separator: ", "), kind: .word, promiseKey: nil))
+        let toSettle = suspects.count + disagreements.count
+        if toSettle > 0 {
+            out.append(Notice(id: "words", title: toSettle == 1 ? "One word to confirm" : "\(toSettle) words to confirm",
+                              detail: (suspects.prefix(3).map(\.likely) + disagreements.prefix(2).map(\.b.text)).prefix(3).joined(separator: ", "),
+                              kind: .word, promiseKey: nil))
         }
         return out.filter { !dismissedNotices.contains($0.id) }
     }
@@ -313,7 +385,7 @@ final class LiveModel: ObservableObject {
         people = [:]; peopleOrder = []; promises = [:]; promiseOrder = []; speakerAzimuth = [:]; speakerLevel = [:]
         ownerSpeakers = []; lines = []; turnKind = [:]; turnStart = [:]; turnEnd = [:]
         suspects = []; moves = [:]; topics = []; translations = [:]; history = [:]; speakerFirstMs = [:]; photos = [:]
-        liveHooks = [:]; reportHooks = [:]; indexKeys = [:]
+        liveHooks = [:]; reportHooks = [:]; indexKeys = [:]; confirmed = []; disagreements = []
         tMs = 0; lastSpeaker = nil; donePromises = []; dismissedNotices = []; calendarAdded = []
     }
 
@@ -396,6 +468,12 @@ final class LiveModel: ObservableObject {
             }
         case "person":
             guard let key = e["key"] as? String else { return }
+            let speakers = e["speakers"] as? [String] ?? []
+            // Muse Spark named this voice under its own key: the provisional name from the people index gives way.
+            for (other, p) in people where other != key && p.provisional && !Set(p.speakers).isDisjoint(with: speakers) {
+                people[other] = nil
+                peopleOrder.removeAll { $0 == other }
+            }
             if people[key] == nil { peopleOrder.append(key); loadPhoto(for: key) }
             people[key] = Person(
                 id: key,
@@ -404,7 +482,7 @@ final class LiveModel: ObservableObject {
                 role: e["role"] as? String ?? "",
                 language: e["preferred_language"] as? String ?? "",
                 introducedBy: e["introduced_by"] as? String ?? "",
-                speakers: e["speakers"] as? [String] ?? []
+                speakers: speakers
             )
         case "promise":
             guard let key = e["key"] as? String else { return }
@@ -449,7 +527,37 @@ final class LiveModel: ObservableObject {
             }
             history[key] = History(encounters: encounters, promises: promises)
             if let ik = e["index_key"] as? String, !ik.isEmpty { indexKeys[key] = ik }
+            // Heard by name a moment ago, before Muse Spark ran: the person is in the room at once, ringed, under
+            // the people index's spelling, until Spark confirms or withdraws it.
+            if e["provisional"] as? Bool == true, let speaker = e["speaker"] as? String, people[key] == nil,
+               !people.values.contains(where: { $0.speakers.contains(speaker) }) {
+                peopleOrder.append(key)
+                people[key] = Person(id: key, name: e["name"] as? String ?? key, company: e["company"] as? String ?? "",
+                                     role: "", language: "", introducedBy: "", speakers: [speaker], provisional: true)
+                loadPhoto(for: key)
+            }
             fetchFace(for: key)
+        case "person_history_removed":
+            guard let key = e["key"] as? String else { return }
+            history[key] = nil
+            indexKeys[key] = nil
+            if people[key]?.provisional == true {
+                people[key] = nil
+                peopleOrder.removeAll { $0 == key }
+            }
+        case "hook_removed":
+            guard let key = e["person_key"] as? String, let title = e["title"] as? String else { return }
+            liveHooks[key] = (liveHooks[key] ?? []).filter { $0.title != title }
+        case "confirmed":
+            if let kind = e["kind"] as? String, let key = e["key"] as? String { confirmed.insert(kind + ":" + key) }
+        case "confirmed_removed":
+            if let kind = e["kind"] as? String, let key = e["key"] as? String { confirmed.remove(kind + ":" + key) }
+        case "disagreement":
+            guard let d = Disagreement(e) else { return }
+            disagreements.removeAll { $0.id == d.id }
+            disagreements.append(d)
+        case "disagreement_removed":
+            if let id = e["id"] as? String { disagreements.removeAll { $0.id == id } }
         case "hook":
             guard let key = e["person_key"] as? String, !key.isEmpty else { return }
             let hook = Hook(e)

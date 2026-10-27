@@ -75,7 +75,7 @@ struct MainView: View {
             !app.live.donePromises.contains(key) && app.live.promises[key]?.owedBy == "owner"
         }.count
         _ = openOwe
-        return [.people: app.live.peopleOrder.count, .words: app.live.suspects.count]
+        return [.people: app.live.peopleOrder.count, .words: app.live.suspects.count + app.live.disagreements.count]
     }
 
     /// Plain words, never an id: what the app is doing right now.

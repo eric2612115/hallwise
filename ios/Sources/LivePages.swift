@@ -25,6 +25,17 @@ func mmss(_ ms: Int) -> String {
     return "\(s / 60):\(String(format: "%02d", s % 60))"
 }
 
+/// Both Meta models heard this the same way: Muse Spark and Muse Spark Open, reading the same transcript.
+struct ConfirmedMark: View {
+    var size: CGFloat = 13
+    var body: some View {
+        Image(systemName: "checkmark.seal.fill")
+            .font(.system(size: size, weight: .semibold))
+            .foregroundStyle(Theme.accent)
+            .accessibilityLabel("Confirmed by two Meta models")
+    }
+}
+
 /// A section header in the paper voice instead of the system's.
 struct PaperHeader: View {
     let text: String
@@ -280,10 +291,17 @@ struct PersonRow: View {
                 .frame(width: 32, height: 32)
                 .animation(.easeInOut(duration: 0.2), value: talking)
             VStack(alignment: .leading, spacing: 3) {
-                Text(person.name)
-                    .font(.system(size: 17, weight: .semibold, design: .serif))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(1)
+                HStack(spacing: 5) {
+                    Text(person.name)
+                        .font(.system(size: 17, weight: .semibold, design: .serif))
+                        .foregroundStyle(Theme.ink)
+                        .lineLimit(1)
+                    if live.isConfirmed(person: person.id) { ConfirmedMark() }
+                }
+                if let e = live.history[person.id]?.encounters.first {
+                    Text("met before · \(e.event.isEmpty ? dayString(e.started) : e.event)")
+                        .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.accent).lineLimit(1)
+                }
                 let line = [person.company, person.role].filter { !$0.isEmpty }.joined(separator: " · ")
                 if !line.isEmpty {
                     Text(line).font(.system(size: 15)).foregroundStyle(Theme.inkSoft).lineLimit(1)
@@ -316,9 +334,15 @@ struct PersonDetail: View {
                     HStack(alignment: .top, spacing: 14) {
                         if live.photos[person.id] != nil { FaceDot(live: live, key: person.id, size: 32, ring: true) }
                         VStack(alignment: .leading, spacing: 4) {
-                        Text(person.name).font(.system(size: 26, weight: .bold, design: .serif)).foregroundStyle(Theme.ink)
+                        HStack(spacing: 6) {
+                            Text(person.name).font(.system(size: 26, weight: .bold, design: .serif)).foregroundStyle(Theme.ink)
+                            if live.isConfirmed(person: person.id) { ConfirmedMark(size: 18) }
+                        }
                         Text([person.company, person.role].filter { !$0.isEmpty }.joined(separator: " · "))
                             .foregroundStyle(Theme.inkSoft)
+                        if live.isConfirmed(person: person.id) {
+                            Text("Both Meta models heard this name").font(.system(size: 13)).foregroundStyle(Theme.accent)
+                        }
                         HStack(spacing: 6) {
                             if !person.language.isEmpty { Tag(text: "speaks \(person.language)") }
                             if !person.introducedBy.isEmpty { Tag(text: "via \(live.name(for: person.introducedBy))") }
@@ -486,10 +510,13 @@ struct PromiseRow: View {
             }
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 3) {
-                Text(promise.what)
-                    .font(.system(size: 17))
-                    .strikethrough(done)
-                    .foregroundStyle(done ? Theme.inkSoft : Theme.ink)
+                HStack(spacing: 5) {
+                    Text(promise.what)
+                        .font(.system(size: 17))
+                        .strikethrough(done)
+                        .foregroundStyle(done ? Theme.inkSoft : Theme.ink)
+                    if live.isConfirmed(promise: promise.id) { ConfirmedMark() }
+                }
                 HStack(spacing: 6) {
                     Text(promise.owedBy == "owner" ? "to \(live.name(for: promise.owedTo))" : "from \(live.name(for: promise.owedBy))")
                         .font(.subheadline).foregroundStyle(Theme.inkSoft)
@@ -571,6 +598,10 @@ struct MoveSheet: View {
                         Image(systemName: "checklist").foregroundStyle(Theme.inkSoft)
                         Text(promise.what + (promise.due.isEmpty ? "" : " · \(promise.due)"))
                             .font(.system(size: 14)).foregroundStyle(Theme.inkSoft)
+                        if live.isConfirmed(promise: promise.id) {
+                            ConfirmedMark()
+                            Text("both Meta models").font(.system(size: 12)).foregroundStyle(Theme.accent)
+                        }
                     }
                     if let hook {
                         VStack(alignment: .leading, spacing: 4) {
@@ -670,10 +701,17 @@ struct WordsPage: View {
     @ObservedObject var live: LiveModel
     @ObservedObject var settings: BadgeSettings
     @State private var editing: LiveModel.Suspect?
+    @State private var editingDisagreement: LiveModel.Disagreement?
     @State private var draft = ""
 
     var body: some View {
         List {
+            if !live.disagreements.isEmpty {
+                Section(header: PaperHeader(text: "Two Meta models heard this differently")) {
+                    ForEach(live.disagreements) { d in disagreementRow(d) }
+                }
+                .listRowBackground(Theme.paperDeep)
+            }
             Section(header: PaperHeader(text: "Check these words")) {
                 if live.suspects.isEmpty {
                     Text("Nothing to check").foregroundStyle(Theme.inkSoft)
@@ -717,6 +755,79 @@ struct WordsPage: View {
         } message: {
             Text("Heard “\(editing?.heard ?? "")”. Type what it should be.")
         }
+        .alert("What was said?", isPresented: Binding(get: { editingDisagreement != nil }, set: { if !$0 { editingDisagreement = nil } })) {
+            TextField("Spelling", text: $draft)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.words)
+            Button("Remember") {
+                if let d = editingDisagreement { keep(d, draft) }
+                editingDisagreement = nil
+            }
+            Button("Cancel", role: .cancel) { editingDisagreement = nil }
+        } message: {
+            Text("Muse Spark heard “\(editingDisagreement?.a.text ?? "")”, Muse Spark Open “\(editingDisagreement?.b.text ?? "")”.")
+        }
+    }
+
+    /// Keep one reading. A name or a company is remembered, as Keep does for a suspect word, so the next
+    /// recording sends it as a hint.
+    private func keep(_ d: LiveModel.Disagreement, _ text: String) {
+        if d.kind == "person", !text.isEmpty { settings.remember(text) }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        withAnimation { live.settle(d, with: text) }
+    }
+
+    private func disagreementRow(_ d: LiveModel.Disagreement) -> some View {
+        let none = d.field == "exists" ? "no promise" : "—"
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(d.kind == "person" ? (d.field == "company" ? "Company" : "Name") : (d.field == "due" ? "When it is due" : "A promise"))
+                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.inkSoft)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                reading("A", d.a.text.isEmpty ? none : d.a.text, missing: d.a.text.isEmpty)
+                Text("/").font(.system(size: 18)).foregroundStyle(Theme.inkSoft)
+                reading("B", d.b.text.isEmpty ? none : d.b.text, missing: d.b.text.isEmpty)
+            }
+            Text("A Muse Spark · B Muse Spark Open").font(.system(size: 12)).foregroundStyle(Theme.inkSoft)
+            if d.turn >= 0, let line = live.line(forTurn: d.turn) {
+                Text("\(live.speakerName(line.speaker)) · \(mmss(live.turnStart[line.id] ?? 0)) — “\(String(line.text.prefix(70)))”")
+                    .font(.system(size: 13)).foregroundStyle(Theme.inkSoft).lineLimit(2)
+            }
+            HStack(spacing: 8) {
+                Spacer()
+                pill("Keep A", filled: true) { keep(d, d.a.text) }
+                pill("Keep B", filled: true) { keep(d, d.b.text) }
+                if d.field != "exists" {
+                    pill("Edit", filled: false) {
+                        draft = d.a.text
+                        editingDisagreement = d
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func reading(_ letter: String, _ text: String, missing: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Text(letter).font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.paper)
+                .frame(width: 18, height: 18).background(Circle().fill(Theme.inkSoft))
+            Text(text)
+                .font(.system(size: 19, weight: .semibold, design: .serif))
+                .italic(missing)
+                .foregroundStyle(missing ? Theme.inkSoft : Theme.ink)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func pill(_ title: String, filled: Bool, run: @escaping () -> Void) -> some View {
+        Button(action: run) {
+            Text(title).font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(filled ? Theme.paper : Theme.ink)
+                .frame(width: 84, height: 44)
+                .background(Capsule().fill(filled ? Theme.accent : Color.clear))
+                .overlay(Capsule().stroke(Theme.rule, lineWidth: filled ? 0 : 1))
+        }
+        .buttonStyle(.plain)
     }
 
     private func suspectRow(_ s: LiveModel.Suspect) -> some View {
