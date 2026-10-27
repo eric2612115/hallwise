@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 from fastapi.testclient import TestClient
+from auth import AUTH
 
 from hallwise.app import create_app
 from hallwise.people import people_index
@@ -45,7 +46,7 @@ def test_a_place_that_is_not_a_fix_is_dropped_not_fatal():
 
 
 def test_ingest_stores_the_precise_place_and_the_recordings_list_exposes_it(tmp_path):
-    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None))
+    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None), headers=AUTH)
     audio = np.zeros(4800, dtype=np.int16).tobytes()
     ids = []
     for extra in ({"venue": "", "place": FIX}, {"venue": "Taipei"}):
@@ -115,9 +116,9 @@ def all_places(obj, out):
 def test_the_replay_export_rounds_every_place_to_two_decimals(tmp_path):
     data, out = tmp_path / "data", tmp_path / "out"
     week(data, time.time())
-    for rid in ("a-afterparty", "b-dinner"):
-        subprocess.run([sys.executable, str(SERVER / "scripts" / "export_replay.py"), rid, "--data", str(data), "--out", str(out)],
-                       check=True, capture_output=True, cwd=SERVER)
+    for rid, earlier in (("a-afterparty", []), ("b-dinner", ["--include", "a-afterparty"])):
+        subprocess.run([sys.executable, str(SERVER / "scripts" / "export_replay.py"), rid, "--data", str(data), "--out", str(out),
+                        *earlier], check=True, capture_output=True, cwd=SERVER)
     dinner = json.loads((out / "b-dinner.json").read_text())
     assert dinner["meta"]["place"] == {"name": "Da'an, Taipei", "lat": 25.04, "lon": 121.55}
     kenji = next(p for p in dinner["people_index"]["people"] if p["name"] == "Kenji Watanabe")

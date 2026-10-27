@@ -23,6 +23,8 @@ async def main() -> None:
     args = ap.parse_args()
     import websockets
 
+    from hallwise.guard import client_headers  # the server key, from $HALLWISE_TOKEN or the repo's .env
+
     with wave.open(args.wav) as w:
         if (w.getnchannels(), w.getsampwidth()) != (1, 2):
             raise SystemExit("needs a mono 16-bit WAV")
@@ -32,7 +34,7 @@ async def main() -> None:
         hello["language_bias"] = args.bias.split(",")
     if args.keywords:
         hello["keywords"] = [k.strip() for k in args.keywords.split(",")]
-    async with websockets.connect(f"{args.server}/ask/{args.recording}", max_size=None) as ws:
+    async with websockets.connect(f"{args.server}/ask/{args.recording}", max_size=None, additional_headers=client_headers()) as ws:
         await ws.send(json.dumps(hello))
 
         async def reader() -> None:

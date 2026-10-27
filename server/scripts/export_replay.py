@@ -3,10 +3,25 @@ for the week map, and the audio as a small mono MP3.
 
     uv run python scripts/export_replay.py 20261027-030551-c42b
     uv run python scripts/export_replay.py /path/to/recordings/20261027-012559-ec28 --out ../apps/replay/data
+    uv run python scripts/export_replay.py 20261027-064036-3f3e --include 20261027-030551-c42b 20261027-032636-0a72 \
+        20261027-032704-badd 20261027-032735-1e3d
 
 The argument is a recording id (looked up in $HALLWISE_DATA/recordings, default server/data) or the path to a
 recording folder. Writes <out>/<id>.json and <out>/<id>.mp3, and adds the recording to <out>/index.json, which
 the page reads first. The newest export becomes the page's default unless --keep-default is given.
+
+People: the snapshot is built from the exported recording alone, unless --include names other recordings (ids in
+$HALLWISE_DATA/recordings) whose people and promises may go public with it. Nothing else on the server is read
+into it, so exporting one evening cannot publish who was met, or what was promised, at another. Put the
+recording first and --include after it (--include takes every id that follows).
+
+Today's demo export (the rehearsal after the four seeded evenings, as published in apps/replay/data) is the third
+command above. Each seeded evening was exported with the ones before it, in this order: 20261027-030551-c42b
+(ETH Taipei afterparty) alone, then 20261027-032636-0a72 (Hardware meetup), 20261027-032704-badd (Blockchain Week
+side event) and 20261027-032735-1e3d (Founder dinner), each with --include and the ids before it, e.g.
+
+    uv run python scripts/export_replay.py 20261027-032735-1e3d --include 20261027-030551-c42b \
+        20261027-032636-0a72 20261027-032704-badd
 
 Places: every `place` in the export (the recording's own, and each encounter's in the people index) is rounded
 to two decimals, about a kilometre; the page is public and the server keeps the precise fix.
@@ -38,6 +53,7 @@ REPO = SERVER.parent
 sys.path.insert(0, str(SERVER))
 
 from hallwise.events import read_events  # noqa: E402
+from hallwise.ids import is_rid  # noqa: E402
 from hallwise.people import match, people_index  # noqa: E402
 from hallwise.places import PUBLIC_DECIMALS, public_places  # noqa: E402
 
@@ -98,18 +114,32 @@ def slim_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def snapshot_people(data: Path, folder: Path, rid: str, started: float, days: int) -> dict[str, Any]:
-    """The people index as the server would build it with this recording on file, merged the way live matching
-    merges ("Ragoo Nathan" and "Raghunathan" at the same company are one person), limited to the week up to and
-    including this recording."""
+def included(data: Path, ids: list[str], rid: str) -> list[Path]:
+    """The folders of the recordings named by --include (never the exported one twice); an id that is not a
+    recording id, or not on file, stops the export."""
+    out: list[Path] = []
+    for other in dict.fromkeys(ids):
+        if not is_rid(other):
+            raise SystemExit(f"--include {other!r}: not a recording id")
+        d = data / "recordings" / other
+        if not (d / "meta.json").exists():
+            raise SystemExit(f"--include {other}: no such recording in {data / 'recordings'}")
+        if other != rid:
+            out.append(d.resolve())
+    return out
+
+
+def snapshot_people(data: Path, folder: Path, rid: str, started: float, days: int,
+                    include: list[str] | None = None) -> dict[str, Any]:
+    """The people index as the server would build it from this recording and the `include`d ones only, merged the
+    way live matching merges ("Ragoo Nathan" and "Raghunathan" at the same company are one person), limited to the
+    week up to and including this recording. Other recordings on the server stay out of it."""
+    others = included(data, include or [], rid)
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp) / "recordings"
         root.mkdir()
-        source = data / "recordings"
-        if source.exists():
-            for d in source.iterdir():
-                if (d / "meta.json").exists() and d.name != rid:
-                    (root / d.name).symlink_to(d.resolve(), target_is_directory=True)
+        for d in others:
+            (root / d.name).symlink_to(d, target_is_directory=True)
         (root / rid).symlink_to(folder, target_is_directory=True)
         index = people_index(Path(tmp))
 
@@ -264,6 +294,8 @@ def main() -> None:
     parser.add_argument("--max-audio-mb", type=float, default=8.0, help="audio size cap; bitrate drops to fit")
     parser.add_argument("--keep-silent", action="store_true", help="export the audio even if it is silent")
     parser.add_argument("--keep-default", action="store_true", help="do not make this the page's default recording")
+    parser.add_argument("--include", nargs="+", default=[], metavar="RID",
+                        help="other recordings whose people and promises may go in the people snapshot (default: none)")
     args = parser.parse_args()
 
     data = Path(args.data).resolve()
@@ -286,7 +318,7 @@ def main() -> None:
     audio = export_audio(folder, out / rid, args.max_audio_mb, args.keep_silent)
     end_ms = max((e.get("t_ms", 0) for e in slim), default=0)
     duration_ms = max(end_ms, audio["duration_ms"] if audio else 0)
-    people = snapshot_people(data, folder, rid, started, args.week_days)
+    people = snapshot_people(data, folder, rid, started, args.week_days, args.include)
     report = load_report(data, rid)
 
     payload = public_places({

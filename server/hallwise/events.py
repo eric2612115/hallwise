@@ -53,6 +53,7 @@ class EventLog:
 
 
 REPLAY_TICK_S = 1.0  # a replay_clock tick after this much wall time with nothing sent
+MIN_PACE, MAX_PACE = 0.1, 100.0  # a tenth of real time to a hundred times faster
 
 
 async def replay(events: list[dict[str, Any]], pace: float, from_ms: int = 0) -> AsyncIterator[str]:
@@ -65,7 +66,13 @@ async def replay(events: list[dict[str, Any]], pace: float, from_ms: int = 0) ->
     once first, so the state is right, then `{"type": "replay_clock", "t_ms": from_ms}` marks the start of
     pacing, and another tick follows each second of wall time with nothing to send, so a client clock keeps
     up with the recording through a silence.
+
+    `pace` outside MIN_PACE..MAX_PACE is refused: a pace so small that a tick no longer moves the clock (1e-17)
+    once spun this loop forever at full CPU. The loop also gives the event loop a turn at every step, due or not,
+    and stops ticking if a step ever fails to move the clock, so no input can make it spin.
     """
+    if not (isinstance(pace, (int, float)) and MIN_PACE <= pace <= MAX_PACE):
+        raise ValueError(f"pace must be between {MIN_PACE} and {MAX_PACE}")
     timed: list[tuple[int, str]] = []
     latest = 0
     for e in events:
@@ -80,8 +87,7 @@ async def replay(events: list[dict[str, Any]], pace: float, from_ms: int = 0) ->
 
     async def until(t_ms: float) -> None:
         delay = t0 + (t_ms - from_ms) / 1000 / pace - loop.time()
-        if delay > 0:
-            await asyncio.sleep(delay)
+        await asyncio.sleep(max(0.0, delay))  # sleep(0) when due: the server still gets a turn
 
     def tick(t_ms: float) -> str:
         return json.dumps({"type": "replay_clock", "t_ms": int(round(t_ms))})
@@ -92,6 +98,8 @@ async def replay(events: list[dict[str, Any]], pace: float, from_ms: int = 0) ->
     while i < len(timed):
         t = timed[i][0]
         while t - clock > step:
+            if clock + step <= clock:  # the step no longer moves the clock: stop ticking rather than spin
+                break
             clock += step
             await until(clock)
             yield tick(clock)

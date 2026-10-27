@@ -1,9 +1,12 @@
 import asyncio
 import json
+import time
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from auth import AUTH
+from pictures import picture_b64
 
 from hallwise.photo import FACE_PHRASE, MATCH_SCHEMA, PHOTO_SCHEMA, TAG_PHRASE, build_photo_prompt, match_photo
 from hallwise.sam import parse_boxes
@@ -201,15 +204,15 @@ def test_the_photo_endpoint_passes_sam_and_records_the_finder(tmp_path, monkeypa
     monkeypatch.setattr(app_module, "SparkClient", FakeSpark)
     root = tmp_path / "recordings" / "r1"
     root.mkdir(parents=True)
-    (root / "meta.json").write_text(json.dumps({"id": "r1", "started": 0}))
-    body = {"image_b64": "aGVsbG8=", "mime": "image/jpeg", "people": PEOPLE}
+    (root / "meta.json").write_text(json.dumps({"id": "r1", "started": time.time()}))  # tonight's: it takes photos
+    body = {"image_b64": picture_b64(), "mime": "image/jpeg", "people": PEOPLE}
 
-    client = TestClient(app_module.create_app(tmp_path, asr="fake", make_extractor=None))
+    client = TestClient(app_module.create_app(tmp_path, asr="fake", make_extractor=None), headers=AUTH)
     out = client.post("/api/recordings/r1/photo", json=body).json()
     assert out["finder"] == "sam" and [f["box"] for f in out["faces"]] == [LEFT_FACE, RIGHT_FACE]
     assert [f["person_key"] for f in out["faces"]] == ["", KENJI]
     monkeypatch.setenv("HALLWISE_SAM", "off")
-    client = TestClient(app_module.create_app(tmp_path, asr="fake", make_extractor=None))
+    client = TestClient(app_module.create_app(tmp_path, asr="fake", make_extractor=None), headers=AUTH)
     assert client.post("/api/recordings/r1/photo", json=body).json()["finder"] == "spark"
 
     photos = [e for e in map(json.loads, (root / "events.jsonl").read_text().splitlines()) if e["type"] == "photo"]

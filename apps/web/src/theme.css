@@ -132,3 +132,14 @@ s { color: var(--ink-soft); }
 
 .list { padding: 20px; display: flex; flex-direction: column; gap: 10px; max-width: 720px; }
 .list a.card { display: flex; justify-content: space-between; align-items: center; color: var(--ink); }
+
+.login { display: flex; flex-direction: column; gap: 10px; max-width: 440px; }
+.login p { margin: 0; }
+.login input {
+  font: inherit; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px;
+}
+.login input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.login button { align-self: flex-start; }
+.login button:disabled { opacity: 0.5; cursor: default; }
+.login .error { color: var(--live); }

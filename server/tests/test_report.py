@@ -1,14 +1,17 @@
 import json
 import time
+from io import BytesIO
 
 from fastapi.testclient import TestClient
+from auth import AUTH
+from PIL import Image
+from pictures import picture
 from week import week
 
 from hallwise.app import create_app
 from hallwise.report import Reports, report_day
 from hallwise.research import Researcher
 
-JPEG = b"\xff\xd8\xff\xe0" + b"face" * 100
 
 
 def make_app(tmp_path, calls, prompts=None):
@@ -40,7 +43,7 @@ def make_app(tmp_path, calls, prompts=None):
                 "usage": {"total_tokens": 5000, "input_tokens": 4500, "output_tokens": 500}}
 
     reports = Reports(tmp_path, lambda: llm, Researcher(tmp_path, search, min_gap_s=0))
-    return TestClient(create_app(tmp_path, asr="fake", make_extractor=None, reports=reports))
+    return TestClient(create_app(tmp_path, asr="fake", make_extractor=None, reports=reports), headers=AUTH)
 
 
 def test_report_runs_stores_and_serves(tmp_path):
@@ -91,7 +94,7 @@ def test_report_runs_stores_and_serves(tmp_path):
 def test_report_without_spark_falls_back_to_threads(tmp_path):
     week(tmp_path, time.time())
     reports = Reports(tmp_path, lambda: None, Researcher(tmp_path, None, off_reason="test"))
-    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None, reports=reports))
+    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None, reports=reports), headers=AUTH)
     report = client.post("/api/report/run", params={"recording": "c-tonight"}).json()
     titles = {row["person"]["name"]: (row["hook"] or {}).get("title", "") for row in report["reach_out"]}
     assert titles["Margot Lefèvre"].startswith("Chloé's colleague")
@@ -102,22 +105,23 @@ def test_report_without_spark_falls_back_to_threads(tmp_path):
 def test_faces_are_kept_by_person_and_served(tmp_path):
     week(tmp_path, time.time())
     client = make_app(tmp_path, [])
-    r = client.post("/api/people/kenji-watanabe-hoshizora-robotics/face", content=JPEG, headers={"Content-Type": "image/jpeg"})
-    assert r.status_code == 200 and r.json()["bytes"] == len(JPEG)
-    assert (tmp_path / "faces" / "kenji-watanabe-hoshizora-robotics.jpg").read_bytes() == JPEG
+    r = client.post("/api/people/kenji-watanabe-hoshizora-robotics/face", content=picture("JPEG"), headers={"Content-Type": "image/jpeg"})
+    kept = (tmp_path / "faces" / "kenji-watanabe-hoshizora-robotics.jpg").read_bytes()
+    assert r.status_code == 200 and r.json()["bytes"] == len(kept)
+    assert Image.open(BytesIO(kept)).format == "JPEG"  # kept re-encoded, without whatever metadata came in
     got = client.get("/api/people/kenji-watanabe-hoshizora-robotics/face")
-    assert got.status_code == 200 and got.content == JPEG and got.headers["content-type"] == "image/jpeg"
+    assert got.status_code == 200 and got.content == kept and got.headers["content-type"] == "image/jpeg"
 
-    import base64
-    r = client.post("/api/people/lena-novak-brightline-grid/face", content=json.dumps({"image_b64": base64.b64encode(JPEG).decode()}),
-                    headers={"Content-Type": "application/json"})
+    # A PNG is kept too, as a JPEG.
+    r = client.post("/api/people/lena-novak-brightline-grid/face", content=picture("PNG"), headers={"Content-Type": "image/png"})
     assert r.status_code == 200
+    assert Image.open(tmp_path / "faces" / "lena-novak-brightline-grid.jpg").format == "JPEG"
     # A record key from another evening finds the face through the index match (name and company).
-    assert client.get("/api/people/kenji-hoshizora/face", params={"name": "Kenji Watanabe", "company": "Hoshizora Robotics"}).content == JPEG
+    assert client.get("/api/people/kenji-hoshizora/face", params={"name": "Kenji Watanabe", "company": "Hoshizora Robotics"}).content == kept
     assert client.get("/api/people/nobody/face").status_code == 404
     assert client.post("/api/people/x/face", content=b"GIF89a", headers={"Content-Type": "image/gif"}).status_code == 415
-    assert client.post("/api/people/..secret/face", content=JPEG).status_code == 400
-    assert client.post("/api/people/Kenji/face", content=JPEG).status_code == 400
+    assert client.post("/api/people/..secret/face", content=picture(), headers={"Content-Type": "image/jpeg"}).status_code == 400
+    assert client.post("/api/people/Kenji/face", content=picture(), headers={"Content-Type": "image/jpeg"}).status_code == 400
     kenji = next(p for p in client.get("/api/people").json() if p["key"] == "kenji-watanabe-hoshizora-robotics")
     assert kenji["face"] is True
 

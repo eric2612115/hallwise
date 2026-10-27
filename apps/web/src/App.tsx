@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { bearing, mmss, nameFor, type State } from './model'
+import { Login, useSession } from './Login'
 import { SoundField } from './SoundField'
 import { useRecording, useRecordings } from './useRecording'
 
@@ -62,6 +63,7 @@ function ThemeIcon({ theme }: { theme: Theme }) {
 
 export default function App() {
   const [theme, setTheme] = useTheme()
+  const [session, setSession] = useSession()
   const hash = useHash()
   const match = /^#\/r\/([^/]+)/.exec(hash)
   const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
@@ -80,13 +82,19 @@ export default function App() {
           <ThemeIcon theme={theme} />
         </button>
       </header>
-      {match ? <Dashboard id={match[1]} /> : <RecordingList />}
+      {session === 'out' ? (
+        <Login onIn={() => setSession('in')} />
+      ) : session === 'checking' ? null : match ? (
+        <Dashboard id={match[1]} />
+      ) : (
+        <RecordingList onOut={() => setSession('out')} />
+      )}
     </>
   )
 }
 
-function RecordingList() {
-  const rows = useRecordings()
+function RecordingList({ onOut }: { onOut: () => void }) {
+  const rows = useRecordings(onOut)
   return (
     <main className="list">
       <h2>Recordings</h2>

@@ -9,6 +9,8 @@ export default defineConfig({
     port: 5188,
     proxy: {
       '/api': 'http://127.0.0.1:8790',
+      '/login': 'http://127.0.0.1:8790',
+      '/logout': 'http://127.0.0.1:8790',
       '/events': { target: 'ws://127.0.0.1:8790', ws: true },
     },
   },

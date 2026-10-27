@@ -40,13 +40,20 @@ export interface RecordingMeta {
   live: boolean
 }
 
-export function useRecordings(): RecordingMeta[] {
+/** Every recording, polled; `onOut` when the server stops taking this browser's key (a new key, a restart). */
+export function useRecordings(onOut: () => void): RecordingMeta[] {
   const [list, setList] = useState<RecordingMeta[]>([])
   useEffect(() => {
     let alive = true
     const load = () =>
       fetch('/api/recordings')
-        .then((r) => r.json())
+        .then((r) => {
+          if (r.status === 401) {
+            onOut()
+            throw new Error('unauthorized')
+          }
+          return r.json()
+        })
         .then((rows: RecordingMeta[]) => alive && setList(rows))
         .catch(() => undefined)
     load()
@@ -55,6 +62,7 @@ export function useRecordings(): RecordingMeta[] {
       alive = false
       clearInterval(timer)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return list
 }

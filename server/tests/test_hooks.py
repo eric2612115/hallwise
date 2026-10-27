@@ -107,6 +107,7 @@ def test_a_person_turning_up_gets_their_hooks_and_the_drafts_use_them(tmp_path):
 
     import numpy as np
     from fastapi.testclient import TestClient
+    from auth import AUTH
 
     from hallwise.app import create_app
     from hallwise.extract import Extractor
@@ -125,7 +126,7 @@ def test_a_person_turning_up_gets_their_hooks_and_the_drafts_use_them(tmp_path):
         return {"owner_speakers": ["1:B"], "turns": [], "people": [margot], "mentioned": [], "promises": [promise],
                 "suspect_words": [], "translations": [], "room_topics": []}
 
-    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=lambda hello: Extractor(llm, "Eric", "Hallwise")))
+    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=lambda hello: Extractor(llm, "Eric", "Hallwise")), headers=AUTH)
     with client.websocket_connect("/ingest") as ws:
         ws.send_text(json.dumps({"sample_rate": 24_000, "channels": 1, "layout": "mono", "owner_name": "Eric",
                                  "fake_script": [{"start_ms": 100, "end_ms": 600, "speaker": "A", "text": "Margot Lefèvre."}]}))

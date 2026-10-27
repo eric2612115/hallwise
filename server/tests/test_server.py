@@ -6,6 +6,7 @@ import wave
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
+from auth import AUTH
 from starlette.websockets import WebSocketDisconnect
 
 from hallwise.app import create_app
@@ -81,15 +82,17 @@ def test_recording_keeps_multichannel_audio_and_finds_two_turns(tmp_path):
     assert events[-1]["t_ms"] == pytest.approx(len(mono) / rate * 1000, abs=1)
 
 
-def test_a_scripted_hello_gets_the_fake_recogniser_even_on_the_meta_backend(monkeypatch):
+def test_a_scripted_hello_gets_the_fake_recogniser_only_on_the_fake_backend(monkeypatch):
+    """H2: on the Meta backend a client cannot choose its own transcript (and plant people and promises)."""
     from hallwise.asr import make_asr_factory
 
     monkeypatch.setenv("MODEL_API_KEY", "key")
-    make = make_asr_factory("meta")
-    scripted = Hello(sample_rate=24_000, channels=1, layout="mono", fake_script=[])
+    scripted = Hello(sample_rate=24_000, channels=1, layout="mono", fake_script=[{"start_ms": 0, "end_ms": 500, "text": "Hi"}])
     real = Hello(sample_rate=24_000, channels=1, layout="mono")
-    assert isinstance(make(lambda *a, **k: None, rate=24_000, hello=scripted), FakeAsr)
-    assert isinstance(make(lambda *a, **k: None, rate=24_000, hello=real), MetaRealtimeAsr)
+    meta, fake = make_asr_factory("meta"), make_asr_factory("fake")
+    assert isinstance(meta(lambda *a, **k: None, rate=24_000, hello=scripted), MetaRealtimeAsr)
+    assert isinstance(meta(lambda *a, **k: None, rate=24_000, hello=real), MetaRealtimeAsr)
+    assert isinstance(fake(lambda *a, **k: None, rate=24_000, hello=scripted), FakeAsr)
 
 
 def test_meta_events_map_onto_turns_with_speaker_and_times():
@@ -112,7 +115,7 @@ def test_meta_events_map_onto_turns_with_speaker_and_times():
 
 
 def test_ingest_streams_a_recording_and_replays_its_events(tmp_path):
-    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None))
+    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None), headers=AUTH)
     script = [
         {"start_ms": 200, "end_ms": 900, "speaker": "A", "text": "Hi, I'm Sarah from Acme."},
         {"start_ms": 1000, "end_ms": 1800, "speaker": "B", "text": "I'm Eric, from Vexi."},
@@ -141,7 +144,7 @@ def test_ingest_streams_a_recording_and_replays_its_events(tmp_path):
 def test_holding_to_talk_diverts_audio_to_a_question(tmp_path):
     """ask_start / ask_end on the ingest socket: the audio in between is not a conversation turn, and the
     owner gets an ask_answer back (here with no Spark key and a scriptless fake, so an error, not a crash)."""
-    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None))
+    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=None), headers=AUTH)
     rate = 24_000
     audio = silence(1.0, rate).tobytes()
     script = [{"start_ms": 200, "end_ms": 900, "speaker": "A", "text": "Hi, I'm Sarah from Acme."}]
@@ -168,7 +171,7 @@ def finished_recording(tmp_path, events, rid="r1"):
     root = tmp_path / "recordings" / rid
     root.mkdir(parents=True)
     (root / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
-    return TestClient(create_app(tmp_path, asr="fake", make_extractor=None))
+    return TestClient(create_app(tmp_path, asr="fake", make_extractor=None), headers=AUTH)
 
 
 def watch_to_the_end(client, url):
@@ -242,7 +245,7 @@ def test_a_long_silence_gets_a_clock_tick_each_second(tmp_path):
 
 
 def test_a_live_recording_ignores_pace(tmp_path):
-    with TestClient(create_app(tmp_path, asr="fake", make_extractor=None)) as client:  # one event loop for both sockets
+    with TestClient(create_app(tmp_path, asr="fake", make_extractor=None), headers=AUTH) as client:  # one event loop for both sockets
         script = [{"start_ms": 200, "end_ms": 900, "speaker": "A", "text": "Hi, I'm Sarah from Acme."}]
         rate = 24_000
         with client.websocket_connect("/ingest") as ingest:

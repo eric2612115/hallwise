@@ -11,6 +11,8 @@ drafted when the recording closes can attach the links and avoid the busy window
 clock with its UTC offset. --place is the phone's location fix at Start, named by --venue, so the recording has a
 pin on the Places map.
 
+The server key comes from $HALLWISE_TOKEN or the repo's .env (run.sh puts it there).
+
 The WAV must be 16-bit PCM: 1 channel (mono), 2 (stereo) or 4 (first-order ambisonics, ACN/SN3D).
 """
 
@@ -25,12 +27,14 @@ from datetime import datetime
 
 import websockets
 
+from hallwise.guard import client_headers  # the server key, from $HALLWISE_TOKEN or the repo's .env
+
 FRAME_SECONDS = 0.08
 LAYOUTS = {1: "mono", 2: "stereo", 4: "foa"}
 
 
 async def watch(server: str, recording: str) -> None:
-    async with websockets.connect(f"{server}/events/{recording}", max_size=None) as ws:
+    async with websockets.connect(f"{server}/events/{recording}", max_size=None, additional_headers=client_headers()) as ws:
         async for message in ws:
             event = json.loads(message)
             t = f"{event['t_ms'] / 1000:7.2f}s"
@@ -75,7 +79,7 @@ async def main(args: argparse.Namespace) -> None:
         lat, lon = (float(x) for x in args.place.split(","))
         hello["place"] = {"name": args.venue, "lat": lat, "lon": lon}
 
-    async with websockets.connect(f"{args.server}/ingest", max_size=None) as ws:
+    async with websockets.connect(f"{args.server}/ingest", max_size=None, additional_headers=client_headers()) as ws:
         await ws.send(json.dumps(hello))
         ready = json.loads(await ws.recv())
         print(f"recording {ready['recording']}: {channels} ch, {rate} Hz, {layout}")
@@ -100,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument("wav")
     parser.add_argument("--server", default="ws://127.0.0.1:8790")
     parser.add_argument("--layout", default="auto", choices=["auto", "mono", "stereo", "foa"])
-    parser.add_argument("--script", help="ground-truth turns for the offline fake recogniser")
+    parser.add_argument("--script", help="ground-truth turns for the fake recogniser (the server must run HALLWISE_ASR=fake)")
     parser.add_argument("--keywords", help="comma-separated recognition hints")
     parser.add_argument("--owner", default="Eric", help="the badge wearer's name, so they are not listed as a person met")
     parser.add_argument("--company", default="Hallwise")

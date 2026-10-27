@@ -15,7 +15,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import re
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -25,11 +24,11 @@ from .ask import latest_moves
 from .events import fold_record, read_events
 from .extract import LLM, draft_next_moves
 from .hooks import Threads, find_hooks
+from .ids import is_rid
 from .people import person_key
 from .research import Researcher, candidates
 
 REPORT_TTL_S = 3600
-RID = re.compile(r"^[0-9A-Za-z_-]{1,80}$")
 
 # Muse Spark list prices, for the cost line: $ per token, $ per search.
 PRICE_IN, PRICE_OUT, PRICE_SEARCH = 1.25e-6, 4.25e-6, 2.5e-3
@@ -219,7 +218,7 @@ class Reports:
         return self.dir / f"{rid}.json"
 
     def get(self, rid: str) -> dict[str, Any] | None:
-        if not RID.match(rid):
+        if not is_rid(rid):
             return None
         try:
             return json.loads(self.path(rid).read_text())
@@ -239,7 +238,7 @@ class Reports:
 
     async def run(self, rid: str, force: bool = False) -> dict[str, Any]:
         root = self.data / "recordings" / rid
-        if not RID.match(rid) or not (root / "meta.json").exists():
+        if not is_rid(rid) or not (root / "meta.json").exists():
             raise KeyError(rid)
         lock = self._locks.setdefault(rid, asyncio.Lock())
         async with lock:

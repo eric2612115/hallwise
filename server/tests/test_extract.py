@@ -3,6 +3,7 @@ import json
 
 import numpy as np
 from fastapi.testclient import TestClient
+from auth import AUTH
 
 from hallwise.app import create_app
 from hallwise.extract import SCHEMA, Extractor, Turn, build_prompt
@@ -124,7 +125,7 @@ def test_recording_reruns_extraction_until_every_turn_is_seen(tmp_path):
     def make_extractor(hello):
         return Extractor(llm, hello.owner_name, hello.owner_company, hello.keywords or [])
 
-    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=make_extractor))
+    client = TestClient(create_app(tmp_path, asr="fake", make_extractor=make_extractor), headers=AUTH)
     script = [
         {"start_ms": 100, "end_ms": 600, "speaker": "A", "text": "Hi, I'm Sarah from Acme."},
         {"start_ms": 700, "end_ms": 1200, "speaker": "B", "text": "I'm Eric, from Vexi."},
