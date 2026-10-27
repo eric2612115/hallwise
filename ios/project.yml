@@ -7,7 +7,7 @@ targets:
   Hallwise:
     type: application
     platform: iOS
-    sources: [Sources]
+    sources: [Sources, Resources]
     info:
       path: Sources/Info.plist
       properties:
