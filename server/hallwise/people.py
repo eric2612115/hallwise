@@ -2,6 +2,11 @@
 promise between them. Built by folding the event logs, so it is always as fresh as the logs are.
 
 A person is the same person when name and company match; a name alone matches when one side has no company.
+
+A person the owner corrected on the phone (fold_record applies the `correction`) keeps the key they had as heard,
+so their face, their research and the app's references stay where they are, while the entry shows, and matches on,
+the owner's spelling: "Ken, Vexy" corrected to Vexi stays `ken-vexy`, reads "Ken, Vexi", and a later evening that
+hears "Ken from Vexi" lands on the same entry.
 """
 
 from __future__ import annotations
@@ -19,28 +24,64 @@ def person_key(name: str, company: str) -> str:
     return slug(name) + ("-" + slug(company) if slug(company) else "")
 
 
+def index_key_of(person: dict[str, Any]) -> str:
+    """A folded person's people-index key: from the name and company as first heard when the owner corrected them,
+    so a correction never moves them to another key; from the name and company otherwise."""
+    if person.get("corrected") and slug(person.get("heard_name", "")):
+        return person_key(person.get("heard_name", ""), person.get("heard_company", ""))
+    return person_key(person.get("name", ""), person.get("company", ""))
+
+
 def people_index(data: Path, exclude: str | None = None) -> list[dict[str, Any]]:
     """Every person met, newest encounter first; `exclude` leaves one recording out (the one in progress)."""
     index: dict[str, dict[str, Any]] = {}
     root = data / "recordings"
     if not root.exists():
         return []
+    records: list[tuple[dict[str, Any], str, dict[str, Any]]] = []
     for meta_path in sorted(root.glob("*/meta.json")):
         meta = json.loads(meta_path.read_text())
         rid = meta.get("id") or meta_path.parent.name
         if rid == exclude:
             continue
-        record = fold_record(read_events(meta_path.parent / "events.jsonl"))
+        records.append((meta, rid, fold_record(read_events(meta_path.parent / "events.jsonl"))))
+    # The owner's spelling of a corrected person leads to the key they keep, from any evening. Except when that
+    # spelling is someone met before the correction's evening: then the owner has said who it was ("Ken, Vexy" is
+    # Kenji Watanabe), and the corrected person joins that entry rather than taking it over.
+    def started(meta: dict[str, Any]) -> float:
+        return float(meta.get("started", 0) or 0)
+
+    first_heard: dict[str, float] = {}
+    for meta, _, record in records:
+        for p in record["people"]:
+            if not p.get("corrected"):
+                k = person_key(p.get("name", ""), p.get("company", ""))
+                first_heard[k] = min(first_heard.get(k, started(meta)), started(meta))
+    aliases: dict[str, str] = {}
+    for meta, _, record in records:
+        for p in record["people"]:
+            if p.get("corrected") and slug(p.get("name", "")):
+                fixed, kept = person_key(p.get("name", ""), p.get("company", "")), index_key_of(p)
+                if fixed == kept:
+                    continue
+                if first_heard.get(fixed, started(meta)) < started(meta):
+                    aliases.setdefault(kept, fixed)
+                else:
+                    aliases.setdefault(fixed, kept)
+    for meta, rid, record in records:
         names = {p["key"]: p.get("name", p["key"]) for p in record["people"]}
         place = parse_place(meta.get("place"), name=meta.get("venue", ""))
         for p in record["people"]:
-            key = person_key(p.get("name", ""), p.get("company", ""))
+            key = index_key_of(p)
+            key = aliases.get(key, key)
             if not slug(p.get("name", "")):
                 continue
             entry = index.setdefault(key, {
                 "key": key, "name": p.get("name", ""), "company": p.get("company", ""), "role": p.get("role", ""),
                 "language": p.get("preferred_language", ""), "encounters": [], "promises": [],
             })
+            if p.get("corrected"):  # the owner's spelling wins over any evening's hearing of it
+                entry["name"], entry["company"] = p.get("name", ""), p.get("company", "")
             for field, value in (("company", p.get("company", "")), ("role", p.get("role", "")), ("language", p.get("preferred_language", ""))):
                 if value and not entry[field]:
                     entry[field] = value

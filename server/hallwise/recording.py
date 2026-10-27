@@ -24,13 +24,14 @@ import soxr
 from .asr import Asr
 from .direction import FRAME_ROTATION, DirectionTracker, SpeakerPositions, Wearer
 from .events import EventLog, fold_record
-from .extract import Extractor, Turn, build_prompt, draft_next_moves
+from .extract import Extractor, Turn, draft_next_moves
 from .leveler import Leveler
 from .hooks import Threads
 from .people import history_event, match, people_index
 from .recall import Recall
 from .second import SecondListener
 from .places import parse_place
+from .vocabulary import Vocabulary, keywords as vocabulary_keywords
 
 ASR_RATE = 24_000
 LAYOUT_CHANNELS = {"mono": 1, "stereo": 2, "foa": 4}
@@ -39,13 +40,14 @@ MAX_HINT_NAMES = 40
 MAX_HINT_COMPANIES = 20
 
 
-def recognition_hints(own: list[str], index: list[dict[str, Any]]) -> list[str]:
-    """The badge's own hints, then the names of people met at earlier evenings, then their companies (each once):
-    in rehearsal "Corvane Capital" was never transcribed while only Chloé Martin's name was a hint."""
+def recognition_hints(own: list[str], index: list[dict[str, Any]], vocabulary: list[str] | None = None) -> list[str]:
+    """The badge's own hints, then the spellings the owner fixed on the phone (vocabulary.py), then the names of
+    people met at earlier evenings, then their companies (each once): in rehearsal "Corvane Capital" was never
+    transcribed while only Chloé Martin's name was a hint."""
     names = [e["name"] for e in index[:MAX_HINT_NAMES] if e.get("name")]
     companies = list(dict.fromkeys(e["company"] for e in index if e.get("company")))[:MAX_HINT_COMPANIES]
     out: dict[str, str] = {}
-    for word in [*own, *names, *companies]:
+    for word in [*own, *(vocabulary or []), *names, *companies]:
         out.setdefault(word.strip().casefold(), word.strip())
     return [w for w in out.values() if w]
 
@@ -167,9 +169,10 @@ class Recording:
         # the chest. The rehearsal audio keeps naming the owner from the transcript alone.
         self.wearer = Wearer() if hello.layout == "foa" and hello.foa_frame == "camera" else None
         self._wearer_found = ""
-        # Names from earlier evenings go to the transcriber as hints, so a hard surname is heard the way
-        # it was spelled before, and their companies after them.
-        hello.keywords = recognition_hints(hello.keywords or [], self.known)
+        # The owner's fixed spellings and the names from earlier evenings go to the transcriber as hints, so a hard
+        # surname is heard the way it was spelled before, and their companies after them.
+        vocabulary = Vocabulary(root).load()
+        hello.keywords = recognition_hints(hello.keywords or [], self.known, vocabulary_keywords(vocabulary))
         # The conversation's transcriber gets the server's default languages when the badge names none; a question
         # asked by voice (start_ask) keeps the badge's own, so it is not steered away from the owner's language.
         self.asr = make_asr(self._on_asr, rate=ASR_RATE, hello=replace(hello, language_bias=bias))
@@ -189,6 +192,9 @@ class Recording:
             self.extractor.known = [
                 e["name"] + (f", {e['company']}" if e["company"] else "") for e in self.known[:60]
             ]
+            self.extractor.known_people = [(e["name"], e["company"]) for e in self.known]
+            self.extractor.spellings = vocabulary["words"]
+            self.extractor.rejected = vocabulary["rejected"]
         # "Met before" the moment a known person says who they are, before Muse Spark runs (recall.py), and a
         # second Meta model re-hearing the transcript (second.py). Both only beside Spark, and neither can stop it.
         self.recall = (
@@ -312,7 +318,25 @@ class Recording:
         ex = self.extractor
         assert ex is not None
         turns, wearer = list(ex.turns[:upto]), ex.wearer
-        return lambda: build_prompt(turns, ex.owner_name, ex.owner_company, ex.vocabulary, ex.known, wearer)
+        return lambda: ex.prompt(turns, wearer)
+
+    def correct(self, event: dict[str, Any]) -> None:
+        """A correction the owner just made (app.py has logged it): the next Muse Spark run, its prompt and the drafts
+        at Stop hold it. A word goes to every live recording; a person only to the recording they were heard in."""
+        ex = self.extractor
+        if ex is None:
+            return
+        kind = event.get("kind")
+        if kind == "person":
+            ex.corrections[event["key"]] = {"name": event.get("name", ""), "company": event.get("company", ""),
+                                            "was": event.get("was") or {}}
+        elif kind == "word":
+            heard = str(event.get("heard", "")).casefold()
+            ex.spellings = [w for w in ex.spellings if w["heard"].casefold() != heard] + [
+                {"heard": event["heard"], "use": event["use"]}
+            ]
+        elif kind == "word_rejected":
+            ex.rejected = [*ex.rejected, {"heard": event["heard"], "likely": event["likely"]}]
 
     async def _extract(self) -> None:
         """Run until the latest run has seen every turn; a turn arriving mid-run triggers one more run."""
@@ -412,6 +436,7 @@ class Recording:
                 tz=self.hello.tz,
                 busy=self.hello.busy or [],
                 links=self.hello.links or {},
+                spellings=self.extractor.spellings,
             )
         except Exception as err:  # drafts are a bonus; the record is already safe
             self.log.emit("extract_error", self.now_ms, message=f"next moves: {err.__class__.__name__}: {err}"[:300])

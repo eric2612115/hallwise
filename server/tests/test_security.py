@@ -140,7 +140,7 @@ def test_every_route_and_socket_needs_the_key(tmp_path):
                 denial = refused(client, path)
                 assert (denial.status_code, denial.json()) == (401, {"error": "unauthorized"}), path
             checked.append(path)
-    assert len(checked) == 13  # every API route and all three sockets
+    assert len(checked) == 16  # every API route (the three correction routes too) and all three sockets
     assert TestClient(app, headers=AUTH).get("/api/recordings").status_code == 200
 
 

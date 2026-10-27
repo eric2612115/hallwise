@@ -25,8 +25,9 @@ from .events import fold_record, read_events
 from .extract import LLM, draft_next_moves
 from .hooks import Threads, find_hooks
 from .ids import is_rid
-from .people import person_key
+from .people import index_key_of
 from .research import Researcher, candidates
+from .vocabulary import Vocabulary
 
 REPORT_TTL_S = 3600
 
@@ -80,7 +81,7 @@ def assemble(
     def person(key: str, hook: dict[str, Any] | None = None) -> dict[str, Any]:
         p = people.get(key)
         if p is not None:
-            return {"key": key, "index_key": index_of.get(key) or person_key(p.get("name", ""), p.get("company", "")),
+            return {"key": key, "index_key": index_of.get(key) or index_key_of(p),
                     "name": p.get("name", key), "company": p.get("company", ""),
                     "language": p.get("preferred_language", ""), "tonight": True}
         if hook is not None:
@@ -296,6 +297,7 @@ class Reports:
                 owner_name=meta.get("owner_name", ""), owner_company=meta.get("owner_company", ""),
                 event=meta.get("event", ""), venue=meta.get("venue", ""), now=meta.get("now", ""), tz=meta.get("tz", ""),
                 busy=meta.get("busy") or [], links=meta.get("links") or {},
+                spellings=Vocabulary(self.data).load()["words"],
             )
         except Exception:  # the night's drafts are still good
             return moves, False

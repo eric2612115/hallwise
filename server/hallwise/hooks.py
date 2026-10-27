@@ -25,7 +25,7 @@ from typing import Any
 
 from .events import fold_record, read_events
 from .extract import LLM, _STR, _STR_LIST, _obj, slug
-from .people import match, people_index, person_key
+from .people import index_key_of, match, people_index, person_key
 
 HOOK_TYPES = ("introduction", "mutual_connection", "open_thread", "timely")
 MAX_HOOKS = 8
@@ -130,7 +130,7 @@ def load_evenings(data: Path, upto: str | None = None) -> list[Evening]:
             speakers[s] = meta.get("owner_name", "") or "the owner"
         out.append(Evening(
             rid=meta["id"], meta=meta, record=record,
-            index_keys={p["key"]: person_key(p.get("name", ""), p.get("company", "")) for p in record["people"]},
+            index_keys={p["key"]: index_key_of(p) for p in record["people"]},
             speakers=speakers, turns={t["turn"]: t for t in record["turns"] if "turn" in t},
         ))
     out.sort(key=lambda e: e.started)
@@ -323,7 +323,7 @@ def build_hook_context(
         if not slug(p.get("name", "")):
             continue
         entry = match(known, p.get("name", ""), p.get("company", ""))
-        ik = entry["key"] if entry else person_key(p.get("name", ""), p.get("company", ""))
+        ik = entry["key"] if entry else index_key_of(p)
         index_of[p["key"]] = ik
         people.setdefault(ik, {"key": ik, "name": p.get("name", ""), "company": p.get("company", ""), "role": p.get("role", ""),
                                "language": p.get("preferred_language", ""), "encounters": [], "promises": []})

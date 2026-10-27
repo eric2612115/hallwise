@@ -120,8 +120,16 @@ def read_events(path: Path) -> list[dict[str, Any]]:
 def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
     """The latest picture in a log: people, promises, turns, translations, who was mentioned, and the hooks (reasons
     to reach out found across evenings). Removed items are gone, later versions win.
-    This is what the follow-up drafts are written from, live or from a file."""
+    This is what the follow-up drafts are written from, live or from a file.
+
+    The owner's corrections (`correction` events, see corrections.py) win over whatever Muse Spark wrote, before or
+    after them: a corrected person carries the owner's name and company, with `corrected` set and what was heard
+    in `heard_name` and `heard_company` (from the first correction, so the people index keeps one key for them).
+    The words corrected in this recording are in `spellings` ({heard, use}) and `rejected` ({heard, likely})."""
     people: dict[str, dict[str, Any]] = {}
+    fixes: dict[str, dict[str, Any]] = {}
+    spellings: list[dict[str, str]] = []
+    rejected: list[dict[str, str]] = []
     promises: dict[str, dict[str, Any]] = {}
     translations: dict[int, dict[str, Any]] = {}
     kinds: dict[int, str] = {}
@@ -164,9 +172,30 @@ def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
             translations[e["turn"]] = e
         elif t == "translation_removed":
             translations.pop(e["turn"], None)
+        elif t == "correction":
+            kind = e.get("kind")
+            if kind == "person" and e.get("key") and e.get("name"):
+                first = fixes.get(e["key"], {}).get("was")
+                fixes[e["key"]] = {**e, "was": first or e.get("was") or {}}
+            elif kind == "word" and e.get("heard") and e.get("use"):
+                spellings[:] = [w for w in spellings if w["heard"].casefold() != str(e["heard"]).casefold()]
+                spellings.append({"heard": str(e["heard"]), "use": str(e["use"])})
+            elif kind == "word_rejected" and e.get("heard") and e.get("likely"):
+                rejected.append({"heard": str(e["heard"]), "likely": str(e["likely"])})
+    for key, fix in fixes.items():
+        p = people.get(key)
+        if p is None:
+            continue
+        was = fix["was"]
+        people[key] = {
+            **p, "name": fix["name"], "company": fix.get("company", ""), "corrected": True,
+            "heard_name": was.get("name", p.get("name", "")), "heard_company": was.get("company", p.get("company", "")),
+        }
     return {
         "owner_speakers": owner,
         "people": list(people.values()),
+        "spellings": spellings,
+        "rejected": rejected,
         "promises": list(promises.values()),
         "turns": turns,
         "turn_kinds": kinds,

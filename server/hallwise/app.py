@@ -9,6 +9,11 @@
     /api/people                 everyone met across recordings, with each encounter and promise
     /api/recordings/{id}/photo  a photo of the people around the badge; SAM 3.1 finds the faces, Muse Spark says who is who
     /api/people/{key}/face      a person's face, kept across evenings (POST a JPEG or PNG, GET a JPEG back)
+    /api/recordings/{id}/corrections  the owner fixes the record (POST): a person's name and company, a misheard
+                                word spelled right, a wrong suggestion turned down (corrections.py)
+    /api/people/{key}/correction      a person's name and company fixed from the directory (POST), in every recording
+                                they were met in
+    /api/vocabulary             the spellings the owner fixed and the suggestions turned down, kept across recordings
     /api/report/run?recording=  the morning report: research, hooks, follow-ups (cached for an hour; force=1 rebuilds)
     /api/report/latest          the newest morning report; /api/report/{id} one recording's
     /ask/{recording}            a spoken question: PCM in, Muse Voice Transcribe, then the same answer
@@ -57,6 +62,7 @@ from .recording import Hello, Recording
 from .report import Reports, report_delay_s
 from .research import Researcher
 from .sam import SamClient
+from .vocabulary import MAX_CHARS, Vocabulary, clean, keywords as vocabulary_keywords
 
 MAX_RECORDINGS = 2  # badge sessions at once: the phone's, and one reconnecting while the old one still closes
 MAX_ASKS = 2  # questions being heard or answered at once, spoken (/ask) or typed (/api/recordings/{id}/ask)
@@ -83,6 +89,32 @@ class Photo(BaseModel):
     mime: Literal["image/jpeg", "image/png"] = "image/jpeg"
     people: list[dict[str, Any]] = Field(default=[], max_length=60)  # key, name, company, bearing
     hint: str = Field(default="", max_length=2000)
+
+
+class Correction(BaseModel):
+    """One correction from the phone (see corrections.py). person: key, name, company. word: heard, use (and the
+    suggestion it answers, likely). word_rejected: heard, likely. turn: where the word was heard, when known."""
+
+    kind: Literal["person", "word", "word_rejected"]
+    key: str = Field(default="", max_length=MAX_CHARS)
+    name: str = Field(default="", max_length=MAX_CHARS)
+    company: str = Field(default="", max_length=MAX_CHARS)
+    heard: str = Field(default="", max_length=MAX_CHARS)
+    use: str = Field(default="", max_length=MAX_CHARS)
+    likely: str = Field(default="", max_length=200)
+    turn: int | None = Field(default=None, ge=0, le=1_000_000)
+
+
+class PersonFix(BaseModel):
+    name: str = Field(max_length=MAX_CHARS)
+    company: str = Field(default="", max_length=MAX_CHARS)
+
+
+def heard_as(person: dict[str, Any]) -> dict[str, str]:
+    """A folded person's name and company as first heard, before any correction: what a new correction replaces."""
+    if person.get("corrected"):
+        return {"name": person.get("heard_name", ""), "company": person.get("heard_company", "")}
+    return {"name": person.get("name", ""), "company": person.get("company", "")}
 
 
 def spark_extractor_factory() -> Callable[[Hello], Extractor | None] | None:
@@ -153,6 +185,7 @@ def create_app(
     recording_slots, ask_slots = Slots(MAX_RECORDINGS), Slots(MAX_ASKS)
     forced, photos, login_failures = Window(1, FORCE_EVERY_S), Window(PHOTOS_PER_MINUTE, 60), Window(LOGIN_FAILURES_PER_MINUTE, 60)
     max_recording_ms, max_ask_ms = MAX_RECORDING_MS, MAX_ASK_MS
+    vocabulary = Vocabulary(data)
 
     def folder(rid: str) -> Path:
         """A recording's folder, for a string that is a recording id (ids.py); 404 for anything else."""
@@ -184,13 +217,112 @@ def create_app(
         if spark is None:
             raise HTTPException(503, "MODEL_API_KEY is not set")
         record, moves, meta = record_of(rid)
+        words = list(dict.fromkeys([*(keywords or meta.get("keywords") or []), *vocabulary_keywords(vocabulary.load())]))
         result = await answer(
             spark, record, moves,
             owner_name=meta.get("owner_name", ""), owner_company=meta.get("owner_company", ""),
             event=meta.get("event", ""), venue=meta.get("venue", ""),
-            keywords=keywords or meta.get("keywords") or [], history=history, question=question,
+            keywords=words, history=history, question=question,
         )
         return {"question": question, **result}
+
+    def append(rid: str, type: str, **data_: Any) -> dict[str, Any]:
+        """An event at the end of a recording's log: through the live log while it records (watchers see it at
+        once), else appended to the file at the recording's last time."""
+        rec = live.get(rid)
+        if rec is not None and not rec.log.closed:
+            return rec.log.emit(type, rec.now_ms, **data_)
+        path = folder(rid) / "events.jsonl"
+        last = max((int(e.get("t_ms", 0)) for e in read_events(path)), default=0)
+        log = EventLog(path)
+        try:
+            return log.emit(type, last, **data_)
+        finally:
+            log.close()
+
+    def correct_person(rid: str, key: str, name: str, company: str) -> dict[str, Any] | None:
+        """Log a person correction in one recording and hand it to the live recording, if it is one; None when the
+        recording has nobody under that key."""
+        record, _, _ = record_of(rid)
+        person = next((p for p in record["people"] if p["key"] == key), None)
+        if person is None:
+            return None
+        event = append(rid, "correction", kind="person", key=key, name=name, company=company, was=heard_as(person))
+        rec = live.get(rid)
+        if rec is not None:
+            rec.correct(event)
+        return event
+
+    @app.post("/api/recordings/{rid}/corrections")
+    async def corrections(rid: str, body: Correction) -> dict[str, Any]:
+        """The owner fixes the record from the phone; the correction is appended to the recording's log (never
+        rewritten) and the record, the people index and every later Muse Spark run and draft hold it.
+
+        person {key, name, company}: the person keeps their key; name and company become the owner's.
+        word {heard, use}: the right spelling, kept in the owner's vocabulary for every later recording.
+        word_rejected {heard, likely}: that suggestion is never offered again.
+        Back come the event and, for a person, the person as the record now has them; for a word, the vocabulary."""
+        if not exists(rid):
+            raise HTTPException(404, "no such recording")
+        if body.kind == "person":
+            if not is_key(body.key):
+                raise HTTPException(400, "not a person key")
+            name, company = clean(body.name), clean(body.company)
+            if not name:
+                raise HTTPException(400, "a person needs a name")
+            event = correct_person(rid, body.key, name, company)
+            if event is None:
+                raise HTTPException(404, "no such person in this recording")
+            record, _, _ = record_of(rid)
+            return {"event": event, "person": next(p for p in record["people"] if p["key"] == body.key)}
+        heard = clean(body.heard)
+        if not heard:
+            raise HTTPException(400, "say which word was heard")
+        where = {"turn": body.turn} if body.turn is not None else {}
+        if body.kind == "word":
+            use, likely = clean(body.use), clean(body.likely, 200)
+            if not use:
+                raise HTTPException(400, "say how the word is spelled")
+            event = append(rid, "correction", kind="word", heard=heard, use=use, **({"likely": likely} if likely else {}), **where)
+            words = vocabulary.add_word(heard, use)
+        else:
+            likely = clean(body.likely, 200)
+            if not likely:
+                raise HTTPException(400, "say which suggestion was wrong")
+            event = append(rid, "correction", kind="word_rejected", heard=heard, likely=likely, **where)
+            words = vocabulary.reject(heard, likely)
+        for rec in list(live.values()):  # a recording in progress elsewhere stops suggesting it too
+            rec.correct(event)
+        return {"event": event, "vocabulary": words}
+
+    @app.post("/api/people/{key}/correction")
+    async def correct_known(key: str, body: PersonFix) -> dict[str, Any]:
+        """A person's name and company fixed from the directory: a person correction in every recording they were
+        met in, under the key each recording has them by. Their people-index key stays; back comes the entry."""
+        if not is_key(key):
+            raise HTTPException(400, "not a person key")
+        name, company = clean(body.name), clean(body.company)
+        if not name:
+            raise HTTPException(400, "a person needs a name")
+        entry = next((e for e in people_index(data) if e["key"] == key), None)
+        if entry is None:
+            raise HTTPException(404, "no such person")
+        met = list(dict.fromkeys((e["recording"], e["record_key"]) for e in entry["encounters"]))
+        for rid, record_key in met:
+            if exists(rid) and is_key(record_key):
+                correct_person(rid, record_key, name, company)
+        index = people_index(data)
+        # the same key, unless the owner named someone met earlier: then the entry they joined
+        fresh = next((e for e in index if e["key"] == key), None) or next(
+            (e for e in index if any((x["recording"], x["record_key"]) in met for x in e["encounters"])), None)
+        if fresh is None:
+            raise HTTPException(500, "the person is no longer in the index")
+        return fresh
+
+    @app.get("/api/vocabulary")
+    def get_vocabulary() -> dict[str, Any]:
+        """The spellings the owner fixed ({heard, use}) and the suggestions turned down ({heard, likely})."""
+        return vocabulary.load()
 
     @app.post("/login")
     async def login(request: Request) -> Response:
@@ -519,9 +651,10 @@ def create_app(
             elif type == "turn" and d.get("text"):
                 turns.append(d["text"])
 
+        hints = list(dict.fromkeys([*(hello.get("keywords") or []), *vocabulary_keywords(vocabulary.load())]))
         asr = MetaRealtimeAsr(
             key, sink, rate=rate,
-            language_bias=hello.get("language_bias"), keywords=hello.get("keywords") or None,
+            language_bias=hello.get("language_bias"), keywords=hints or None,
         )
         budget = rate * 2 * max_ask_ms // 1000  # bytes of 16-bit mono audio in MAX_ASK_MS
         try:

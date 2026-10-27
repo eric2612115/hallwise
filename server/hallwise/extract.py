@@ -116,6 +116,8 @@ Write exactly one move per promise:
 - A promise the owner owes becomes a message to that person, ready to send: 2-4 sentences, warm and specific.
   Name the thing promised and one concrete detail from what was said. No padding ("I hope this finds you well").
   When a due date was agreed ("by Friday"), say so. Never invent facts, prices, names or dates.
+- Names and companies: spell them as the People lines do, never as the transcript heard them; "Spellings the owner
+  corrected" lists what the transcriber got wrong.
 - Attachments and products: say what is attached or shown, never what it contains. Do not describe the contents of
   a deck, one-pager, link, demo or product, or what it "includes", "covers" or "shows", beyond what was said in the
   transcript: "the deck includes the face-photo flow" when nobody said so is an invented fact.
@@ -178,7 +180,13 @@ Rules:
     person), list each spelling as a suspect with likely = the other spelling. Do not decide which one is right.
   - A name that looks split or garbled (a surname heard as two short words, an odd spelling of a common name) is a
     suspect even when you cannot tell the right spelling; likely = your best guess.
-  - In people, use the spelling from the person's own introduction.
+  - Never offer a known person's name for someone with a different first name at a different company: "I'm Ken from
+    Vexi" is not a mishearing of Kenji Watanabe from Hoshizora Robotics, it is someone else. A mishearing sounds the
+    same ("Margot" for Margaux) or splits one name ("Raghoo Nathan" for Raghunathan).
+  - Spellings the owner corrected are settled: write the right one everywhere and never list them as suspects.
+    A suggestion the owner rejected is never listed again.
+  - In people, use the spelling from the person's own introduction, unless the owner corrected that person: then
+    keep the key and use exactly the owner's name and company.
 - Never infer accent, nationality, ethnicity or personality.
 - Every person and promise must cite the turns it comes from. Keep keys stable between runs."""
 
@@ -204,6 +212,18 @@ def owner_label(owner_name: str) -> str:
     return f"{owner_name or 'the owner'} (owner)"
 
 
+def spelling_pairs(*groups: list[dict[str, str]]) -> list[tuple[str, str]]:
+    """(heard, right) pairs from lists of {heard, use}, each heard word once (the last word on it wins)."""
+    out: dict[str, tuple[str, str]] = {}
+    for group in groups:
+        for w in group or []:
+            heard, use = str(w.get("heard", "")).strip(), str(w.get("use", "")).strip()
+            if heard and use and heard.casefold() != use.casefold():
+                out.pop(heard.casefold(), None)
+                out[heard.casefold()] = (heard, use)
+    return list(out.values())
+
+
 def build_prompt(
     turns: list[Turn],
     owner_name: str,
@@ -211,9 +231,16 @@ def build_prompt(
     vocabulary: list[str],
     known: list[str] | None = None,
     wearer: str = "",
+    *,
+    spellings: list[dict[str, str]] | None = None,
+    rejected: list[dict[str, str]] | None = None,
+    corrections: dict[str, dict[str, Any]] | None = None,
 ) -> str:
-    """`wearer`: the speaker key the badge hears from just above, the owner's own voice (direction.Wearer), or ""."""
+    """`wearer`: the speaker key the badge hears from just above, the owner's own voice (direction.Wearer), or "".
+    `spellings` ({heard, use}), `rejected` ({heard, likely}) and `corrections` (person key -> {name, company}) are
+    what the owner fixed on the phone (corrections.py); each adds its line only when there is something in it."""
     who = owner_label(owner_name)
+    pairs = spelling_pairs(spellings or [])
     lines = [
         f"Owner: {owner_name or 'unknown'}" + (f", from {owner_company}" if owner_company else ""),
         *(
@@ -222,6 +249,19 @@ def build_prompt(
             if wearer else []
         ),
         "Vocabulary (names and terms the owner has confirmed before): " + (", ".join(vocabulary) or "none"),
+        *(
+            ["Spellings the owner corrected (heard -> right; the transcript may still have the heard one): "
+             + "; ".join(f"{h} -> {u}" for h, u in pairs)] if pairs else []
+        ),
+        *(
+            ["Suggestions the owner rejected (never list these as suspect words): "
+             + "; ".join(f"{r.get('heard', '')} -> {r.get('likely', '')}" for r in rejected)] if rejected else []
+        ),
+        *(
+            ["People the owner corrected (keep each key; use exactly this name and company): "
+             + "; ".join(f"{key} is {c.get('name', '')}" + (f", from {c['company']}" if c.get("company") else "")
+                         for key, c in corrections.items())] if corrections else []
+        ),
         "People the owner has met at earlier events (use these spellings when one of them turns up): "
         + ("; ".join(known) if known else "none"),
         "",
@@ -245,9 +285,17 @@ def build_next_prompt(
     tz: str = "",
     busy: list[list[str]] | None = None,
     links: dict[str, str] | None = None,
+    spellings: list[dict[str, str]] | None = None,
 ) -> str:
+    """`spellings`: the owner's vocabulary ({heard, use}); this recording's own word corrections and every corrected
+    person's heard name and company join it, so a draft never repeats what the transcriber misheard."""
     translations = record.get("translations", {})
     kinds = record.get("turn_kinds", {})
+    heard = [
+        {"heard": p.get(f"heard_{f}", ""), "use": p.get(f, "")}
+        for p in record.get("people", []) if p.get("corrected") for f in ("name", "company")
+    ]
+    pairs = spelling_pairs(spellings or [], record.get("spellings") or [], heard)
     # a provisional "met before" (a name heard, not yet confirmed by Muse Spark) never reaches a draft
     history = {k: h for k, h in record.get("history", {}).items() if not h.get("provisional")}
 
@@ -278,6 +326,10 @@ def build_next_prompt(
         "Event: " + (", ".join(x for x in (event, venue) if x) or "unknown"),
         "Owner busy (ISO ranges): " + ("; ".join(f"{a} to {b}" for a, b in (busy or [])) or "none"),
         "Owner can share: " + (", ".join(sorted(k for k, v in (links or {}).items() if v)) or "nothing"),
+        *(
+            ["Spellings the owner corrected (heard -> right; the transcript may still have the heard one, always write "
+             "the right one): " + "; ".join(f"{h} -> {u}" for h, u in pairs)] if pairs else []
+        ),
         "",
         "People:",
         *(
@@ -427,6 +479,12 @@ class Extractor:
         self.owner_company = owner_company
         self.vocabulary = vocabulary or []
         self.known: list[str] = []  # "Name, Company" of people met at earlier events
+        self.known_people: list[tuple[str, str]] = []  # (name, company) of the same, for corrections.refine
+        # What the owner fixed on the phone (corrections.py): the vocabulary's spellings and rejected suggestions, and
+        # this recording's corrected people (key -> {name, company, was}). Every run's prompt and result hold them.
+        self.spellings: list[dict[str, str]] = []
+        self.rejected: list[dict[str, str]] = []
+        self.corrections: dict[str, dict[str, Any]] = {}
         self.turns: list[Turn] = []
         self.state: dict[str, Any] = {}
         # The speaker key the badge hears from just above (direction.Wearer): the owner's own voice, measured rather
@@ -447,14 +505,28 @@ class Extractor:
         self.state = {**self.state, "owner_speakers": self.owner_speakers()}
         return self.state["owner_speakers"]
 
+    def prompt(self, turns: list[Turn], wearer: str | None = None) -> str:
+        """The prompt for these turns, with everything the extractor knows; the second listener reads the same one."""
+        return build_prompt(
+            turns, self.owner_name, self.owner_company, self.vocabulary, self.known,
+            self.wearer if wearer is None else wearer,
+            spellings=self.spellings, rejected=self.rejected,
+            corrections={k: {"name": c.get("name", ""), "company": c.get("company", "")} for k, c in self.corrections.items()},
+        )
+
     async def run(self) -> list[tuple[str, int, dict[str, Any]]]:
         """Run Muse Spark on the transcript so far; return (type, t_ms, data) for everything new or changed."""
         if not self.turns:
             return []
         turns = list(self.turns)
-        prompt = build_prompt(turns, self.owner_name, self.owner_company, self.vocabulary, self.known, self.wearer)
-        result = await self.llm(SYSTEM, prompt)
-        return self.diff(normalize_keys(result), t_ms=turns[-1].end_ms)
+        result = await self.llm(SYSTEM, self.prompt(turns))
+        from .corrections import refine  # here, not at the top: corrections reads helpers that import this module
+
+        result = refine(
+            normalize_keys(result), turns=turns, corrections=self.corrections, spellings=self.spellings,
+            rejected=self.rejected, known=self.known_people,
+        )
+        return self.diff(result, t_ms=turns[-1].end_ms)
 
     def diff(self, new: dict[str, Any], t_ms: int) -> list[tuple[str, int, dict[str, Any]]]:
         old = self.state
