@@ -112,13 +112,19 @@ final class AppModel: ObservableObject {
         Task { @MainActor in
             // Tonight names itself: the calendar event happening now, and the place the phone is.
             if settings.eventName.isEmpty, let title = await OwnerCalendar.currentEventTitle() { settings.eventName = title }
-            if settings.venue.isEmpty, let venue = await whereabouts.venue() { settings.venue = venue }
+            // One fix every Start, so every recording has a place. Its name fills the venue unless the owner typed one.
+            // A guess left from an earlier evening names somewhere else, so it goes even when this fix has no name.
+            let place = await whereabouts.place()
+            if let place, settings.venue.isEmpty || settings.venue == settings.venueGuessed {
+                settings.venue = place.name ?? ""
+                settings.venueGuessed = settings.venue
+            }
             // The week's busy windows ride along, so the times Hallwise proposes afterwards are free ones.
             let busy = await OwnerCalendar.busyWindows()
             let iso = ISO8601DateFormatter()
             iso.timeZone = .current
             capture.onFormat = { [weak self] format in
-                let hello: [String: Any] = [
+                var hello: [String: Any] = [
                     "sample_rate": format.sampleRate,
                     "channels": format.channels,
                     "layout": format.layout,
@@ -133,6 +139,11 @@ final class AppModel: ObservableObject {
                     "tz": TimeZone.current.identifier,
                     "now": iso.string(from: Date()),
                 ]
+                // the fix as taken; whatever is published from it is rounded on the server's side
+                if let place {
+                    hello["place"] = ["name": settings.venue.isEmpty ? (place.name ?? "") : settings.venue,
+                                      "lat": place.latitude, "lon": place.longitude]
+                }
                 self?.link.open(base: settings.serverURL, hello: hello)
             }
             capture.start()

@@ -107,6 +107,14 @@ final class ServerLink: ObservableObject {
         return list
     }
 
+    /// Every recording on the server, newest first, each with its event, start and place.
+    func fetchRecordings(base: String) async -> [[String: Any]] {
+        guard let url = URL(string: Self.httpBase(base) + "/api/recordings"),
+              let (data, _) = try? await urlSession.data(from: url),
+              let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+        return list
+    }
+
     /// The newest recording on the server: what a question after Stop is about when nothing is live.
     func latestRecording(base: String) async -> String? {
         guard let url = URL(string: Self.httpBase(base) + "/api/recordings"),

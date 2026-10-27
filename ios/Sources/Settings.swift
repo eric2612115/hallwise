@@ -10,6 +10,7 @@ final class BadgeSettings: ObservableObject {
     @AppStorage("keywords") var keywords = "Hallwise"  // comma-separated recognition hints
     @AppStorage("eventName") var eventName = ""      // tonight's event, stored with each recording
     @AppStorage("venue") var venue = ""
+    @AppStorage("venueGuessed") var venueGuessed = ""  // what Start last filled the venue with; a typed one is kept
     @AppStorage("yawOffset") var yawOffset = 0.0     // degrees, calibrates the badge's forward direction
     @AppStorage("appearance") var appearance = Theme.Appearance.system.rawValue
     @AppStorage("followRecording") var followRecording = ""  // debug: watch this recording instead of capturing

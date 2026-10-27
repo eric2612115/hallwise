@@ -1,4 +1,30 @@
+import MapKit
 import SwiftUI
+
+/// Where an evening was: the server's `place` for a recording, the fix as the phone took it.
+struct PlacePoint {
+    let name: String
+    let latitude: Double
+    let longitude: Double
+    var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: latitude, longitude: longitude) }
+
+    init?(_ any: Any?) {
+        guard let d = any as? [String: Any], let lat = (d["lat"] as? NSNumber)?.doubleValue,
+              let lon = (d["lon"] as? NSNumber)?.doubleValue else { return nil }
+        name = d["name"] as? String ?? ""
+        latitude = lat
+        longitude = lon
+    }
+}
+
+/// One evening on the Places map: what it was called, when, where, and who was met there.
+struct Evening: Identifiable {
+    let id: String  // the recording
+    let name: String
+    let started: Double
+    let place: PlacePoint
+    var people: [DirectoryPerson]
+}
 
 /// Everyone met, across recordings, as the server lists them.
 struct DirectoryPerson: Identifiable {
@@ -7,6 +33,7 @@ struct DirectoryPerson: Identifiable {
         let recording: String
         let event: String
         let venue: String
+        let place: PlacePoint?
         let started: Double
         let introducedBy: String
     }
@@ -38,8 +65,8 @@ struct DirectoryPerson: Identifiable {
         language = d["language"] as? String ?? ""
         encounters = (d["encounters"] as? [[String: Any]] ?? []).map {
             Encounter(recording: $0["recording"] as? String ?? "", event: $0["event"] as? String ?? "",
-                      venue: $0["venue"] as? String ?? "", started: $0["started"] as? Double ?? 0,
-                      introducedBy: $0["introduced_by"] as? String ?? "")
+                      venue: $0["venue"] as? String ?? "", place: PlacePoint($0["place"]),
+                      started: $0["started"] as? Double ?? 0, introducedBy: $0["introduced_by"] as? String ?? "")
         }
         promises = (d["promises"] as? [[String: Any]] ?? []).map {
             Promise(recording: $0["recording"] as? String ?? "", event: $0["event"] as? String ?? "",
@@ -52,12 +79,37 @@ struct DirectoryPerson: Identifiable {
 @MainActor
 final class Directory: ObservableObject {
     @Published var people: [DirectoryPerson] = []
+    @Published var recordings: [[String: Any]] = []
     @Published var loaded = false
 
     func load(base: String) async {
-        let list = await ServerLink().fetchPeople(base: base)
+        let link = ServerLink()
+        let list = await link.fetchPeople(base: base)
+        recordings = await link.fetchRecordings(base: base)
         people = list.compactMap(DirectoryPerson.init)
         loaded = true
+    }
+
+    /// Every evening with a place, oldest first: from the recordings, so an evening where nobody was met still has
+    /// its pin, and from the encounters for any the list does not have.
+    var evenings: [Evening] {
+        var byID: [String: Evening] = [:]
+        for r in recordings {
+            guard let id = r["id"] as? String, let place = PlacePoint(r["place"]) else { continue }
+            let event = r["event"] as? String ?? ""
+            byID[id] = Evening(id: id, name: event.isEmpty ? "untitled" : event,
+                               started: (r["started"] as? NSNumber)?.doubleValue ?? 0, place: place, people: [])
+        }
+        for p in people {
+            for e in p.encounters {
+                if byID[e.recording] == nil, let place = e.place {
+                    byID[e.recording] = Evening(id: e.recording, name: e.event.isEmpty ? "untitled" : e.event,
+                                                started: e.started, place: place, people: [])
+                }
+                if byID[e.recording]?.people.contains(where: { $0.id == p.id }) == false { byID[e.recording]?.people.append(p) }
+            }
+        }
+        return byID.values.sorted { $0.started < $1.started }
     }
 
     /// Events, newest first, with how many people were met at each.
@@ -98,14 +150,18 @@ struct MapPage: View {
             Picker("", selection: $scope) {
                 Text("Tonight").tag(0)
                 Text("All").tag(1)
+                Text("Places").tag(2)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.top, 8)
             if scope == 0 {
                 TonightMap(live: live, settings: settings) { selected = $0 }
-            } else {
+            } else if scope == 1 {
                 NetworkView(directory: directory) { selectedKnown = $0 }
+                    .task { await directory.load(base: settings.serverURL) }
+            } else {
+                PlacesView(directory: directory) { selectedKnown = $0 }
                     .task { await directory.load(base: settings.serverURL) }
             }
         }
@@ -421,6 +477,317 @@ struct NetworkView: View {
             }
         }
         positions = pts
+    }
+}
+
+// MARK: - Places
+
+/// Every evening on a map: one pin per evening, at the place the badge's fix named, with its name, date and how
+/// many people were met; the evenings joined in date order as a faint path. Tap a pin, or an evening below, for the
+/// people met there. The phone keeps the precise fix; the map only ever shows evenings, never where you stand.
+struct PlacesView: View {
+    @ObservedObject var directory: Directory
+    let onTap: (DirectoryPerson) -> Void
+    @State private var selected: String?
+    @State private var camera: MapCameraPosition = .automatic
+    @State private var framedFor = ""
+    @State private var sides: [String: PlacePin.Side] = [:]
+    @State private var mapSize: CGSize = .zero
+
+    var body: some View {
+        let evenings = directory.evenings
+        let colours = colours(for: evenings)
+        VStack(spacing: 10) {
+            ZStack {
+                MapReader { proxy in
+                Map(position: $camera, interactionModes: [.pan, .zoom]) {
+                    if evenings.count > 1 {
+                        MapPolyline(coordinates: evenings.map(\.place.coordinate))
+                            .stroke(Theme.inkSoft.opacity(0.75), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round, dash: [5, 6]))
+                    }
+                    ForEach(evenings) { e in
+                        Annotation(e.name, coordinate: e.place.coordinate, anchor: .center) {
+                            PlacePin(evening: e, colour: colours[e.id] ?? Theme.inkSoft, side: sides[e.id] ?? .below,
+                                     selected: selected == e.id, dimmed: selected != nil && selected != e.id)
+                                .onTapGesture { withAnimation(.easeOut(duration: 0.2)) { selected = selected == e.id ? nil : e.id } }
+                        }
+                        .annotationTitles(.hidden)
+                    }
+                }
+                .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
+                .mapControls { MapScaleView() }
+                .onMapCameraChange(frequency: .onEnd) { _ in sides = layOutCallouts(evenings, proxy) }
+                .onChange(of: evenings.map(\.id)) { _, _ in sides = layOutCallouts(evenings, proxy) }
+                .onChange(of: mapSize) { _, _ in sides = layOutCallouts(evenings, proxy) }
+                }
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { mapSize = $0 }
+                if !directory.loaded {
+                    ProgressView().tint(Theme.inkSoft)
+                } else if evenings.isEmpty {
+                    Text("No places yet").font(.system(size: 14, design: .serif)).foregroundStyle(Theme.inkSoft)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(Capsule().fill(Theme.paper))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.rule, lineWidth: 1))
+            .frame(height: selected == nil ? 340 : 250)  // an evening picked: room for its people
+            .padding(.horizontal, 12)
+            .onAppear { frame(evenings) }
+            .onChange(of: evenings.map(\.id)) { _, _ in frame(evenings) }
+            list(evenings, colours: colours)
+        }
+    }
+
+    @ViewBuilder
+    private func list(_ evenings: [Evening], colours: [String: Color]) -> some View {
+        List {
+            if let id = selected, let e = evenings.first(where: { $0.id == id }) {
+                Section {
+                    Button { withAnimation(.easeOut(duration: 0.2)) { selected = nil } } label: {
+                        HStack(spacing: 10) {
+                            Circle().fill(colours[e.id] ?? Theme.inkSoft).frame(width: 12, height: 12)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(e.name).font(.system(size: 18, weight: .semibold, design: .serif)).foregroundStyle(Theme.ink)
+                                    .lineLimit(1).minimumScaleFactor(0.8)
+                                Text([dayString(e.started), e.place.name, "\(e.people.count) met"].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.system(size: 13)).foregroundStyle(Theme.inkSoft)
+                            }
+                            Spacer()
+                            Text("All places").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.accent)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Theme.paperDeep)
+                    if e.people.isEmpty {
+                        Text("Nobody named that evening").font(.system(size: 15)).foregroundStyle(Theme.inkSoft)
+                            .listRowBackground(Theme.paperDeep)
+                    }
+                    ForEach(e.people) { p in
+                        Button { onTap(p) } label: {
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(p.name).font(.system(size: 16, weight: .semibold, design: .serif)).foregroundStyle(Theme.ink)
+                                    let line = p.encounters.count > 1 ? [p.line, "met \(p.encounters.count) times"].filter { !$0.isEmpty }.joined(separator: " · ") : p.line
+                                    if !line.isEmpty { Text(line).font(.system(size: 13)).foregroundStyle(Theme.inkSoft).lineLimit(1) }
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.inkSoft)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(Theme.paperDeep)
+                    }
+                }
+            } else {
+                ForEach(evenings.reversed()) { e in
+                    Button { withAnimation(.easeOut(duration: 0.2)) { selected = e.id } } label: {
+                        HStack(spacing: 12) {
+                            Circle().fill(colours[e.id] ?? Theme.inkSoft).frame(width: 10, height: 10)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(e.name).font(.system(size: 16, weight: .semibold, design: .serif)).foregroundStyle(Theme.ink)
+                                Text([dayString(e.started), e.place.name].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.system(size: 13)).foregroundStyle(Theme.inkSoft).lineLimit(1)
+                            }
+                            Spacer()
+                            Text("\(e.people.count) met").font(.system(size: 13).monospacedDigit()).foregroundStyle(Theme.inkSoft)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Theme.paperDeep)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    /// The same colour per evening as the network's chips: by event, newest first; an evening where nobody was met
+    /// has no chip, and takes the next colour after them.
+    private func colours(for evenings: [Evening]) -> [String: Color] {
+        let byName = Dictionary(directory.events.enumerated().map { ($0.element.name, $0.offset) }, uniquingKeysWith: { a, _ in a })
+        var spare = directory.events.count
+        var out: [String: Color] = [:]
+        for e in evenings.reversed() {
+            let k = byName[e.name] ?? spare
+            if byName[e.name] == nil { spare += 1 }
+            out[e.id] = Theme.people[k % Theme.people.count]
+        }
+        return out
+    }
+
+    /// Where each callout goes, worked out on screen whenever the map settles: below, above, right or left of its
+    /// pin, or above or below leaning one way, so that callouts cover no other pin, no other callout and stay inside
+    /// the map. Up to six evenings try every combination and keep the one that covers least; more go greedily.
+    private func layOutCallouts(_ evenings: [Evening], _ proxy: MapProxy) -> [String: PlacePin.Side] {
+        guard mapSize.width > 0 else { return [:] }
+        let bounds = CGRect(origin: .zero, size: mapSize).insetBy(dx: 4, dy: 4)
+        let spots = evenings.compactMap { e in proxy.convert(e.place.coordinate, to: .local).map { (e, $0) } }
+        let dots = spots.map { e, p in
+            let r = PlacePin.dotFrame(e) / 2
+            return CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r)
+        }
+        let sides = PlacePin.Side.allCases
+        // every callout's rectangle on every side, and what it costs on its own: off the map, over other pins
+        let rects: [[CGRect]] = spots.map { e, p in
+            let size = PlacePin.calloutSize(e), half = PlacePin.dotFrame(e) / 2 - 2
+            let lean = PlacePin.lean
+            return sides.map { side in
+                let below = p.y + half, above = p.y - half - size.height
+                switch side {
+                case .below: return CGRect(x: p.x - size.width / 2, y: below, width: size.width, height: size.height)
+                case .above: return CGRect(x: p.x - size.width / 2, y: above, width: size.width, height: size.height)
+                case .right: return CGRect(x: p.x + half, y: p.y - size.height / 2, width: size.width, height: size.height)
+                case .left: return CGRect(x: p.x - half - size.width, y: p.y - size.height / 2, width: size.width, height: size.height)
+                case .belowRight: return CGRect(x: p.x - lean, y: below, width: size.width, height: size.height)
+                case .belowLeft: return CGRect(x: p.x + lean - size.width, y: below, width: size.width, height: size.height)
+                case .aboveRight: return CGRect(x: p.x - lean, y: above, width: size.width, height: size.height)
+                case .aboveLeft: return CGRect(x: p.x + lean - size.width, y: above, width: size.width, height: size.height)
+                }
+            }
+        }
+        func area(_ a: CGRect, _ b: CGRect) -> CGFloat {
+            let i = a.intersection(b)
+            return i.isNull ? 0 : i.width * i.height
+        }
+        let alone: [[CGFloat]] = rects.enumerated().map { i, options in
+            options.enumerated().map { k, r in
+                var c = (r.width * r.height - area(r, bounds)) * 4 + (k == 0 ? 0 : k < 4 ? 0.5 : 1)  // centred first
+                for (j, d) in dots.enumerated() where j != i { c += area(r, d) * 2 }
+                return c
+            }
+        }
+        let n = spots.count
+        var best = [Int](repeating: 0, count: n)
+        if n <= 6 {
+            var choice = [Int](repeating: 0, count: n), bestCost = CGFloat.infinity
+            func search(_ i: Int, _ cost: CGFloat) {
+                if cost >= bestCost { return }
+                if i == n { bestCost = cost; best = choice; return }
+                for k in sides.indices {
+                    var c = cost + alone[i][k]
+                    for j in 0..<i { c += area(rects[i][k], rects[j][choice[j]]) }
+                    choice[i] = k
+                    search(i + 1, c)
+                }
+            }
+            search(0, 0)
+        } else {
+            for i in 0..<n {
+                best[i] = sides.indices.min { a, b in
+                    let ca = alone[i][a] + (0..<i).reduce(0) { $0 + area(rects[i][a], rects[$1][best[$1]]) }
+                    let cb = alone[i][b] + (0..<i).reduce(0) { $0 + area(rects[i][b], rects[$1][best[$1]]) }
+                    return ca < cb
+                } ?? 0
+            }
+        }
+        return Dictionary(uniqueKeysWithValues: spots.enumerated().map { ($0.element.0.id, sides[best[$0.offset]]) })
+    }
+
+    /// All the evenings in view, with room around them for the callouts.
+    private func frame(_ evenings: [Evening]) {
+        let key = evenings.map(\.id).joined(separator: ",")
+        guard !evenings.isEmpty, key != framedFor else { return }
+        framedFor = key
+        let lats = evenings.map(\.place.latitude), lons = evenings.map(\.place.longitude)
+        let center = CLLocationCoordinate2D(latitude: (lats.min()! + lats.max()!) / 2, longitude: (lons.min()! + lons.max()!) / 2)
+        let span = MKCoordinateSpan(latitudeDelta: max(0.012, (lats.max()! - lats.min()!) * 2.4),
+                                    longitudeDelta: max(0.012, (lons.max()! - lons.min()!) * 1.22))
+        camera = .region(MKCoordinateRegion(center: center, span: span))
+    }
+}
+
+/// A pin in the paper palette: a dot in the evening's colour with the count met inside, and a paper callout with
+/// the name and the date on one side of it.
+struct PlacePin: View {
+    /// Where the callout sits; the leaning ones keep a pin near the map's edge from pushing its callout off it.
+    enum Side: CaseIterable { case below, above, right, left, belowRight, belowLeft, aboveRight, aboveLeft }
+    static let lean: CGFloat = 14  // how far a leaning callout reaches back past the pin's centre
+
+    let evening: Evening
+    let colour: Color
+    let side: Side
+    let selected: Bool
+    let dimmed: Bool
+
+    static let nameFont = UIFont(descriptor: UIFont.systemFont(ofSize: 12, weight: .semibold).fontDescriptor.withDesign(.serif)
+        ?? UIFont.systemFont(ofSize: 12, weight: .semibold).fontDescriptor, size: 12)
+    static let dateFont = UIFont.systemFont(ofSize: 10.5)
+    static let maxNameWidth: CGFloat = 132
+
+    static func dotSize(_ e: Evening) -> CGFloat { CGFloat(22 + 3 * min(6, e.people.count)) }
+    static func dotFrame(_ e: Evening) -> CGFloat { dotSize(e) + 12 }
+    static func dateLine(_ e: Evening) -> String { "\(dayString(e.started)) · \(e.people.count) met" }
+    /// The callout's size, measured the way it is drawn, so the layout knows what it is placing.
+    static func calloutSize(_ e: Evening) -> CGSize {
+        let name = min(maxNameWidth, (e.name as NSString).size(withAttributes: [.font: nameFont]).width)
+        let date = (dateLine(e) as NSString).size(withAttributes: [.font: dateFont]).width
+        return CGSize(width: ceil(max(name, date)) + 16, height: ceil(nameFont.lineHeight + dateFont.lineHeight) + 8)
+    }
+
+    var body: some View {
+        let size = Self.dotSize(evening), frame = Self.dotFrame(evening)
+        ZStack {
+            if selected {
+                Circle().stroke(colour, lineWidth: 2).frame(width: size + 10, height: size + 10)
+            }
+            Circle().fill(colour).frame(width: size, height: size)
+            Circle().stroke(Theme.paper, lineWidth: 2.5).frame(width: size, height: size)
+            Text("\(evening.people.count)")
+                .font(.system(size: 12, weight: .bold).monospacedDigit())
+                .foregroundStyle(Theme.paper)
+        }
+        .frame(width: frame, height: frame)
+        .overlay(alignment: alignment) {
+            VStack(spacing: 0) {
+                Text(evening.name)
+                    .font(Font(Self.nameFont))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: Self.maxNameWidth)
+                Text(Self.dateLine(evening))
+                    .font(Font(Self.dateFont))
+                    .foregroundStyle(Theme.inkSoft)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Theme.paper))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(selected ? colour : Theme.rule, lineWidth: selected ? 1.5 : 0.75))
+            .shadow(color: Theme.ink.opacity(0.12), radius: 3, y: 1)
+            .fixedSize()
+            .offset(offset(frame))
+        }
+        .opacity(dimmed ? 0.45 : 1)
+        .contentShape(Rectangle())
+    }
+
+    private var alignment: Alignment {
+        switch side {
+        case .below: return .top
+        case .above: return .bottom
+        case .right: return .leading
+        case .left: return .trailing
+        case .belowRight: return .topLeading
+        case .belowLeft: return .topTrailing
+        case .aboveRight: return .bottomLeading
+        case .aboveLeft: return .bottomTrailing
+        }
+    }
+
+    /// From the pin's own frame to just outside the dot, on its side.
+    private func offset(_ frame: CGFloat) -> CGSize {
+        let lean = frame / 2 - Self.lean
+        switch side {
+        case .below: return CGSize(width: 0, height: frame - 2)
+        case .above: return CGSize(width: 0, height: -frame + 2)
+        case .right: return CGSize(width: frame - 2, height: 0)
+        case .left: return CGSize(width: -frame + 2, height: 0)
+        case .belowRight: return CGSize(width: lean, height: frame - 2)
+        case .belowLeft: return CGSize(width: -lean, height: frame - 2)
+        case .aboveRight: return CGSize(width: lean, height: -frame + 2)
+        case .aboveLeft: return CGSize(width: -lean, height: -frame + 2)
+        }
     }
 }
 
