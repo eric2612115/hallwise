@@ -488,6 +488,27 @@ struct PromiseRow: View {
     @ObservedObject var settings: BadgeSettings
     @State private var draft: LiveModel.Move?
 
+    private var whoText: some View {
+        Text(promise.owedBy == "owner" ? "to \(live.name(for: promise.owedTo))" : "from \(live.name(for: promise.owedBy))")
+            .font(.subheadline).foregroundStyle(Theme.inkSoft)
+    }
+
+    /// The old time (struck through) and the new one. The "·" separates them from the name, or the old time from
+    /// the new one; on a line of its own, with nothing before it, it is dropped.
+    @ViewBuilder private func whenLine(done: Bool, onOwnLine: Bool) -> some View {
+        if !promise.replaces.isEmpty || !promise.due.isEmpty {
+            HStack(spacing: 6) {
+                if !promise.replaces.isEmpty {
+                    Text(promise.replaces).strikethrough().font(.subheadline).foregroundStyle(Theme.inkSoft)
+                }
+                if !promise.due.isEmpty {
+                    Text(onOwnLine && promise.replaces.isEmpty ? promise.due : "· \(promise.due)")
+                        .font(.subheadline).bold().foregroundStyle(done ? Theme.inkSoft : Theme.accent)
+                }
+            }
+        }
+    }
+
     var body: some View {
         let done = live.donePromises.contains(promise.id)
         let move = live.moves[promise.id]
@@ -517,18 +538,21 @@ struct PromiseRow: View {
                         .foregroundStyle(done ? Theme.inkSoft : Theme.ink)
                     if live.isConfirmed(promise: promise.id) { ConfirmedMark() }
                 }
-                HStack(spacing: 6) {
-                    Text(promise.owedBy == "owner" ? "to \(live.name(for: promise.owedTo))" : "from \(live.name(for: promise.owedBy))")
-                        .font(.subheadline).foregroundStyle(Theme.inkSoft)
-                    if !promise.replaces.isEmpty {
-                        Text(promise.replaces).strikethrough().font(.subheadline).foregroundStyle(Theme.inkSoft)
+                // "to Kenji Watanabe  ~~Thursday~~ · Friday" on one line when it fits. When the button leaves too little
+                // room, the dates drop under the name instead of squeezing it: a name never breaks mid-word.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) {
+                        whoText
+                        whenLine(done: done, onOwnLine: false)
                     }
-                    if !promise.due.isEmpty {
-                        Text("· \(promise.due)").font(.subheadline).bold().foregroundStyle(done ? Theme.inkSoft : Theme.accent)
+                    VStack(alignment: .leading, spacing: 1) {
+                        whoText
+                        whenLine(done: done, onOwnLine: true)
                     }
                 }
             }
             .padding(.top, 10)
+            .layoutPriority(1)    // the text column outranks the follow-up button
             Spacer(minLength: 4)
             if let move, !done {
                 // The follow-up is written; one tap to read it and send it.
