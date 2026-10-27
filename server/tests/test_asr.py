@@ -290,3 +290,88 @@ def test_the_normal_end_of_a_recording_is_not_an_error():
     asyncio.run(run())
     assert service.connects == 1 and session.ended
     assert not [e for e in events if e[0] == "asr_error"]
+
+
+class StallScenario:
+    """A badge on Wi-Fi: real time, then nothing for `stall_s` while the clock runs, then the backlog all at once,
+    then real time again. Every chunk is tagged, and each session records when (on the fake clock) it got what."""
+
+    def __init__(self, stall_s: float, before_s: float = 5.0, after_s: float = 10.0):
+        self.clock = Clock()
+        self.arrivals: list[tuple[int, float, int, int]] = []  # (session, clock, ms, tag)
+        self.stall_s, self.before_s, self.after_s = stall_s, before_s, after_s
+        scenario = self
+
+        class Session(FakeSession):
+            async def send(self, data):
+                if isinstance(data, bytes) and self.close_code is None:
+                    scenario.arrivals.append((scenario.service.opened.index(self), scenario.clock.t,
+                                              len(data) // 2 * 1000 // RATE, data[0] + 256 * data[1]))
+                await super().send(data)
+
+        self.service = FakeService([Session(), Session(), Session()])
+        self.events: list = []
+        self.asr = MetaRealtimeAsr("key", lambda type, t, **d: self.events.append((type, t, d)),
+                                   connect=self.service.connect, clock=self.clock)
+        self.sent = 0
+
+    def chunk(self) -> bytes:
+        t, self.sent = self.sent, self.sent + 1
+        return bytes([t % 256, t // 256]) * (len(CHUNK) // 2)
+
+    async def run(self) -> None:
+        await self.asr.start()
+        for _ in range(int(self.before_s * 1000 / CHUNK_MS)):
+            await self.asr.send(self.chunk())
+            self.clock.t += CHUNK_MS / 1000
+            await asyncio.sleep(0)
+        self.clock.t += self.stall_s  # nothing arrives
+        for _ in range(int(self.stall_s * 1000 / CHUNK_MS)):  # then all of it at once
+            await self.asr.send(self.chunk())
+            await asyncio.sleep(0)
+        for _ in range(int(self.after_s * 1000 / CHUNK_MS)):
+            await self.asr.send(self.chunk())
+            self.clock.t += CHUNK_MS / 1000
+            for _ in range(3):
+                await asyncio.sleep(0)
+        await self.asr.finish()
+
+    def worst_burst(self, session: int) -> float:
+        queued, last, worst = 0.0, 0.0, 0.0
+        for s, t, ms, _ in self.arrivals:
+            if s != session:
+                continue
+            queued = max(0.0, queued - (t - last) * 1000 * MetaRealtimeAsr.DRAIN_RATE) + ms
+            last, worst = t, max(worst, queued)
+        return worst
+
+
+def test_a_short_stall_sends_the_backlog_at_once_to_the_same_session():
+    # Live, a 9 s backlog in one go was fine; up to STALL_MS the session carries on.
+    sc = StallScenario(stall_s=7.0)
+    asyncio.run(sc.run())
+    assert [a[3] for a in sc.arrivals] == list(range(sc.sent))  # everything, in order
+    assert {a[0] for a in sc.arrivals} == {0} and sc.service.connects == 1
+    assert sc.worst_burst(0) == pytest.approx(7000 + CHUNK_MS, abs=CHUNK_MS)
+    assert not [e for e in sc.events if e[0] == "asr_error"]
+
+
+def test_a_long_stall_ends_the_session_cleanly_and_a_fresh_one_takes_the_backlog_in_bursts():
+    # Live, a 12 s stall ended the session either way ("Audio backlog too large" when sent at once, "Ingress below
+    # real-time" when sent slowly). Past STALL_MS the session is ended with endStream, so its turns complete, and a
+    # fresh session, never behind, gets the backlog at most FRESH_BURST_MS ahead of what it has worked through.
+    sc = StallScenario(stall_s=12.0)
+    first_turn = turn_events(0, 1000, 3000, "Before the stall.")
+    sc.service.sessions[0].script = [(3200, first_turn)]
+    sc.service.sessions[1].script = [(2000, turn_events(0, 500, 1500, "From the backlog."))]
+    asyncio.run(sc.run())
+    first, second = sc.service.opened[:2]
+    assert sc.service.connects == 2 and first.ended and second.ended
+    assert [a[3] for a in sc.arrivals] == list(range(sc.sent))  # nothing lost or doubled, in order
+    before_ms = int(5000 / CHUNK_MS) * CHUNK_MS
+    assert first.received_ms == before_ms  # the stall's backlog went to the fresh session
+    assert sc.worst_burst(1) <= MetaRealtimeAsr.FRESH_BURST_MS + CHUNK_MS
+    assert sc.worst_burst(1) >= MetaRealtimeAsr.FRESH_BURST_MS - CHUNK_MS
+    turns = [(d["turn"], d["session"], d["text"], d["start_ms"]) for ty, _, d in sc.events if ty == "turn"]
+    assert turns == [(0, 1, "Before the stall.", 1000), (1, 2, "From the backlog.", before_ms + 500)]
+    assert not [e for e in sc.events if e[0] == "asr_error"]  # a planned hand-over, not an error

@@ -42,6 +42,13 @@ class MetaRealtimeAsr:
     BUFFER_MS, and sent first when the next one opens, so a short stall loses no words. Every close that was not
     asked for and not a long session's natural end is an asr_error. Reopening backs off when sessions keep
     dying young, and stops for a while after REOPEN_LIMIT attempts in REOPEN_WINDOW_S.
+
+    Stalls themselves: a badge whose Wi-Fi stalls delivers its backlog all at once. Live, the service took a 9 s
+    backlog in one go, closed the session with "Audio backlog too large" at 12 s, and with a 12 s backlog sent
+    more slowly it closed it with "Ingress below real-time" instead. So up to STALL_MS behind, the backlog goes
+    out at once to the same session; further behind, the session is ended cleanly with endStream, so its turns
+    complete, and the backlog goes to a fresh session, which is never behind, FRESH_BURST_MS at a time (a fresh
+    session given 8 s at once closed with "Audio backlog too large"), then DRAIN_RATE times real time.
     """
 
     URI = "wss://api.meta.ai/v1/asr/realtime"
@@ -50,7 +57,13 @@ class MetaRealtimeAsr:
     YOUNG_S = 30.0  # a session that ends sooner than this counts as dying young
     REOPEN_LIMIT = 6
     REOPEN_WINDOW_S = 60.0
-    BUFFER_MS = 15_000
+    BUFFER_MS = 30_000  # audio kept while no session is open; older audio is dropped
+    BURST_MS = 9_000  # at most this much ahead of what the service has presumably worked through
+    FRESH_BURST_MS = 4_000  # the same for a new session until it has caught up; live, 8 s killed a fresh one
+    FRESH_S = 5.0  # a new session counts as new for at least this long, while a backlog may still be arriving
+    DRAIN_RATE = 2.0  # seconds of queued audio it works through per second, conservatively
+    STALL_MS = 8_000  # this far behind real time, roll over to a fresh session
+    ROLLOVER_WAIT_S = 5.0  # for the old session to complete its turns after endStream
 
     def __init__(
         self,
@@ -80,10 +93,14 @@ class MetaRealtimeAsr:
         self._receiver: asyncio.Task[None] | None = None
         self._reopening: asyncio.Task[None] | None = None
         self._reopen = False  # the last session ended; open another when audio comes
+        self._rolling = False  # ending a session that fell behind, on purpose
         self._finishing = False
         self._received_ms = 0.0  # all audio handed to send(), across sessions: the recording clock
         self._buffer: list[bytes] = []  # audio waiting for the next session
         self._buffered_ms = 0.0
+        self._queued_ms = 0.0  # audio the service has presumably not worked through yet
+        self._queued_at = 0.0
+        self._caught_up = False  # the current session has been open FRESH_S and has nothing waiting
         self._offset_ms = 0  # recording time at which the current session's audio starts
         self._opened_at = 0.0
         self._young = 0  # sessions in a row that died young
@@ -134,8 +151,11 @@ class MetaRealtimeAsr:
         self._current = None
         self._offset_ms = int(round(self._received_ms - self._buffered_ms))
         self._opened_at = self._clock()
+        self._queued_ms, self._queued_at = 0.0, self._opened_at
+        self._caught_up = False
         self._ws = ws
         self._reopen = False
+        self._rolling = False
         self._paused_reported = False
         self._receiver = asyncio.create_task(self._receive(ws))
         await self._drain()
@@ -150,6 +170,23 @@ class MetaRealtimeAsr:
             self._young += 1
             self._next_attempt = self._clock() + self.BACKOFF_S[min(self._young, len(self.BACKOFF_S) - 1)]
             self.sink("asr_error", int(self._received_ms), message=f"transcription reopen failed: {err}"[:300])
+
+    async def _roll_over(self) -> None:
+        """End a session that fell too far behind real time, cleanly, then open a fresh one for the backlog."""
+        from websockets.exceptions import ConnectionClosed
+
+        ws, receiver = self._ws, self._receiver
+        try:
+            await ws.send(json.dumps({"type": "endStream"}))
+        except ConnectionClosed:
+            pass
+        if receiver is not None:
+            try:
+                await asyncio.wait_for(asyncio.shield(receiver), self.ROLLOVER_WAIT_S)
+            except asyncio.TimeoutError:
+                await ws.close()
+                await receiver
+        await self._reopen_session()
 
     def _recent_attempts(self) -> int:
         now = self._clock()
@@ -169,30 +206,48 @@ class MetaRealtimeAsr:
             return False
         return self._clock() >= self._next_attempt
 
-    def _keep(self, pcm: bytes) -> None:
-        """Hold audio for the next session, dropping the oldest beyond BUFFER_MS."""
+    def _keep(self, pcm: bytes, live: bool = False) -> None:
+        """Hold audio to send. Without a live session, the oldest beyond BUFFER_MS is dropped; the next session's
+        clock starts after it. A live session's audio is never dropped: its clock is the audio it was sent."""
         self._buffer.append(pcm)
         self._buffered_ms += self._ms(pcm)
-        while self._buffered_ms > self.BUFFER_MS and len(self._buffer) > 1:
+        while not live and self._buffered_ms > self.BUFFER_MS and len(self._buffer) > 1:
             self._buffered_ms -= self._ms(self._buffer.pop(0))
 
     def _ms(self, pcm: bytes) -> float:
         return len(pcm) / 2 / self.rate * 1000
 
-    async def _drain(self) -> bool:
-        """Send the kept audio, oldest first; what the session refuses stays kept, in order."""
+    async def _drain(self, wait: bool = False) -> bool:
+        """Send the kept audio, oldest first, in bursts of at most BURST_MS; what is left waits for the next call
+        (or, with `wait`, for the service to catch up). What the session refuses stays kept, in order. False when
+        the session turned out to be closed."""
         from websockets.exceptions import ConnectionClosed
 
         while self._buffer:
             pcm = self._buffer[0]
+            now = self._clock()
+            self._queued_ms = max(0.0, self._queued_ms - (now - self._queued_at) * 1000 * self.DRAIN_RATE)
+            self._queued_at = now
+            over = self._queued_ms + self._ms(pcm) - (self.BURST_MS if self._caught_up else self.FRESH_BURST_MS)
+            if self._queued_ms > 0 and over > 0:
+                if not wait:
+                    return True
+                pause = over / 1000 / self.DRAIN_RATE
+                await asyncio.sleep(pause)
+                self._queued_ms = max(0.0, self._queued_ms - pause * 1000 * self.DRAIN_RATE)
+                self._queued_at = self._clock()
+                continue
             try:
                 await self._ws.send(pcm)
             except ConnectionClosed:
                 return False
+            self._queued_ms += self._ms(pcm)
             if self._buffer and self._buffer[0] is pcm:
                 self._buffer.pop(0)
                 self._buffered_ms -= self._ms(pcm)
         self._buffered_ms = 0.0
+        if self._clock() - self._opened_at >= self.FRESH_S:
+            self._caught_up = True
         return True
 
     async def send(self, pcm: bytes) -> None:
@@ -206,7 +261,15 @@ class MetaRealtimeAsr:
             if self._reopening is None and self._reopen and self._may_reopen():
                 self._reopening = asyncio.create_task(self._reopen_session())
             return
-        self._keep(pcm)  # behind anything kept while the session was opening
+        behind = (self._clock() - self._opened_at) * 1000 - (self._received_ms - self._ms(pcm) - self._offset_ms)
+        if behind > self.STALL_MS:
+            # The badge went quiet for longer than the service waits. End this session cleanly and give what
+            # comes now to a fresh one.
+            self._keep(pcm)
+            self._rolling = self._reopen = True
+            self._reopening = asyncio.create_task(self._roll_over())
+            return
+        self._keep(pcm, live=True)  # behind anything still waiting to go out
         await self._drain()
 
     async def finish(self) -> None:
@@ -221,7 +284,7 @@ class MetaRealtimeAsr:
                 await self._reopen_session()  # the last words of the evening still go out
             if self._ws is None:
                 return
-            if not self._reopen and await self._drain():
+            if not self._reopen and await self._drain(wait=True):
                 try:
                     await self._ws.send(json.dumps({"type": "endStream"}))
                 except ConnectionClosed:
@@ -246,8 +309,8 @@ class MetaRealtimeAsr:
             pass
         self._flush_open_turns()
         code, reason = getattr(ws, "close_code", None), getattr(ws, "close_reason", None) or ""
-        if self._finishing and code in (1000, None):
-            return
+        if (self._finishing or self._rolling) and code in (1000, None):
+            return  # we asked for this end
         lived = self._clock() - self._opened_at
         self._young = 0 if lived >= self.YOUNG_S else self._young + 1
         self._next_attempt = self._clock() + self.BACKOFF_S[min(self._young, len(self.BACKOFF_S) - 1)]
