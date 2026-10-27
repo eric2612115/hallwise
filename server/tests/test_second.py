@@ -94,6 +94,21 @@ def test_people_without_a_label_pair_by_first_name_and_spark_items_open_never_he
     assert list(cmp.disagreements) == ["person:julian:name", "promise:deck-to-leo:exists"]
 
 
+def test_a_promise_to_someone_spark_never_listed_still_matches_by_key():
+    """Live run, Oct 27: the transcriber put Kenji's introduction inside Siddharth's turn, so Muse Spark listed no
+    Kenji but kept the coffee owed to kenji-watanabe-hoshizora-robotics; Spark Open owed it to "Kenji Watanabe"."""
+    spark = {"people": [person("siddharth-raghunathan-quill-mesh", "Siddharth Raghunathan", "Quill Mesh", ["1:F"], turn=23)],
+             "promises": [promise("coffee-to-kenji-watanabe-hoshizora-robotics", "owner", "kenji-watanabe-hoshizora-robotics",
+                                  "coffee", "Friday", turn=24)]}
+    for owed_to in ("Kenji Watanabe", "Kenji"):
+        other = {"people": [{"name": "Siddharth Raghunathan", "company": "Quill Mesh", "speakers": ["1:F"]}],
+                 "promises": [{"owed_by": "owner", "owed_to": owed_to, "what": "coffee", "due": "Friday", "turn": 24}],
+                 "suspect_words": []}
+        cmp = compare(spark, other, upto_turn=26)
+        assert "promise:coffee-to-kenji-watanabe-hoshizora-robotics" in cmp.confirmed, owed_to
+        assert cmp.disagreements == {}, owed_to
+
+
 def test_wording_similarity():
     assert what_similarity("send our deck", "the deck") == 1
     assert what_similarity("one-pager", "one page with numbers") >= 0.5

@@ -289,8 +289,14 @@ def compare(spark: dict[str, Any], other: dict[str, Any], upto_turn: int) -> Com
         if name_ok and company_ok:
             out.confirmed[f"person:{p['key']}"] = {"kind": "person", "key": p["key"], "by": by}
 
-    # Promises: who it is owed to (and by), resolved to Spark's keys, plus what it is.
+    # Promises: who it is owed to (and by), resolved to Spark's keys, plus what it is. Spark's promises may point at a
+    # person it never listed (a voice the transcriber merged into someone else's turn): their keys count too.
     spark_names = {p["key"]: p.get("name", "") for p in spark.get("people", [])}
+    for q in spark.get("promises", []):
+        for f in ("owed_by", "owed_to"):
+            k = q.get(f, "")
+            if k and k != "owner" and k not in spark_names:
+                spark_names[k] = ""
 
     def party(name: str) -> str:
         n = fold(name).strip()
@@ -301,9 +307,10 @@ def compare(spark: dict[str, Any], other: dict[str, Any], upto_turn: int) -> Com
         if slug(name) in spark_names:
             return slug(name)
         for key, sname in spark_names.items():
-            if same_name(sname, name):
+            if same_name(sname, name) or (not sname and key.startswith(slug(name) + "-")):
                 return key
-        firsts = [key for key, sname in spark_names.items() if same_first_name(sname, name)]
+        firsts = [key for key, sname in spark_names.items()
+                  if same_first_name(sname or key.split("-")[0], name)]
         return firsts[0] if len(firsts) == 1 else "?" + slug(name)
 
     s_promises = [q for q in spark.get("promises", []) if first_evidence(q) <= upto_turn]
