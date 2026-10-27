@@ -135,8 +135,13 @@ def test_a_person_turning_up_gets_their_hooks_and_the_drafts_use_them(tmp_path):
         ws.receive_json()
 
     events = client.get(f"/api/recordings/{rid}/events").json()
-    hooks = [e for e in events if e["type"] == "hook"]
+    hooks = [e for e in events if e["type"] == "hook" and not e.get("provisional")]
     assert [(h["person_key"], h["title"].split(" · ")[0]) for h in hooks] == [("margot-lefevre", "Chloé's colleague")]
+    # She said her name before Muse Spark ran, so the hook came at once under the people index's key (recall.py),
+    # and moved to Spark's key when Spark named her.
+    early = [e["person_key"] for e in events if e["type"] == "hook" and e.get("provisional")]
+    assert early == ["margot-lef-vre"]
+    assert [e["person_key"] for e in events if e["type"] == "hook_removed"] == ["margot-lef-vre"]
     assert hooks[0]["kind"] == "mutual_connection"
     assert hooks[0]["evidence"][0]["quote"].startswith("Chloé Martin, Corvane Capital. My colleague Margaux")
     assert "Reasons to write" in prompts["hallwise_next_moves"]

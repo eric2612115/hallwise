@@ -24,14 +24,29 @@ import soxr
 from .asr import Asr
 from .direction import DirectionTracker, SpeakerPositions
 from .events import EventLog, fold_record
-from .extract import Extractor, Turn, draft_next_moves
+from .extract import Extractor, Turn, build_prompt, draft_next_moves
 from .leveler import Leveler
 from .hooks import Threads
 from .people import history_event, match, people_index
+from .recall import Recall
+from .second import SecondListener
 from .places import parse_place
 
 ASR_RATE = 24_000
 LAYOUT_CHANNELS = {"mono": 1, "stereo": 2, "foa": 4}
+MAX_HINT_NAMES = 40
+MAX_HINT_COMPANIES = 20
+
+
+def recognition_hints(own: list[str], index: list[dict[str, Any]]) -> list[str]:
+    """The badge's own hints, then the names of people met at earlier evenings, then their companies (each once):
+    in rehearsal "Corvane Capital" was never transcribed while only Chloé Martin's name was a hint."""
+    names = [e["name"] for e in index[:MAX_HINT_NAMES] if e.get("name")]
+    companies = list(dict.fromkeys(e["company"] for e in index if e.get("company")))[:MAX_HINT_COMPANIES]
+    out: dict[str, str] = {}
+    for word in [*own, *names, *companies]:
+        out.setdefault(word.strip().casefold(), word.strip())
+    return [w for w in out.values() if w]
 
 
 @dataclass
@@ -109,6 +124,7 @@ class Recording:
         hello: Hello,
         make_asr: Callable[..., Asr],
         make_extractor: Callable[[Hello], Extractor | None] | None = None,
+        make_second: Callable[[], SecondListener | None] | None = None,
     ):
         self.id = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]
         self.dir = root / "recordings" / self.id
@@ -135,9 +151,8 @@ class Recording:
         self.direction = DirectionTracker(hello.sample_rate, hello.layout)
         self.speaker_positions = SpeakerPositions()
         # Names from earlier evenings go to the transcriber as hints, so a hard surname is heard the way
-        # it was spelled before.
-        names = [e["name"] for e in self.known[:40] if e.get("name")]
-        hello.keywords = list(dict.fromkeys((hello.keywords or []) + names))
+        # it was spelled before, and their companies after them.
+        hello.keywords = recognition_hints(hello.keywords or [], self.known)
         # The conversation's transcriber gets the server's default languages when the badge names none; a question
         # asked by voice (start_ask) keeps the badge's own, so it is not steered away from the owner's language.
         self.asr = make_asr(self._on_asr, rate=ASR_RATE, hello=replace(hello, language_bias=bias))
@@ -157,6 +172,13 @@ class Recording:
             self.extractor.known = [
                 e["name"] + (f", {e['company']}" if e["company"] else "") for e in self.known[:60]
             ]
+        # "Met before" the moment a known person says who they are, before Muse Spark runs (recall.py), and a
+        # second Meta model re-hearing the transcript (second.py). Both only beside Spark, and neither can stop it.
+        self.recall = (
+            Recall(self.known, hello.owner_name, hello.owner_company, threads=self.threads, exclude=self.id, before=self.started)
+            if self.extractor is not None else None
+        )
+        self.second = (make_second or SecondListener.from_env)() if self.extractor is not None else None
         self._extract_task: asyncio.Task[None] | None = None
         self._extracted_upto = 0  # how many turns the latest finished run had seen
 
@@ -213,15 +235,15 @@ class Recording:
         if type == "turn":
             self._locate(data)
         if type == "turn" and self.extractor is not None and data.get("text"):
-            self.extractor.add_turn(
-                Turn(
-                    turn=data["turn"],
-                    speaker=f"{data.get('session', 1)}:{data.get('speaker') or '?'}",
-                    start_ms=data["start_ms"],
-                    end_ms=data["end_ms"],
-                    text=data["text"],
-                )
+            turn = Turn(
+                turn=data["turn"],
+                speaker=f"{data.get('session', 1)}:{data.get('speaker') or '?'}",
+                start_ms=data["start_ms"],
+                end_ms=data["end_ms"],
+                text=data["text"],
             )
+            self.extractor.add_turn(turn)
+            self._recall(turn)
             if self._extract_task is None or self._extract_task.done():
                 self._extract_task = asyncio.get_running_loop().create_task(self._extract())
 
@@ -237,6 +259,23 @@ class Recording:
         )
         if placed is not None:
             self.log.emit("speaker_position", turn["end_ms"], speaker=speaker, **placed)
+
+    def _recall(self, turn: Turn) -> None:
+        """A known name in this turn rings "met before" now, provisionally, for that turn's speaker."""
+        if self.recall is None or self.extractor is None:
+            return
+        try:
+            for kind, t_ms, data in self.recall.on_turn(turn, self.extractor.state, self._history_sent, self.now_ms):
+                self.log.emit(kind, t_ms, **data)
+        except Exception as err:  # the fast path is a bonus; Spark still runs
+            self.log.emit("extract_error", self.now_ms, message=f"recall: {err.__class__.__name__}: {err}"[:300])
+
+    def _prompt(self, upto: int) -> Callable[[], str]:
+        """The transcript Muse Spark read, for the second listener: the same prompt, the same turns."""
+        ex = self.extractor
+        assert ex is not None
+        turns = list(ex.turns[:upto])
+        return lambda: build_prompt(turns, ex.owner_name, ex.owner_company, ex.vocabulary, ex.known)
 
     async def _extract(self) -> None:
         """Run until the latest run has seen every turn; a turn arriving mid-run triggers one more run."""
@@ -258,6 +297,13 @@ class Recording:
                             history = history_event(entry, data["key"], exclude=self.id, before=self.started)
                             if history["encounters"]:
                                 self.log.emit("person_history", t_ms, **history)
+                seen_turn = self.extractor.turns[seen - 1].turn
+                if self.recall is not None:  # confirm or withdraw what the fast path rang
+                    for kind, t, data in self.recall.after_run(self.extractor.state, seen_turn, self._history_sent, self.now_ms):
+                        self.log.emit(kind, t, **data)
+                if self.second is not None:
+                    ex = self.extractor
+                    self.second.after_spark_run(self.log.emit, self._prompt(seen), lambda: ex.state, seen_turn, lambda: self.now_ms)
             except Exception as err:  # a failed run must not stop the recording
                 self.log.emit("extract_error", self.now_ms, message=f"{err.__class__.__name__}: {err}"[:300])
             self._extracted_upto = seen
@@ -271,7 +317,10 @@ class Recording:
         if self._extract_task is not None:
             await self._extract_task
         await self._extract()
-        await self._next_moves()
+        if self.recall is not None:  # a ring Spark never confirmed does not outlive the recording
+            for kind, t_ms, data in self.recall.close(self.now_ms):
+                self.log.emit(kind, t_ms, **data)
+        await asyncio.gather(self._next_moves(), self._second_last())
         self._wav.close()
         self.log.emit("recording_end", self.now_ms)
         self.log.close()
@@ -297,6 +346,17 @@ class Recording:
         question = " ".join(self._ask_turns).strip()
         self.log.emit("ask", self.now_ms, question=question)
         return question
+
+    async def _second_last(self) -> None:
+        """The second listener's last call, on the whole transcript, beside the drafts."""
+        ex = self.extractor
+        if self.second is None or ex is None or not ex.turns:
+            return
+        try:
+            await self.second.finish(self.log.emit, self._prompt(len(ex.turns)), lambda: ex.state, ex.turns[-1].turn,
+                                     lambda: self.now_ms)
+        except Exception as err:
+            self.log.emit("second_error", self.now_ms, message=f"{err.__class__.__name__}: {err}"[:300])
 
     async def _next_moves(self) -> None:
         """After the last extraction: one ready-to-send follow-up per promise, before the log closes, so a
