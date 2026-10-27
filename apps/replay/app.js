@@ -495,7 +495,8 @@
     'app', 'radar', 'radar-static', 'blips', 'wearer', 'wearer-mark', 'new-voice', 'new-voice-label', 'radar-note',
     'captions', 'people', 'intro', 'evening-name', 'evening-meta', 'evening-stats', 'play-big', 'play-len',
     'audio-note', 'skip-end', 'skip-end-2', 'transcript', 'promises', 'suspects', 'suspects-box', 'after',
-    'waiting', 'moves', 'week', 'week-sub', 'chips', 'places-box', 'places', 'places-note', 'map', 'foot-id', 'bar', 'pp', 'pp-icon', 'time', 'scrub',
+    'waiting', 'moves', 'morning', 'morning-when', 'morning-count', 'm-hooks-part', 'm-hooks', 'm-redrafts-part',
+    'm-redrafts', 'm-checks-box', 'm-checks', 'm-due-box', 'm-due', 'morning-cost', 'week', 'week-sub', 'chips', 'places-box', 'places', 'places-note', 'map', 'foot-id', 'bar', 'pp', 'pp-icon', 'time', 'scrub',
     'track', 'segs', 'fill', 'head', 'lane-person', 'lane-promise', 'lane-translation', 'tip', 'toast', 'pick',
     'theme', 'theme-label', 'brand', 'mute', 'mute-waves', 'mute-cross',
   ].forEach((id) => { els[id] = $(id); });
@@ -516,6 +517,8 @@
   let flashTurn = null;
   let weekFilter = null;
   let weekDrawn = false;
+  let morningDrawn = false;
+  const redraftEls = new Map();  // promise key -> this morning's card, for the evening card's link to it
 
   // ---------------------------------------------------------------- player: audio when there is some, else a clock
   const player = {
@@ -1142,8 +1145,31 @@
         }
       }
     }
+    const report = P.rec.report;
+    els.morning.hidden = !(done && report);
+    if (done && report && !morningDrawn) drawMorning(report);
     els.week.hidden = !done;
     if (done && !weekDrawn) drawWeek();
+  }
+
+  /** Copy to the clipboard where the host allows it, else select the text so the reader can copy it. */
+  function wireCopy(btn, text, bodyEl) {
+    const label = btn.textContent;
+    btn.addEventListener('click', () => {
+      const done = () => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = label; }, 1600); };
+      const fallback = () => {
+        const range = document.createRange();
+        range.selectNodeContents(bodyEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        btn.textContent = 'Selected, press copy';
+      };
+      try {
+        const pr = navigator.clipboard && navigator.clipboard.writeText(text);
+        if (pr && pr.then) pr.then(done, fallback); else fallback();
+      } catch (_) { fallback(); }
+    });
   }
 
   function moveCard(st, m, k) {
@@ -1155,6 +1181,7 @@
     el.style.setProperty('--c', person ? pcol(P.colour.get(person.key)) : 'var(--accent)');
     el.style.animationDelay = `${k * 90}ms`;
     const translated = m.body_english && m.language && m.language !== 'English';
+    const rewritten = !!(P.rec.report && (P.rec.report.redrafted || []).includes(m.promise_key));
     const rows = [];
     if (m.kind === 'calendar' && m.when) rows.push(['Proposed', `<dd class="slot">${esc(fmtSlot(m.when, m.duration_minutes))}</dd>`]);
     if (m.remind_at) rows.push(['Reminder', `<dd class="slot">${esc(fmtWhen(m.remind_at))}</dd>`]);
@@ -1175,24 +1202,16 @@
       <div class="move-actions">
         <button type="button" class="ghost-btn" data-act="copy">Copy text</button>
         ${promise ? '<button type="button" class="ghost-btn" data-act="hear">Hear the promise</button>' : ''}
+        ${rewritten ? '<button type="button" class="ghost-btn" data-act="morning">Rewritten next morning ↓</button>' : ''}
       </div>`;
-    el.querySelector('[data-act="copy"]').addEventListener('click', (e) => {
-      const text = [m.subject, m.body].filter(Boolean).join('\n\n');
-      const btn = e.currentTarget;
-      const done = () => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy text'; }, 1600); };
-      const fallback = () => {
-        const range = document.createRange();
-        range.selectNodeContents(el.querySelector('.body'));
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        btn.textContent = 'Selected, press copy';
-      };
-      try {
-        const pr = navigator.clipboard && navigator.clipboard.writeText(text);
-        if (pr && pr.then) pr.then(done, fallback); else fallback();
-      } catch (_) { fallback(); }
-    });
+    wireCopy(el.querySelector('[data-act="copy"]'), [m.subject, m.body].filter(Boolean).join('\n\n'), el.querySelector('.body'));
+    const later = el.querySelector('[data-act="morning"]');
+    if (later) {
+      later.addEventListener('click', () => {
+        const card = redraftEls.get(m.promise_key);
+        if (card) card.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+      });
+    }
     const hear = el.querySelector('[data-act="hear"]');
     if (hear) {
       hear.addEventListener('click', () => {
@@ -1205,6 +1224,266 @@
     }
     return el;
   }
+
+  // ---------------------------------------------------------------- the next morning
+  /** The morning report the server writes once a recording is over (exported under `report`): the reasons to
+   *  write today, the drafts those reasons rewrote, who was checked in public, and what falls due. Drawn once,
+   *  shown and hidden with the follow-ups. */
+  const MOVE_KIND = { email: 'Email', message: 'Message', calendar: 'Calendar invite', nudge: 'Reminder for you' };
+  const HOOK_KIND = { introduction: 'Introduction owed', mutual_connection: 'Mutual connection', open_thread: 'Open thread', timely: 'In public this week' };
+  // the status as research reports it, and what it does and does not say
+  const CHECK = {
+    matched: ['public profile found', 'A public page ties them to the company.'],
+    partial: ['company found', 'The company turned up; nothing public ties them to it.'],
+    no_public_record: ['no public record found', 'Check before sending.'],
+  };
+
+  const offsetLabel = (min) => {
+    const a = Math.abs(min);
+    return `UTC${min < 0 ? '-' : '+'}${Math.floor(a / 60)}${a % 60 ? ':' + String(a % 60).padStart(2, '0') : ''}`;
+  };
+  const capital = (s) => String(s || '').replace(/^./, (c) => c.toUpperCase());
+
+  /** "Tue 27 Oct · 08:00 · Taipei, UTC+8": eight in the morning of the report's day, in the report's zone. */
+  function morningWhen(report) {
+    const m = String(report.day || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return '';
+    const local = Date.UTC(+m[1], +m[2] - 1, +m[3], 8, 0);
+    const tz = String(report.tz || '');
+    let zone = '';
+    try {
+      if (tz && window.Intl) {
+        const at = new Date(local - (P.tzOffset || 0) * 60000);
+        const part = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' }).formatToParts(at).find((x) => x.type === 'timeZoneName');
+        if (part) zone = part.value.replace(/^GMT/, 'UTC');
+      }
+    } catch (_) { /* a zone or an option this browser does not know */ }
+    if (!zone && P.tzOffset != null) zone = offsetLabel(P.tzOffset);
+    const city = tz.includes('/') ? tz.split('/').pop().replace(/_/g, ' ') : tz;
+    return [`${dayLabel(partsOf(local))} · 08:00`, [city, zone].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+  }
+
+  function epochLabel(sec) {
+    const w = wallDate(Number(sec) || 0, P.tzOffset);
+    return `${dayLabel(w)} · ${hhmm(w)}`;
+  }
+
+  /** A source as a plain link: http(s) only, shown as host and path. */
+  function linkHtml(url) {
+    try {
+      const u = new URL(String(url));
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return esc(url);
+      const shown = truncate(u.host.replace(/^www\./, '') + (u.pathname === '/' ? '' : u.pathname), 46);
+      return `<a href="${esc(u.href)}" target="_blank" rel="noopener noreferrer">${esc(shown)}</a>`;
+    } catch (_) {
+      return esc(url);
+    }
+  }
+
+  function personColour(key) {
+    return key && P.colour.has(key) ? pcol(P.colour.get(key)) : 'var(--ink-soft)';
+  }
+
+  function evidenceItem(e) {
+    if (e.kind === 'research') {
+      return `<li><div class="ev"><q>${esc(e.quote)}</q><span class="ev-src">public source${e.source ? ` · ${linkHtml(e.source)}` : ''}</span></div></li>`;
+    }
+    const turn = Number(e.turn);
+    const src = `<b>${esc(e.speaker || 'Someone')}</b> · ${esc([e.event, e.day].filter(Boolean).join(' · '))}`;
+    if (e.recording !== P.id || !P.turnStart.has(turn)) {
+      return `<li><div class="ev"><q>${esc(e.quote)}</q><span class="ev-src">${src}</span></div></li>`;
+    }
+    const t = P.turnStart.get(turn);
+    return `<li><button type="button" class="ev here" data-turn="${turn}" aria-label="${esc(`${e.speaker || 'Someone'}: ${e.quote}. Play turn ${turn}.`)}">` +
+      `<q>${esc(e.quote)}</q><span class="ev-src">${src}</span><span class="jump">turn ${turn} · ${mmss(t)} · tap to hear it</span></button></li>`;
+  }
+
+  function hookCard(h, k) {
+    const el = document.createElement('article');
+    el.className = 'move hook';
+    el.style.animationDelay = `${k * 90}ms`;
+    const who = (h.people || []).map((ik, i) => {
+      const rk = (h.record_keys || {})[ik];
+      return `<span class="who-one"><span class="sw" style="background:${personColour(rk)}"></span><b>${esc((h.names || [])[i] || ik)}</b></span>`;
+    }).join('');
+    const evidence = (h.evidence || []).map(evidenceItem).join('');
+    const foreign = h.language && h.language !== 'English';
+    el.innerHTML = `
+      <div class="move-top">
+        <span class="kind">${esc(HOOK_KIND[h.type] || capital(String(h.type || 'reason').replace(/_/g, ' ')))}</span>
+        ${h.tonight ? '<span class="tag accent">from last night</span>' : '<span class="tag">earlier this week</span>'}
+      </div>
+      <div class="to">${who}</div>
+      <h4>${esc(h.title)}</h4>
+      ${h.tag && h.tag !== h.title ? `<p class="hook-tag">${esc(h.tag)}</p>` : ''}
+      ${h.reason ? `<p class="reason">${esc(h.reason)}</p>` : ''}
+      ${evidence ? `<ul class="evidence">${evidence}</ul>` : ''}
+      ${h.draft ? `<details class="draft"><summary>Draft ready to send${foreign ? ` · ${esc(h.language)}` : ''}</summary>
+        <p class="body">${esc(h.draft)}</p>
+        ${foreign && h.draft_english ? `<div class="english"><span class="tag">In English</span><p>${esc(h.draft_english)}</p></div>` : ''}
+      </details>` : ''}`;
+    return el;
+  }
+
+  function draftBlock(m, cls, label) {
+    const foreign = m.body_english && m.language && m.language !== 'English';
+    return `<div class="${cls}">
+        ${label}
+        ${m.subject ? `<h4>${esc(m.subject)}</h4>` : ''}
+        <p class="body">${esc(m.body || '')}</p>
+        ${foreign ? `<div class="english"><span class="tag">In English</span><p>${esc(m.body_english)}</p></div>` : ''}
+      </div>`;
+  }
+
+  function redraftCard(report, key, k) {
+    const r = (report.reach_out || []).find((x) => x.followup && x.followup.promise_key === key && x.followup.move);
+    if (!r) return null;
+    const now = r.followup.move;
+    const then = P.final.moves.get(key) || null;
+    const pk = now.person_key || (then && then.person_key) || (r.person && r.person.key);
+    const person = P.final.people.get(pk);
+    const name = person ? person.name : (r.person && r.person.name) || pk;
+    const company = person ? person.company : r.person && r.person.company;
+    const hooks = [r.hook, ...(r.more_hooks || [])].filter(Boolean);
+    const el = document.createElement('article');
+    el.className = `move redraft kind-${now.kind}`;
+    el.style.setProperty('--c', personColour(pk));
+    el.style.animationDelay = `${k * 90}ms`;
+    const rows = [];
+    const changed = (a, b, f) => (b && a && b !== a ? ` <s>${esc(f(b))}</s>` : '');
+    if (now.kind === 'calendar' && now.when) {
+      rows.push(['Proposed', `<dd class="slot">${esc(fmtSlot(now.when, now.duration_minutes))}${changed(now.when, then && then.when, (w) => fmtSlot(w, then.duration_minutes))}</dd>`]);
+    }
+    if (now.remind_at) rows.push(['Reminder', `<dd class="slot">${esc(fmtWhen(now.remind_at))}${changed(now.remind_at, then && then.remind_at, fmtWhen)}</dd>`]);
+    if (now.why) rows.push(['Why', `<dd class="why">${esc(now.why)}</dd>`]);
+    el.innerHTML = `
+      <div class="move-top">
+        <span class="kind">${esc(MOVE_KIND[now.kind] || now.kind || 'Draft')}</span>
+        <span class="tags"><span class="tag accent">rewritten this morning</span><span class="tag">${esc(now.language || 'English')}</span></span>
+      </div>
+      <div class="to"><span class="sw"></span><b>${esc(name)}</b>${company ? `<span>${esc(company)}</span>` : ''}</div>
+      ${hooks.length ? `<p class="because"><span class="kind">because</span>${hooks.map((h) => `<span class="because-one"><b>${esc(h.title)}</b>${h.tag && h.tag !== h.title ? `<span class="hook-tag">${esc(h.tag)}</span>` : ''}</span>`).join('')}</p>` : ''}
+      <div class="pair">
+        ${draftBlock(now, 'now', '<span class="pair-label">This morning</span>')}
+        ${then ? draftBlock(then, 'then', '<span class="pair-label">Last night, at Stop <span class="tag live">replaced</span></span>')
+    : '<div class="then"><span class="pair-label">Last night</span><p class="body">No draft in last night\'s log.</p></div>'}
+      </div>
+      ${rows.length ? `<dl>${rows.map(([dt, dd]) => `<dt>${dt}</dt>${dd}`).join('')}</dl>` : ''}
+      <div class="move-actions"><button type="button" class="ghost-btn" data-act="copy">Copy this morning's text</button></div>`;
+    wireCopy(el.querySelector('[data-act="copy"]'), [now.subject, now.body].filter(Boolean).join('\n\n'), el.querySelector('.now .body'));
+    redraftEls.set(key, el);
+    return el;
+  }
+
+  function checkRow(c) {
+    const status = String(c.status || 'no_public_record');
+    const searched = c.searched !== false;
+    const [tag, said] = CHECK[status] || [status.replace(/_/g, ' '), ''];
+    const linked = new Set();
+    const findings = (c.findings || []).filter((f) => f && f.text).map((f) => {
+      if (f.source) linked.add(f.source);
+      return `<li><span class="tag">${esc(f.kind || 'found')}</span> ${esc(f.text)}${f.source ? ` · ${linkHtml(f.source)}` : ''}</li>`;
+    }).join('');
+    const extra = (c.sources || []).filter((u) => u && !linked.has(u)).map(linkHtml);
+    const meta = [searched ? 'searched the web' : 'no web search ran', c.checked_at ? `checked ${epochLabel(c.checked_at)}` : ''].filter(Boolean).join(' · ');
+    return `<li class="check">
+        <div class="check-top"><span class="nm">${esc(c.name)}</span>${c.company ? `<span class="co">${esc(c.company)}</span>` : ''}<span class="tag">${esc(!searched && status === 'no_public_record' ? 'no search ran' : tag)}</span></div>
+        ${said ? `<p>${esc(said)}</p>` : ''}
+        ${findings ? `<ul class="findings">${findings}</ul>` : ''}
+        ${extra.length ? `<p>Sources: ${extra.join(' · ')}</p>` : ''}
+        <p class="check-meta">${esc(meta)}</p>
+      </li>`;
+  }
+
+  function uncheckedRow(u) {
+    return `<li class="check">
+        <div class="check-top"><span class="nm">${esc(u.name || u.key)}</span><span class="tag">not checked</span></div>
+        ${u.reason ? `<p>${esc(capital(u.reason))}.</p>` : ''}
+      </li>`;
+  }
+
+  function dueRow(d, day) {
+    const p = d.person || {};
+    const iso = String(d.remind_at || '');
+    const parsed = parseIso(iso);
+    const at = !parsed ? '' : iso.startsWith(day) ? hhmm(partsOf(parsed.base)) : fmtWhen(iso);
+    const sub = [p.name, d.what, d.due ? `due ${d.due}` : ''].filter(Boolean).join(' · ');
+    return `<li class="due-row" style="--c:${personColour(p.key)}">
+        <span class="sw"></span>
+        <span class="due-what"><b>${esc(d.nudge || d.what || '')}</b><span>${esc(sub)}</span></span>
+        <span class="due-at">${d.overdue ? '<span class="tag live">overdue</span>' : ''}${esc(at)}</span>
+      </li>`;
+  }
+
+  function costParts(report) {
+    const c = report.cost || {};
+    const tokens = (Number(c.hooks_tokens) || 0) + (Number(c.research_tokens) || 0);
+    const lookups = Number(c.research_requests) || 0;
+    const searches = Number(c.searches) || 0;
+    const reused = (report.checked || []).filter((x) => x.cached).length;
+    const parts = [`Muse Spark · ${tokens.toLocaleString('en-US')} tokens`];
+    if (lookups) parts.push(`${word(lookups)} research ${plural(lookups, 'lookup')}`);
+    parts.push(searches ? `${searches} web ${plural(searches, 'search', 'searches')}` : 'no new web searches');
+    if (reused) parts.push(`${word(reused)} ${plural(reused, 'check')} reused from the cache`);
+    const usd = Number(c.usd);
+    if (Number.isFinite(usd)) parts.push(usd > 0 && usd < 0.005 ? 'under $0.01' : `$${usd.toFixed(2)}`);
+    return parts;
+  }
+
+  function drawMorning(report) {
+    morningDrawn = true;
+    els['morning-when'].textContent = morningWhen(report);
+    const sum = report.summary || {};
+    const langs = sum.languages || [];
+    const count = [
+      [sum.people, plural(Number(sum.people), 'person met', 'people met')],
+      [sum.followups, plural(Number(sum.followups), 'follow-up')],
+      [langs.length, `${plural(langs.length, 'language')} besides English${langs.length ? ': ' + langs.join(', ') : ''}`],
+      [sum.introductions, plural(Number(sum.introductions), 'introduction owed', 'introductions owed')],
+      [sum.hooks, plural(Number(sum.hooks), 'reason to write', 'reasons to write')],
+      [sum.unverified, 'with no public record found'],
+    ].filter(([n]) => Number.isFinite(Number(n)) && n !== '' && n != null);
+    els['morning-count'].innerHTML = count.map(([n, l]) => `<span><b>${Number(n)}</b>${esc(l)}</span>`).join('');
+
+    const hooks = report.hooks || [];
+    els['m-hooks-part'].hidden = !hooks.length;
+    els['m-hooks'].innerHTML = '';
+    hooks.forEach((h, k) => els['m-hooks'].appendChild(hookCard(h, k)));
+
+    els['m-redrafts'].innerHTML = '';
+    redraftEls.clear();
+    let shown = 0;
+    for (const key of report.redrafted || []) {
+      const card = redraftCard(report, key, shown);
+      if (card) { els['m-redrafts'].appendChild(card); shown++; }
+    }
+    els['m-redrafts-part'].hidden = !shown;
+
+    const checks = (report.checked || []).map(checkRow).concat((report.unchecked || []).map(uncheckedRow));
+    els['m-checks-box'].hidden = !checks.length;
+    els['m-checks'].innerHTML = checks.join('');
+
+    const due = report.due_today || [];
+    els['m-due'].innerHTML = due.length ? due.map((d) => dueRow(d, String(report.day || ''))).join('')
+      : '<li class="due-row none">Nothing falls due today.</li>';
+
+    const extra = (report.notes || []).filter(Boolean).map((n) => `<span>${esc(n)}</span>`).join('');
+    els['morning-cost'].innerHTML = `<span class="cost-k">This morning's run</span><span>${esc(costParts(report).join(' · '))}</span>${extra}`;
+    els['morning-cost'].hidden = !report.cost && !extra;
+  }
+
+  function hearTurn(turn) {
+    const t = P.turnStart.get(turn);
+    if (t == null) return;
+    jumpTo(t, turn);
+    if (!player.playing) player.play();
+    document.querySelector('.stage').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    toast(`Back to turn ${turn}, at ${mmss(t)}, where it was said.`);
+  }
+  els['m-hooks'].addEventListener('click', (e) => {
+    const b = e.target.closest('.ev.here');
+    if (b) hearTurn(Number(b.dataset.turn));
+  });
 
   // ---------------------------------------------------------------- the week map
   function drawWeek() {
@@ -1698,6 +1977,10 @@
     els.people.innerHTML = '';
     els.captions.innerHTML = '';
     movesSig = '';
+    morningDrawn = false;
+    redraftEls.clear();
+    for (const id of ['m-hooks', 'm-redrafts', 'm-checks', 'm-due', 'morning-count', 'morning-cost']) els[id].innerHTML = '';
+    els.morning.hidden = true;
     weekDrawn = false;
     weekFilter = null;
     endScrolled = false;

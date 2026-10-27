@@ -11,6 +11,9 @@ the page reads first. The newest export becomes the page's default unless --keep
 Places: every `place` in the export (the recording's own, and each encounter's in the people index) is rounded
 to two decimals, about a kilometre; the page is public and the server keeps the precise fix.
 
+Morning report: when $HALLWISE_DATA/reports/<id>.json exists it goes in whole under `report` (cost included), with
+every place and any other lat/lon rounded the same way and no local file paths in its text. No report, no key.
+
 Audio: the W (omni) channel of a four-channel badge recording, loudness-normalised, 64 kbps mono (lower for very
 long recordings, so the file stays under --max-audio-mb). A silent or missing WAV exports no audio, and the page
 runs on a clock instead.
@@ -36,13 +39,16 @@ sys.path.insert(0, str(SERVER))
 
 from hallwise.events import read_events  # noqa: E402
 from hallwise.people import match, people_index  # noqa: E402
-from hallwise.places import public_places  # noqa: E402
+from hallwise.places import PUBLIC_DECIMALS, public_places  # noqa: E402
 
 FORMAT = 1
 WEEK_DAYS = 7
 # Never shipped: transcriber partials beyond the last one per change, error messages, private calendar windows.
 DROP_TYPES = {"extract_error", "asr_error"}
 DROP_META = {"links", "busy"}
+COORDINATES = {"lat", "lon", "lng", "latitude", "longitude"}
+# An absolute path on a Mac or Linux box, not the path part of a URL ("example.com/home" is left alone).
+LOCAL_PATH = re.compile(r"(?<![\w.:/~-])/(?:Users|home|private|var|tmp|opt|Volumes|root|mnt|srv)/[^\s\"'<>()]*")
 
 
 def find_ffmpeg(name: str) -> str:
@@ -140,6 +146,40 @@ def snapshot_people(data: Path, folder: Path, rid: str, started: float, days: in
         })
     people.sort(key=lambda p: (min(e.get("started", 0) for e in p["encounters"] if e.get("started", 0) > since), p["name"]))
     return {"since": since, "until": until, "days": days, "people": people}
+
+
+def load_report(data: Path, rid: str) -> dict[str, Any] | None:
+    path = data / "reports" / f"{rid}.json"
+    if not path.exists():
+        return None
+    try:
+        report = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as err:
+        print(f"report: {path.name} unreadable ({err.__class__.__name__}), left out")
+        return None
+    return report if isinstance(report, dict) else None
+
+
+def public_report(report: dict[str, Any], roots: list[Path]) -> dict[str, Any]:
+    """The morning report as the public page may show it: places rounded by public_places, any other lat/lon
+    rounded the same, and every local path in its text cut to the file's name. Nothing else changes."""
+    prefixes = sorted({str(r) for r in roots if str(r) not in ("", "/")}, key=len, reverse=True)
+    mine = re.compile(r"(?<![\w.:/~-])(?:" + "|".join(map(re.escape, prefixes)) + r")[^\s\"'<>()]*") if prefixes else None
+
+    def text(s: str) -> str:
+        name = lambda m: Path(m.group(0)).name  # noqa: E731
+        if mine is not None:
+            s = mine.sub(name, s)
+        return LOCAL_PATH.sub(name, s)
+
+    def walk(v: Any) -> Any:
+        if isinstance(v, dict):
+            return {k: round(x, PUBLIC_DECIMALS) if k in COORDINATES and isinstance(x, float) else walk(x) for k, x in v.items()}
+        if isinstance(v, list):
+            return [walk(x) for x in v]
+        return text(v) if isinstance(v, str) else v
+
+    return walk(public_places(report))
 
 
 def probe(ffprobe: str, wav: Path) -> dict[str, Any]:
@@ -247,6 +287,7 @@ def main() -> None:
     end_ms = max((e.get("t_ms", 0) for e in slim), default=0)
     duration_ms = max(end_ms, audio["duration_ms"] if audio else 0)
     people = snapshot_people(data, folder, rid, started, args.week_days)
+    report = load_report(data, rid)
 
     payload = public_places({
         "format": FORMAT,
@@ -258,6 +299,8 @@ def main() -> None:
         "events": slim,
         "people_index": people,
     })
+    if report is not None:
+        payload["report"] = public_report(report, [data, folder, REPO, Path.home()])
     meta = payload["meta"]
     target = out / f"{rid}.json"
     target.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
@@ -273,6 +316,11 @@ def main() -> None:
     print(f"events: {len(slim)} of {len(events)} kept  {target.stat().st_size / 1024:.0f} KB  "
           + ", ".join(f"{k} {v}" for k, v in sorted(kinds.items(), key=lambda kv: -kv[1])[:8]))
     print(f"people index: {len(people['people'])} people in the {args.week_days} days up to this recording")
+    if report is None:
+        print("report: none on file; the page ends with the follow-ups and the week")
+    else:
+        print(f"report: {report.get('day', '?')}, {len(report.get('hooks') or [])} reasons to write, "
+              f"{len(report.get('redrafted') or [])} drafts rewritten")
     print(f"wrote {target}  (total {total / 1024:.0f} KB with audio)")
 
 

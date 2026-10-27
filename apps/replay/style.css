@@ -448,7 +448,7 @@ button { cursor: pointer; }
   padding: 14px 18px 10px;
   border-bottom: 1px solid var(--rule);
 }
-.panel-head h2 { margin: 0; font-family: var(--serif); font-size: var(--step-1); font-weight: 600; }
+.panel-head h2, .panel-head h3 { margin: 0; font-family: var(--serif); font-size: var(--step-1); font-weight: 600; }
 .panel-head .sub { font-size: 0.75rem; color: var(--ink-soft); text-align: right; }
 .transcript {
   list-style: none; margin: 0;
@@ -576,7 +576,7 @@ mark.suspect {
 /* ---------- after the evening */
 .after { padding-block: 24px 40px; display: flex; flex-direction: column; gap: 22px; }
 .after-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--ink); padding-top: 18px; }
-.after-head h2, .week-head h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: var(--step-3); line-height: 1.1; text-wrap: balance; }
+.after-head h2, .week-head h2, .morning-head h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: var(--step-3); line-height: 1.1; text-wrap: balance; }
 .after-head p, .week-head p { margin: 4px 0 0; color: var(--ink-soft); max-width: 46em; }
 .waiting {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
@@ -603,7 +603,7 @@ mark.suspect {
 .move .to { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; color: var(--ink-soft); }
 .move .to .sw { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
 .move .to b { font-family: var(--serif); font-size: 1.05rem; color: var(--ink); font-weight: 600; }
-.move h3 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: var(--step-1); line-height: 1.25; overflow-wrap: anywhere; }
+.move h3, .move h4 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: var(--step-1); line-height: 1.25; overflow-wrap: anywhere; }
 .move .body { margin: 0; font-family: var(--serif); font-size: 1.04rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .move .english { border-top: 1px dashed var(--rule); padding-top: 10px; display: grid; gap: 4px; }
 .move .english p { margin: 0; color: var(--ink-soft); font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -613,6 +613,98 @@ mark.suspect {
 .move dd.slot { font-weight: 600; font-variant-numeric: tabular-nums; }
 .move dd.why { font-family: var(--serif); font-style: italic; font-size: 0.95rem; }
 .move-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+
+/* ---------- the next morning: the report the server writes once the evening is over */
+.morning { display: flex; flex-direction: column; gap: 26px; padding-top: 18px; border-top: 1px solid var(--ink); }
+.morning-head { display: grid; gap: 6px; }
+.morning-head .eyebrow { font-variant-numeric: tabular-nums; }
+.morning-head .lead { margin: 0; color: var(--ink-soft); max-width: 46em; }
+.morning-count { margin-top: 8px; }
+.morning-part { display: flex; flex-direction: column; gap: 14px; }
+.part-head { display: grid; gap: 4px; }
+.part-head h3 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: var(--step-2); line-height: 1.15; }
+.part-head p { margin: 0; font-size: 0.84rem; color: var(--ink-soft); max-width: 46em; }
+.morning a { color: var(--accent); text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+.morning a:hover { text-decoration-color: var(--accent); }
+
+.move .to .who-one { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; }
+.move .hook-tag { margin: 0; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em; color: var(--ink-soft); overflow-wrap: anywhere; }
+.hook h4 + .hook-tag { margin-top: -8px; }
+.hook .reason { margin: 0; font-size: 0.92rem; line-height: 1.5; overflow-wrap: anywhere; }
+.evidence { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ev { display: grid; gap: 2px; min-width: 0; padding: 4px 0 4px 12px; border-left: 2px solid var(--rule); }
+.ev q { font-family: var(--serif); font-size: 1rem; line-height: 1.4; overflow-wrap: anywhere; }
+.ev-src { font-size: 0.75rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+.ev-src b { color: var(--ink); font-weight: 600; }
+button.ev {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-left: 2px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 6px 8px 6px 12px;
+  transition: background-color 0.2s;
+}
+button.ev:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.ev .jump { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.04em; color: var(--accent); }
+.draft { margin-top: auto; border-top: 1px dashed var(--rule); padding-top: 10px; }
+.draft summary { cursor: pointer; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+.draft summary:hover { color: var(--ink); }
+.draft[open] summary { margin-bottom: 8px; }
+.draft .english { margin-top: 10px; }
+
+.redrafts { display: grid; gap: 18px; }
+.redraft .tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.redraft .because { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.redraft .because-one { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.redraft .because b { font-family: var(--serif); font-size: 1.05rem; font-weight: 600; overflow-wrap: anywhere; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.pair-label { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.pair .now {
+  display: flex; flex-direction: column; gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--paper-raised));
+}
+.pair .now .pair-label { color: var(--accent); }
+.pair .then {
+  display: flex; flex-direction: column; gap: 6px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px dashed var(--rule);
+  color: var(--ink-soft);
+}
+.pair .then .pair-label { color: var(--ink-soft); }
+.move .pair .then h4 { font-size: 0.98rem; font-weight: 500; color: var(--ink-soft); }
+.move .pair .then .body { font-size: 0.92rem; color: var(--ink-soft); }
+.move .pair .then .english p { font-size: 0.84rem; }
+.move .pair .english { border-top-color: color-mix(in srgb, var(--rule) 80%, transparent); }
+.move dd.slot s { color: var(--ink-soft); font-weight: 400; text-decoration-color: var(--live); margin-left: 6px; }
+
+.morning-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 18px; align-items: start; }
+.checks, .dues { list-style: none; margin: 0; padding: 6px 10px 10px; }
+.check, .due-row { padding: 10px 8px; }
+.check + .check, .due-row + .due-row { border-top: 1px dashed var(--rule); }
+.check-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.check-top .nm { font-family: var(--serif); font-weight: 600; font-size: 1.02rem; overflow-wrap: anywhere; }
+.check-top .co { font-size: 0.8rem; color: var(--ink-soft); }
+.check-top .tag { margin-left: auto; }
+.check p { margin: 4px 0 0; font-size: 0.84rem; overflow-wrap: anywhere; }
+.check .check-meta { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.04em; color: var(--ink-soft); }
+.findings { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; font-size: 0.84rem; overflow-wrap: anywhere; }
+.due-row { --c: var(--ink-soft); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; }
+.due-row .sw { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.due-row.none { display: block; font-family: var(--serif); font-style: italic; color: var(--ink-soft); }
+.due-what { display: grid; min-width: 0; }
+.due-what b { font-family: var(--serif); font-size: 1.04rem; font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; }
+.due-what span { font-size: 0.78rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+.due-at { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 0.8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.morning-cost { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.morning-cost .cost-k { color: var(--ink); text-transform: uppercase; letter-spacing: 0.1em; }
 
 /* ---------- the week */
 .week { display: flex; flex-direction: column; gap: 14px; padding-top: 18px; border-top: 1px solid var(--rule); }
@@ -795,6 +887,12 @@ mark.suspect {
 .is-live .intro { display: none; }
 
 /* ---------- narrow screens */
+@media (min-width: 761px) {
+  /* last night's draft on the left, this morning's on the right */
+  .pair { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
+  .pair .then { grid-column: 1; grid-row: 1; }
+  .pair .now { grid-column: 2; grid-row: 1; }
+}
 @media (max-width: 920px) {
   .stage { grid-template-columns: minmax(0, 1fr); gap: 22px; }
   .is-intro .side { order: -1; }
@@ -824,6 +922,9 @@ mark.suspect {
   .caption .detail { grid-column: 1; }
   .panel-head { flex-wrap: wrap; }
   .panel-head .sub { text-align: left; }
+  .due-row { grid-template-columns: auto minmax(0, 1fr); }
+  .due-at { grid-column: 2; white-space: normal; flex-wrap: wrap; }
+  .check-top .tag { margin-left: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
