@@ -274,7 +274,9 @@ struct PeoplePage: View {
         }
         .task { await directory.load(base: settings.serverURL) }
         .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).closableSheet([.medium, .large]) }
-        .sheet(item: $selectedKnown) { p in KnownPersonSheet(person: p, settings: settings).closableSheet([.medium, .large]) }
+        .sheet(item: $selectedKnown) { p in
+            KnownPersonSheet(person: p, settings: settings) { directory.replace($0) }.closableSheet([.medium, .large])
+        }
     }
 }
 
@@ -320,13 +322,19 @@ struct PersonRow: View {
     }
 }
 
-/// One person: what you know, what you owe each other, what they said.
+/// One person: what you know, what you owe each other, what they said. Edit fixes the name or the company when the
+/// transcriber got it wrong ("Vexy" for Vexi); the server keeps the fix, and the card shows it at once.
 struct PersonDetail: View {
     let person: LiveModel.Person
     @ObservedObject var live: LiveModel
     @ObservedObject var settings: BadgeSettings
+    @State private var editing = false
+
+    /// The person as the record has them now: a correction made on this card shows without reopening it.
+    private var current: LiveModel.Person { live.people[person.id] ?? person }
 
     var body: some View {
+        let person = current
         ZStack {
             PaperBackground()
             List {
@@ -348,6 +356,9 @@ struct PersonDetail: View {
                             if !person.introducedBy.isEmpty { Tag(text: "via \(live.name(for: person.introducedBy))") }
                         }
                         }
+                        Spacer(minLength: 8)
+                        // a name only heard so far (provisional) is not in the record yet: nothing to correct
+                        if !person.provisional { PersonEditButton { editing = true } }
                     }
                     .padding(.vertical, 4)
                 }
@@ -406,6 +417,114 @@ struct PersonDetail: View {
             .contentMargins(.top, 4, for: .scrollContent)
         }
         .preferredColorScheme(settings.colorScheme)
+        .sheet(isPresented: $editing) {
+            EditPersonSheet(name: current.name, company: current.company, settings: settings) { name, company in
+                let result = try await Corrections.send(base: settings.serverURL, recording: live.recordingID,
+                                                        ["kind": "person", "key": person.id, "name": name, "company": company])
+                await MainActor.run {
+                    if let event = result["event"] as? [String: Any] { live.apply(event) }
+                }
+            }
+            .closableSheet([.medium, .large])
+        }
+    }
+}
+
+/// The small "Edit" on a person's card.
+struct PersonEditButton: View {
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Label("Edit", systemImage: "pencil")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 14)
+                .frame(height: 36)
+                .overlay(Capsule().stroke(Theme.rule, lineWidth: 1))
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Edit name and company")
+    }
+}
+
+/// Fix a person's name or company. Nothing changes until the server has it; a failure says why in a line and
+/// keeps what was typed.
+struct EditPersonSheet: View {
+    @State var name: String
+    @State var company: String
+    @ObservedObject var settings: BadgeSettings
+    let save: (String, String) async throws -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var saving = false
+    @State private var failure: String?
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var body: some View {
+        ZStack {
+            PaperBackground()
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Edit person").font(.system(size: 26, weight: .bold, design: .serif)).foregroundStyle(Theme.ink)
+                Text("Fix what the transcriber heard. Your server keeps it, and the drafts and later evenings use it.")
+                    .font(.system(size: 14)).foregroundStyle(Theme.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+                entry("Name", text: $name)
+                entry("Company", text: $company)
+                if let failure {
+                    Label(failure, systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.live)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button { Task { await submit() } } label: {
+                    HStack(spacing: 8) {
+                        if saving { ProgressView().tint(Theme.paper) }
+                        Text(saving ? "Saving" : "Save").font(.system(size: 18, weight: .semibold))
+                    }
+                    .foregroundStyle(Theme.paper)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(Capsule().fill(trimmedName.isEmpty ? Theme.inkSoft : Theme.accent))
+                }
+                .buttonStyle(.plain)
+                .disabled(saving || trimmedName.isEmpty)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+        }
+        .preferredColorScheme(settings.colorScheme)
+    }
+
+    private func entry(_ label: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.inkSoft)
+            TextField(label, text: text)
+                .font(.system(size: 18))
+                .foregroundStyle(Theme.ink)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.words)
+                .padding(.horizontal, 14)
+                .frame(height: 48)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Theme.paperDeep))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.rule, lineWidth: 0.5))
+        }
+    }
+
+    @MainActor
+    private func submit() async {
+        saving = true
+        failure = nil
+        do {
+            try await save(trimmedName, company.trimmingCharacters(in: .whitespacesAndNewlines))
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            dismiss()
+        } catch {
+            failure = "Not saved: " + error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        }
+        saving = false
     }
 }
 
@@ -747,14 +866,18 @@ struct MoveSheet: View {
 
 // MARK: - Words
 
-/// Words the transcriber may have got wrong. One tap keeps the suggestion and remembers it; the memory is the
-/// list of words sent as recognition hints on the next recording.
+/// Words the transcriber may have got wrong. Accept takes the suggested spelling, Fix takes a typed one, Reject says
+/// the suggestion was wrong. Each answer goes to the server, which logs it with the recording and keeps it: an
+/// accepted or fixed spelling is a hint and a preferred spelling on every later recording, a rejected pairing is
+/// never suggested again. The row goes once the server has it; if it does not, a line says why.
 struct WordsPage: View {
     @ObservedObject var live: LiveModel
     @ObservedObject var settings: BadgeSettings
     @State private var editing: LiveModel.Suspect?
     @State private var editingDisagreement: LiveModel.Disagreement?
     @State private var draft = ""
+    @State private var busy: Set<String> = []   // suspect ids with an answer on its way
+    @State private var failure: String?
 
     var body: some View {
         List {
@@ -765,6 +888,11 @@ struct WordsPage: View {
                 .listRowBackground(Theme.paperDeep)
             }
             Section(header: PaperHeader(text: "Check these words")) {
+                if let failure {
+                    Label(failure, systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.live)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if live.suspects.isEmpty {
                     Text("Nothing to check").foregroundStyle(Theme.inkSoft)
                 }
@@ -792,20 +920,18 @@ struct WordsPage: View {
             .listRowBackground(Theme.paperDeep)
         }
         .scrollContentBackground(.hidden)
-        .alert("Correct this word", isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } })) {
-            TextField("Word", text: $draft)
+        .alert("Fix this word", isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } })) {
+            TextField("Spelling", text: $draft)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.words)
-            Button("Remember") {
-                if let s = editing {
-                    settings.remember(draft)
-                    live.resolve(s)
-                }
+            Button("Save") {
+                let use = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let s = editing, !use.isEmpty { answer(s, kind: "word", use: use) }
                 editing = nil
             }
             Button("Cancel", role: .cancel) { editing = nil }
         } message: {
-            Text("Heard “\(editing?.heard ?? "")”. Type what it should be.")
+            Text("Heard “\(editing?.heard ?? "")”. Type how it is spelled.")
         }
         .alert("What was said?", isPresented: Binding(get: { editingDisagreement != nil }, set: { if !$0 { editingDisagreement = nil } })) {
             TextField("Spelling", text: $draft)
@@ -893,37 +1019,71 @@ struct WordsPage: View {
                 Text("\(live.speakerName(line.speaker)) · \(mmss(live.turnStart[line.id] ?? 0)) — “\(snippet(line.text, around: s.heard))”")
                     .font(.system(size: 13)).foregroundStyle(Theme.inkSoft).lineLimit(2)
             }
+            let waiting = busy.contains(s.id)
             HStack(spacing: 8) {
                 Spacer()
-                Button {
-                    settings.remember(s.likely)
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    withAnimation { live.resolve(s) }
-                } label: {
-                    Label("Keep", systemImage: "checkmark").font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Theme.paper).frame(width: 96, height: 44)
-                        .background(Capsule().fill(Theme.accent))
+                if waiting { ProgressView().frame(width: 28, height: 44) }
+                Button { answer(s, kind: "word", use: s.likely) } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark")
+                        Text("Accept")
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.paper).frame(width: 108, height: 44)
+                    .background(Capsule().fill(Theme.accent))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Accept \(s.likely)")
                 Button {
                     draft = s.likely
                     editing = s
                 } label: {
-                    Text("Edit").font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.ink)
-                        .frame(width: 72, height: 44)
+                    Text("Fix").font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.ink)
+                        .frame(width: 60, height: 44)
                         .overlay(Capsule().stroke(Theme.rule, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
-                Button { withAnimation { live.resolve(s) } } label: {
-                    Image(systemName: "xmark").font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.inkSoft)
-                        .frame(width: 44, height: 44)
-                        .overlay(Circle().stroke(Theme.rule, lineWidth: 1))
+                .accessibilityLabel("Fix the spelling")
+                Button { answer(s, kind: "word_rejected") } label: {
+                    Text("Reject").font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.inkSoft)
+                        .frame(width: 76, height: 44)
+                        .overlay(Capsule().stroke(Theme.rule, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Dismiss")
+                .accessibilityLabel("Reject this suggestion")
             }
+            .disabled(waiting)
+            .opacity(waiting ? 0.6 : 1)
         }
         .padding(.vertical, 4)
+    }
+
+    /// One answer about a suspect word, sent to the server: "word" with the spelling to use (accepted or fixed), or
+    /// "word_rejected". The row goes, and an accepted or fixed spelling joins Remembered words, only once the server
+    /// has it; a failure leaves the row and says why above the list.
+    private func answer(_ s: LiveModel.Suspect, kind: String, use: String = "") {
+        guard !busy.contains(s.id) else { return }
+        busy.insert(s.id)
+        failure = nil
+        var body: [String: Any] = ["kind": kind, "heard": s.heard, "likely": s.likely]
+        if kind == "word" { body["use"] = use }
+        if s.turn >= 0 { body["turn"] = s.turn }
+        let base = settings.serverURL, rid = live.recordingID
+        Task { @MainActor in
+            defer { busy.remove(s.id) }
+            do {
+                let result = try await Corrections.send(base: base, recording: rid, body)
+                if kind == "word" { settings.remember(use) }
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                withAnimation {
+                    if let event = result["event"] as? [String: Any] { live.apply(event) }
+                    live.resolve(s)
+                }
+            } catch {
+                failure = "Not saved: " + error.localizedDescription
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
+        }
     }
 
     private func snippet(_ text: String, around word: String) -> String {

@@ -46,8 +46,8 @@ struct DirectoryPerson: Identifiable {
         let direction: String
     }
     let id: String
-    let name: String
-    let company: String
+    var name: String      // var: the owner can correct them (KnownPersonSheet)
+    var company: String
     let role: String
     let language: String
     let encounters: [Encounter]
@@ -88,6 +88,11 @@ final class Directory: ObservableObject {
         recordings = await link.fetchRecordings(base: base)
         people = list.compactMap(DirectoryPerson.init)
         loaded = true
+    }
+
+    /// A person the owner just corrected, as the server now lists them: same key, the owner's spelling.
+    func replace(_ person: DirectoryPerson) {
+        if let i = people.firstIndex(where: { $0.id == person.id }) { people[i] = person }
     }
 
     /// Every evening with a place, oldest first: from the recordings, so an evening where nobody was met still has
@@ -166,7 +171,9 @@ struct MapPage: View {
             }
         }
         .sheet(item: $selected) { p in PersonDetail(person: p, live: live, settings: settings).closableSheet([.medium, .large]) }
-        .sheet(item: $selectedKnown) { p in KnownPersonSheet(person: p, settings: settings).closableSheet([.medium, .large]) }
+        .sheet(item: $selectedKnown) { p in
+            KnownPersonSheet(person: p, settings: settings) { directory.replace($0) }.closableSheet([.medium, .large])
+        }
     }
 }
 
@@ -791,20 +798,33 @@ struct PlacePin: View {
     }
 }
 
-/// Someone from the directory: every evening you met them, and what passed between you.
+/// Someone from the directory: every evening you met them, and what passed between you. Edit fixes the name or the
+/// company in every evening they were met; the key, and so the face, stay.
 struct KnownPersonSheet: View {
-    let person: DirectoryPerson
     @ObservedObject var settings: BadgeSettings
+    var onCorrected: ((DirectoryPerson) -> Void)? = nil
+    @State private var person: DirectoryPerson
+    @State private var editing = false
+
+    init(person: DirectoryPerson, settings: BadgeSettings, onCorrected: ((DirectoryPerson) -> Void)? = nil) {
+        _person = State(initialValue: person)
+        self.settings = settings
+        self.onCorrected = onCorrected
+    }
 
     var body: some View {
         ZStack {
             PaperBackground()
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(person.name).font(.system(size: 26, weight: .bold, design: .serif)).foregroundStyle(Theme.ink)
-                        if !person.line.isEmpty { Text(person.line).foregroundStyle(Theme.inkSoft) }
-                        if !person.language.isEmpty { Tag(text: "speaks \(person.language)") }
+                    HStack(alignment: .top, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(person.name).font(.system(size: 26, weight: .bold, design: .serif)).foregroundStyle(Theme.ink)
+                            if !person.line.isEmpty { Text(person.line).foregroundStyle(Theme.inkSoft) }
+                            if !person.language.isEmpty { Tag(text: "speaks \(person.language)") }
+                        }
+                        Spacer(minLength: 8)
+                        PersonEditButton { editing = true }
                     }
                     .padding(.vertical, 4)
                 }
@@ -837,5 +857,17 @@ struct KnownPersonSheet: View {
             .contentMargins(.top, 4, for: .scrollContent)
         }
         .preferredColorScheme(settings.colorScheme)
+        .sheet(isPresented: $editing) {
+            EditPersonSheet(name: person.name, company: person.company, settings: settings) { name, company in
+                let entry = try await Corrections.person(base: settings.serverURL, key: person.id, name: name, company: company)
+                await MainActor.run {
+                    var fixed = DirectoryPerson(entry) ?? person
+                    if fixed.id != person.id { fixed = person; fixed.name = name; fixed.company = company }
+                    person = fixed
+                    onCorrected?(fixed)
+                }
+            }
+            .closableSheet([.medium, .large])
+        }
     }
 }

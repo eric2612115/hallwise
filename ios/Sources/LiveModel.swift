@@ -349,6 +349,8 @@ final class LiveModel: ObservableObject {
 
     @Published var people: [String: Person] = [:]
     @Published var peopleOrder: [String] = []
+    /// Names and companies the owner corrected, by person key: they win over any later hearing of that person.
+    private var personFixes: [String: (name: String, company: String)] = [:]
     @Published var promises: [String: Promise] = [:]
     @Published var promiseOrder: [String] = []
     @Published var speakerAzimuth: [String: Double] = [:]  // room bearing per speaker key
@@ -403,6 +405,7 @@ final class LiveModel: ObservableObject {
         people = [:]; peopleOrder = []; promises = [:]; promiseOrder = []; speakerAzimuth = [:]; speakerLevel = [:]
         ownerSpeakers = []; lines = []; turnKind = [:]; turnStart = [:]; turnEnd = [:]
         suspects = []; moves = [:]; topics = []; translations = [:]; history = [:]; speakerFirstMs = [:]; photos = [:]
+        personFixes = [:]
         liveHooks = [:]; reportHooks = [:]; indexKeys = [:]; confirmed = []; disagreements = []
         tMs = 0; lastSpeaker = nil; donePromises = []; dismissedNotices = []; calendarAdded = []
     }
@@ -457,6 +460,31 @@ final class LiveModel: ObservableObject {
         }
     }
 
+    /// A `correction` the server logged, from the event stream or straight from its answer to the phone (applying it
+    /// twice changes nothing). person: the name and company become the owner's. word / word_rejected: the
+    /// suggestion leaves the list, with its mirror image.
+    private func applyCorrection(_ e: [String: Any]) {
+        switch e["kind"] as? String {
+        case "person":
+            guard let key = e["key"] as? String, let name = e["name"] as? String, !name.isEmpty else { return }
+            let company = e["company"] as? String ?? ""
+            personFixes[key] = (name, company)
+            people[key]?.name = name
+            people[key]?.company = company
+        case "word", "word_rejected":
+            guard let heard = e["heard"] as? String else { return }
+            let other = (e["kind"] as? String == "word" ? e["use"] : e["likely"]) as? String ?? ""
+            func same(_ a: String, _ b: String) -> Bool { a.caseInsensitiveCompare(b) == .orderedSame }
+            suspects.removeAll { s in
+                let pair = same(s.heard, heard) && (e["kind"] as? String == "word" || same(s.likely, other))
+                let mirror = same(s.heard, other) && same(s.likely, heard)
+                return pair || mirror
+            }
+        default:
+            break
+        }
+    }
+
     func apply(_ e: [String: Any]) {
         if let t = e["t_ms"] as? Int { tMs = max(tMs, t) }
         switch e["type"] as? String {
@@ -493,10 +521,11 @@ final class LiveModel: ObservableObject {
                 peopleOrder.removeAll { $0 == other }
             }
             if people[key] == nil { peopleOrder.append(key); loadPhoto(for: key) }
+            let fix = personFixes[key]
             people[key] = Person(
                 id: key,
-                name: e["name"] as? String ?? key,
-                company: e["company"] as? String ?? "",
+                name: fix?.name ?? e["name"] as? String ?? key,
+                company: fix?.company ?? e["company"] as? String ?? "",
                 role: e["role"] as? String ?? "",
                 language: e["preferred_language"] as? String ?? "",
                 introducedBy: e["introduced_by"] as? String ?? "",
@@ -587,6 +616,8 @@ final class LiveModel: ObservableObject {
             if !donePromises.contains(key) { Reminders.schedule(m, promise: promises[key]) }
         case "room_topics":
             topics = e["topics"] as? [String] ?? []
+        case "correction":
+            applyCorrection(e)
         case "replay_clock":
             break  // a replay's clock through a silence: it only moves tMs (above), so the glow fades as it did live
         default:
