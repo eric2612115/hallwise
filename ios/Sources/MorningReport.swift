@@ -150,11 +150,12 @@ final class ReportStore: ObservableObject {
         missing = false
         let http = ServerLink.httpBase(base)
         var got = await Self.get(http + "/api/report/" + (recording ?? "latest"))
-        if got == nil, recording != nil {
+        if got == nil, recording != nil, !ServerAuth.shared.rejected {
             missing = true
             got = await Self.get(http + "/api/report/latest")
         }
         apply(got)
+        if got == nil, ServerAuth.shared.rejected { state = ServerAuth.wrongKey }
     }
 
     /// Research, hooks, the report: about half a minute on the server; within the hour it answers from its store.
@@ -163,10 +164,14 @@ final class ReportStore: ObservableObject {
         guard var c = URLComponents(string: ServerLink.httpBase(base) + "/api/report/run") else { return }
         c.queryItems = [URLQueryItem(name: "recording", value: recording)] + (force ? [URLQueryItem(name: "force", value: "1")] : [])
         guard let url = c.url else { return }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
+        var req = URLRequest.hallwise(url, method: "POST")
         req.timeoutInterval = 240
-        guard let (data, response) = try? await URLSession.shared.data(for: req),
+        let answer = try? await URLSession.shared.data(for: req)
+        if ServerAuth.shared.note(answer?.1) {
+            state = ServerAuth.wrongKey
+            return
+        }
+        guard let (data, response) = answer,
               (response as? HTTPURLResponse)?.statusCode == 200,
               let d = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             state = "The server could not write the report"
@@ -182,8 +187,11 @@ final class ReportStore: ObservableObject {
         state = report == nil ? (d == nil ? "No report yet" : "The report could not be read") : ""
     }
 
+    /// A GET to the server with the key. A 401 marks the key as turned down (ServerAuth) and reads as nil.
     static func get(_ url: String) async -> [String: Any]? {
-        guard let u = URL(string: url), let (data, response) = try? await URLSession.shared.data(from: u),
+        guard let u = URL(string: url), u.host() != nil,
+              let (data, response) = try? await URLSession.shared.data(for: .hallwise(u)),
+              !ServerAuth.shared.note(response),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
@@ -493,7 +501,7 @@ struct MorningReportView: View {
                         ForEach(c.findings) { f in
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(f.text).font(.system(size: 14)).foregroundStyle(Theme.ink)
-                                if let url = URL(string: f.source) {
+                                if let url = ServerData.webURL(f.source) {
                                     Link(destination: url) {
                                         Label(url.host() ?? f.source, systemImage: "link").font(.system(size: 12, weight: .medium))
                                     }

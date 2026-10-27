@@ -17,7 +17,7 @@ final class VoiceAsk {
 
     func start(base: String, recording: String, keywords: [String], history: [[String: String]]) throws {
         let ws = base.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
-        guard let url = URL(string: ws + "/ask/" + recording) else { throw URLError(.badURL) }
+        guard let url = URL(string: ws + "/ask/" + recording), url.host() != nil else { throw URLError(.badURL) }
         let audio = AVAudioSession.sharedInstance()
         try audio.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothA2DP])
         try audio.setActive(true)
@@ -30,7 +30,7 @@ final class VoiceAsk {
         converter = conv
         outFormat = out
 
-        let t = session.webSocketTask(with: url)
+        let t = session.webSocketTask(with: .hallwise(url))
         task = t
         t.resume()
         send(["sample_rate": 16_000, "keywords": keywords, "history": history])
@@ -81,6 +81,7 @@ final class VoiceAsk {
             guard let self else { return }
             switch result {
             case .success(.string(let text)):
+                ServerAuth.shared.accepted()
                 if let event = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] {
                     DispatchQueue.main.async { self.onEvent?(event) }
                     if event["type"] as? String == "answer" {
@@ -93,7 +94,9 @@ final class VoiceAsk {
             case .success:
                 self.receive()
             case .failure(let error):
-                DispatchQueue.main.async { self.onEvent?(["type": "answer", "answer": "", "actions": [], "error": error.localizedDescription]) }
+                // a key the server turned down (401, or close code 4401) says so; nothing retries
+                let reason = self.task.map { ServerAuth.shared.note($0) } == true ? ServerAuth.wrongKey : error.localizedDescription
+                DispatchQueue.main.async { self.onEvent?(["type": "answer", "answer": "", "actions": [], "error": reason]) }
                 self.task = nil
             }
         }

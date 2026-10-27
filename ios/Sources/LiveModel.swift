@@ -220,14 +220,18 @@ final class LiveModel: ObservableObject {
         }
     }
 
-    /// Keep a face for a person, on screen and on disk under the recording.
+    /// Keep a face for a person, on screen and on disk under the recording: readable only while the phone is
+    /// unlocked, and never in a backup.
     func setPhoto(_ image: UIImage?, for key: String) {
         photos[key] = image
+        guard !recordingID.isEmpty else { return }
         let dir = Self.photoDir(recordingID)
-        let file = dir.appendingPathComponent(key + ".jpg")
+        let file = Self.photoFile(recordingID, key)
         if let image, let data = image.jpegData(compressionQuality: 0.85) {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            try? data.write(to: file)
+            Self.excludeFromBackup(Self.photosRoot)
+            try? data.write(to: file, options: [.atomic, .completeFileProtection])
+            Self.excludeFromBackup(file)
         } else {
             try? FileManager.default.removeItem(at: file)
         }
@@ -236,13 +240,27 @@ final class LiveModel: ObservableObject {
     /// Faces saved earlier for this recording, when a person turns up again (a relaunch, a replay).
     func loadPhoto(for key: String) {
         guard photos[key] == nil, !recordingID.isEmpty else { return }
-        let file = Self.photoDir(recordingID).appendingPathComponent(key + ".jpg")
-        if let data = try? Data(contentsOf: file), let image = UIImage(data: data) { photos[key] = image }
+        if let data = try? Data(contentsOf: Self.photoFile(recordingID, key)), let image = UIImage(data: data) { photos[key] = image }
     }
 
+    static var photosRoot: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("photos")
+    }
+
+    /// The recording id and the person key come from the server, so both are made into plain file names first.
     static func photoDir(_ rid: String) -> URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("photos").appendingPathComponent(rid)
+        photosRoot.appendingPathComponent(ServerData.fileName(rid), isDirectory: true)
+    }
+
+    static func photoFile(_ rid: String, _ key: String) -> URL {
+        photoDir(rid).appendingPathComponent(ServerData.fileName(key) + ".jpg")
+    }
+
+    static func excludeFromBackup(_ url: URL) {
+        var url = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? url.setResourceValues(values)
     }
 
     @Published var history: [String: History] = [:]       // by person key

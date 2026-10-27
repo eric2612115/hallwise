@@ -81,6 +81,7 @@ struct MainView: View {
     /// Plain words, never an id: what the app is doing right now.
     private var stateText: String {
         let s = app.link.status
+        if ServerAuth.shared.rejected { return ServerAuth.wrongKey }  // cleared by a new key or the next Start
         if s.hasPrefix("disconnected") || s.contains("failed") || s.contains("error") || s.contains("denied") { return s }
         if !app.listening { return "Not listening" }
         if app.paused { return "Paused" }
@@ -268,14 +269,16 @@ struct MenuSheet: View {
                         field("Event", text: $settings.eventName, placeholder: "ETH Taipei afterparty")
                         field("Venue", text: $settings.venue, placeholder: "where", last: true)
                     }
-                    group("Listening", nil) {
-                        field("Server", text: $settings.serverURL, keyboard: .URL)
+                    group("Listening", "The server key stays in this phone's Keychain") {
+                        field("Server", text: $settings.serverURL, placeholder: "ws://… or wss://…", keyboard: .URL)
+                        secureField("Server key", text: $settings.serverKey, placeholder: "required by the server")
                         field("Words", text: $settings.keywords, placeholder: "names to recognise, comma-separated")
                         forwardRow
                     }
                     group("Debug", "Follow watches a recording instead of capturing; a finished one replays at this pace") {
                         field("Follow", text: $settings.followRecording, placeholder: "recording id, no capture", keyboard: .URL)
                         paceRow
+                        keepCopyRow
                         reportSoonRow
                     }
                 }
@@ -428,6 +431,42 @@ struct MenuSheet: View {
         .overlay(alignment: .bottom) {
             if !last { Rectangle().fill(Theme.rule).frame(height: 0.5).padding(.leading, 14) }
         }
+    }
+
+    /// Typed, never shown or logged; saved to the Keychain as it changes (see BadgeSettings.serverKey).
+    private func secureField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.inkSoft)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: 72, alignment: .leading)
+            SecureField(placeholder, text: text)
+                .font(.system(size: 17))
+                .foregroundStyle(Theme.ink)
+                // not a password: without this iOS offers to save it to Passwords, which syncs off the phone
+                .textContentType(.oneTimeCode)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 52)
+        .overlay(alignment: .bottom) { Rectangle().fill(Theme.rule).frame(height: 0.5).padding(.leading, 14) }
+    }
+
+    /// Off by default: a raw copy of each take, kept on this phone for a week (not while paused, not in backups).
+    private var keepCopyRow: some View {
+        Toggle(isOn: $settings.keepLocalAudio) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Keep a copy on this phone").font(.system(size: 17)).foregroundStyle(Theme.ink)
+                Text("Raw audio of each take, deleted after 7 days").font(.system(size: 13)).foregroundStyle(Theme.inkSoft)
+            }
+        }
+        .tint(Theme.accent)
+        .padding(.horizontal, 14)
+        .frame(height: 64)
+        .overlay(alignment: .top) { Rectangle().fill(Theme.rule).frame(height: 0.5).padding(.leading, 14) }
     }
 
     /// How fast a followed recording replays once it has finished; Live sends it all at once, as before.

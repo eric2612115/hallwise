@@ -45,6 +45,9 @@ final class AppModel: ObservableObject {
         link.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
         settings.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
         live.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
+        ServerAuth.shared.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &bag)
+        link.onRejected = { [weak self] in self?.keyRejected() }
+        DispatchQueue.global(qos: .utility).async { BadgeCapture.tidyLocalCopies() }
         capture.onAudio = { [weak self] data in self?.link.sendAudio(data) }
         capture.onPose = { [weak self] t, heading, pitch, roll, inverted in
             self?.link.sendPose(tMs: t, yaw: heading, pitch: pitch, roll: roll, inverted: inverted)
@@ -90,11 +93,20 @@ final class AppModel: ObservableObject {
         MorningNotice.schedule(in: 10, recording: currentRecording ?? "")
     }
 
-    func start() {
+    /// Starts listening (or following), unless there is no usable server address: then the Start button's
+    /// caption says what is missing, and nothing starts. Returns whether it started.
+    @discardableResult
+    func start() -> Bool {
+        if let problem = settings.serverAddressProblem {
+            link.status = problem
+            return false
+        }
+        ServerAuth.shared.clear()  // every Start is a fresh try; nothing retries by itself
         live.reset()
         live.serverBase = settings.serverURL
         paused = false
         capture.muted = false
+        capture.keepLocalCopy = settings.keepLocalAudio
         listening = true
         showBadgeOnLockScreen()
         let settings = self.settings
@@ -107,7 +119,7 @@ final class AppModel: ObservableObject {
                     self?.live.applyReport(report)
                 }
             }
-            return
+            return true
         }
         Task { @MainActor in
             // Tonight names itself: the calendar event happening now, and the place the phone is.
@@ -148,6 +160,22 @@ final class AppModel: ObservableObject {
             }
             capture.start()
         }
+        return true
+    }
+
+    /// The server turned the key down: stop capturing (nothing should pile up on the phone for a server that
+    /// will not take it) and leave "Server key is wrong" showing. The owner fixes the key and taps Start again.
+    private func keyRejected() {
+        guard listening else { return }
+        if settings.followRecording.isEmpty {
+            capture.stop()
+            if link.canAskByVoice { link.close() }  // the record socket was turned down after /ingest opened
+        } else {
+            link.unfollow()
+        }
+        listening = false
+        paused = false
+        hideBadgeFromLockScreen()
     }
 
     func stop() {

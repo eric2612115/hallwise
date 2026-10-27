@@ -2,16 +2,19 @@ import SwiftUI
 import UserNotifications
 
 /// Local notifications at the moment a draft becomes overdue: "Deck for Kevin due tonight" at 20:00.
-/// Scheduled when a draft arrives, cancelled when its promise is ticked.
+/// Scheduled when a draft arrives, cancelled when its promise is ticked. The text and times come from the server,
+/// so they are bounded: at most `maxPending` reminders wait at once (the soonest), with short text.
 enum Reminders {
+    static let maxPending = 20
+
     static func schedule(_ move: LiveModel.Move, promise: LiveModel.Promise?) {
         guard !move.remindAt.isEmpty, let when = OwnerCalendar.parse(move.remindAt), when > Date() else { return }
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound, .badge]) { ok, _ in
             guard ok else { return }
             let content = UNMutableNotificationContent()
-            content.title = move.nudge.isEmpty ? "Hallwise" : move.nudge
-            content.body = promise?.what ?? move.subject
+            content.title = move.nudge.isEmpty ? "Hallwise" : String(move.nudge.prefix(80))
+            content.body = String((promise?.what ?? move.subject).prefix(200))
             content.sound = .default
             content.userInfo = ["promise_key": move.promiseKey]
             let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: when)
@@ -19,7 +22,21 @@ enum Reminders {
                 identifier: "promise:" + move.promiseKey, content: content,
                 trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
             )
-            center.add(request)
+            center.add(request) { _ in trim(center) }
+        }
+    }
+
+    /// Keep only the soonest `maxPending` promise reminders. Safe to run after every add, in any order.
+    private static func trim(_ center: UNUserNotificationCenter) {
+        center.getPendingNotificationRequests { pending in
+            let mine = pending.filter { $0.identifier.hasPrefix("promise:") }
+            guard mine.count > maxPending else { return }
+            let soonest = mine.sorted {
+                let a = ($0.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate() ?? .distantFuture
+                let b = ($1.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate() ?? .distantFuture
+                return a == b ? $0.identifier < $1.identifier : a < b
+            }
+            center.removePendingNotificationRequests(withIdentifiers: soonest.dropFirst(maxPending).map(\.identifier))
         }
     }
 

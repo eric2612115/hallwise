@@ -219,7 +219,8 @@ struct AskPage: View {
             var found = app.link.recordingID
             if found == nil { found = await app.link.latestRecording(base: settings.serverURL) }
             guard let rid = found else {
-                thread.append(Exchange(question: "…", answer: "No recording to ask about yet.", actions: []))
+                let why = ServerAuth.shared.rejected ? ServerAuth.wrongKey + "." : "No recording to ask about yet."
+                thread.append(Exchange(question: "…", answer: why, actions: []))
                 holding = false
                 return
             }

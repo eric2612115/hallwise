@@ -131,13 +131,15 @@ struct RoomPage: View {
         } else {
             VStack(spacing: 8) {
                 bigButton("Start", icon: "mic.fill", fill: Theme.accent, text: Theme.paper) {
-                    app.start()
-                    withAnimation(.easeInOut(duration: 0.35)) { showBadge = true }
+                    if app.start() { withAnimation(.easeInOut(duration: 0.35)) { showBadge = true } }
                 }
                 .padding(.horizontal, 60)
-                Text("Your badge comes back up. Hallwise listens from your chest.")
+                // with no usable address, Start says what it needs instead of streaming to whoever answers
+                Text(settings.serverAddressProblem ?? "Your badge comes back up. Hallwise listens from your chest.")
                     .font(.system(size: 13, design: .serif))
-                    .foregroundStyle(Theme.inkSoft)
+                    .foregroundStyle(settings.serverAddressProblem == nil ? Theme.inkSoft : Theme.ink)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
             }
         }
     }
@@ -451,7 +453,7 @@ struct HookRow: View {
             }
             // the lines it rests on, unless the reason already quotes them
             ForEach(Array(hook.evidence.filter { !$0.quote.isEmpty && !hook.reason.contains($0.quote) }.prefix(3).enumerated()), id: \.offset) { _, e in
-                if let url = URL(string: e.source), !e.source.isEmpty {
+                if let url = ServerData.webURL(e.source) {
                     Link(destination: url) {
                         Label(e.quote + " · " + (url.host() ?? e.source), systemImage: "link").font(.system(size: 13))
                     }

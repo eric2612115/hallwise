@@ -2,8 +2,9 @@ import AVFoundation
 import CoreMotion
 
 /// Captures the badge's microphones as 4-channel first-order ambisonics (ACN order W, Y, Z, X, SN3D) when the
-/// phone supports it, stereo otherwise. Each buffer is converted to interleaved 16-bit PCM for the server, and a
-/// full-quality copy is kept on the phone for the demo soundtrack. The phone's orientation is sampled on the same
+/// phone supports it, stereo otherwise. Each buffer is converted to interleaved 16-bit PCM for the server; a
+/// full-quality copy stays on the phone only when the owner asks for one (Debug, "Keep a copy on this phone"), for
+/// the demo soundtrack, and only for a week. The phone's orientation is sampled on the same
 /// clock (milliseconds of audio captured so far): which way the wearer faces, and whether the badge hangs top-down.
 final class BadgeCapture: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate {
     struct Format {
@@ -18,9 +19,13 @@ final class BadgeCapture: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate
     /// `inverted`: the phone hangs top-down, so the microphones' left and right are swapped.
     var onPose: ((_ tMs: Int, _ heading: Double, _ pitch: Double, _ roll: Double, _ inverted: Bool) -> Void)?
     var onError: ((String) -> Void)?
-    /// While muted nothing leaves the phone (audio or pose); the local file keeps the full take.
+    /// While muted nothing leaves the phone (audio or pose), and nothing goes into the local copy either.
     var muted = false
+    /// Write a raw copy of the take to Documents (opt-in; set before `start`).
+    var keepLocalCopy = false
     private(set) var recordingURL: URL?
+    /// Local copies older than this are deleted at launch.
+    static let localCopyDays = 7
 
     private let session = AVCaptureSession()
     private let output = AVCaptureAudioDataOutput()
@@ -136,20 +141,54 @@ final class BadgeCapture: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate
             openFile(format)
             onFormat?(Format(sampleRate: Int(format.sampleRate), channels: channels, layout: layout))
         }
-        try? file?.write(from: buffer)
         if !muted {
+            try? file?.write(from: buffer)
             onAudio?(interleavedInt16(buffer))
             clockLock.withLock { framesCaptured += Int(frames) }
         }
     }
 
     private func openFile(_ format: AVAudioFormat) {
+        file = nil
+        recordingURL = nil
+        guard keepLocalCopy else { return }
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let url = dir.appendingPathComponent("hallwise-\(layout)-\(stamp).caf")
         file = try? AVAudioFile(forWriting: url, settings: format.settings,
                                 commonFormat: format.commonFormat, interleaved: format.isInterleaved)
+        guard file != nil else { return }
+        Self.protectLocalCopy(url)
         recordingURL = url
+    }
+
+    /// Open files stay writable through the lock (the badge records on a locked phone); closed ones are sealed
+    /// until the next unlock. Never in an iCloud or Finder backup.
+    private static func protectLocalCopy(_ url: URL) {
+        try? FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUnlessOpen], ofItemAtPath: url.path)
+        var url = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? url.setResourceValues(values)
+    }
+
+    /// At launch: local copies older than a week go; the rest (some from before these rules) are protected and
+    /// kept out of backups. Face photos are kept out of backups too.
+    static func tidyLocalCopies(now: Date = Date()) {
+        let fm = FileManager.default
+        let dir = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let cutoff = now.addingTimeInterval(-Double(localCopyDays) * 86_400)
+        let names = (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.creationDateKey, .contentModificationDateKey])) ?? []
+        for url in names where url.lastPathComponent.hasPrefix("hallwise-") && url.pathExtension == "caf" {
+            let values = try? url.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
+            let when = values?.contentModificationDate ?? values?.creationDate ?? now
+            if when < cutoff {
+                try? fm.removeItem(at: url)
+            } else {
+                protectLocalCopy(url)
+            }
+        }
+        if fm.fileExists(atPath: LiveModel.photosRoot.path) { LiveModel.excludeFromBackup(LiveModel.photosRoot) }
     }
 }
 
