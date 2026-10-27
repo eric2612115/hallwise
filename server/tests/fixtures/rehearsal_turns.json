@@ -1,0 +1,687 @@
+{
+ "note": "Every distinct turn of the living-room rehearsals (Oct 27) and the script's two introductions; the people index before tonight.",
+ "owner": {
+  "name": "Eric",
+  "company": "Hallwise"
+ },
+ "index": [
+  {
+   "key": "lena-novak-brightline-grid",
+   "name": "Lena Novak",
+   "company": "Brightline Grid",
+   "encounters": [
+    {
+     "recording": "20261027-032735-1e3d",
+     "event": "Founder dinner",
+     "venue": "Taipei, Da'an",
+     "started": 1792839600.0,
+     "introduced_by": ""
+    },
+    {
+     "recording": "20261027-030551-c42b",
+     "event": "ETH Taipei afterparty",
+     "venue": "Taipei, Xinyi",
+     "started": 1792499400.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-032735-1e3d",
+     "event": "Founder dinner",
+     "started": 1792839600.0,
+     "what": "forward it",
+     "due": "tonight",
+     "direction": "owner_owes"
+    },
+    {
+     "recording": "20261027-032735-1e3d",
+     "event": "Founder dinner",
+     "started": 1792839600.0,
+     "what": "send the deck",
+     "due": "before the second",
+     "direction": "owner_owes"
+    },
+    {
+     "recording": "20261027-030551-c42b",
+     "event": "ETH Taipei afterparty",
+     "started": 1792499400.0,
+     "what": "introduce you to Kenji",
+     "due": "Monday",
+     "direction": "owner_owes"
+    }
+   ]
+  },
+  {
+   "key": "daniel-okafor-gridform",
+   "name": "Daniel Okafor",
+   "company": "Gridform",
+   "encounters": [
+    {
+     "recording": "20261027-032735-1e3d",
+     "event": "Founder dinner",
+     "venue": "Taipei, Da'an",
+     "started": 1792839600.0,
+     "introduced_by": ""
+    },
+    {
+     "recording": "20261027-032636-0a72",
+     "event": "Hardware meetup",
+     "venue": "Taipei, Nangang",
+     "started": 1792668600.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-032636-0a72",
+     "event": "Hardware meetup",
+     "started": 1792668600.0,
+     "what": "grab a coffee at Blockchain Week",
+     "due": "tomorrow",
+     "direction": "owner_owes"
+    }
+   ]
+  },
+  {
+   "key": "sofia-reyes-cobalt-health",
+   "name": "Sofia Reyes",
+   "company": "Cobalt Health",
+   "encounters": [
+    {
+     "recording": "20261027-032735-1e3d",
+     "event": "Founder dinner",
+     "venue": "Taipei, Da'an",
+     "started": 1792839600.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-032735-1e3d",
+     "event": "Founder dinner",
+     "started": 1792839600.0,
+     "what": "set you up with a test build",
+     "due": "next week",
+     "direction": "owner_owes"
+    }
+   ]
+  },
+  {
+   "key": "ben-walker-stride-mobility",
+   "name": "Ben Walker",
+   "company": "Stride Mobility",
+   "encounters": [
+    {
+     "recording": "20261027-032735-1e3d",
+     "event": "Founder dinner",
+     "venue": "Taipei, Da'an",
+     "started": 1792839600.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-032735-1e3d",
+     "event": "Founder dinner",
+     "started": 1792839600.0,
+     "what": "show you the map",
+     "due": "after dinner",
+     "direction": "owner_owes"
+    }
+   ]
+  },
+  {
+   "key": "siddharth-raghunathan-quill-mesh",
+   "name": "Siddharth Raghunathan",
+   "company": "Quill Mesh",
+   "encounters": [
+    {
+     "recording": "20261027-032704-badd",
+     "event": "Blockchain Week side event",
+     "venue": "Taipei, Xinyi",
+     "started": 1792756800.0,
+     "introduced_by": ""
+    },
+    {
+     "recording": "20261027-030551-c42b",
+     "event": "ETH Taipei afterparty",
+     "venue": "Taipei, Xinyi",
+     "started": 1792499400.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-030551-c42b",
+     "event": "ETH Taipei afterparty",
+     "started": 1792499400.0,
+     "what": "pilot numbers",
+     "due": "this week",
+     "direction": "they_owe"
+    }
+   ]
+  },
+  {
+   "key": "tom-s-ferreira-marlin-ventures",
+   "name": "Tomás Ferreira",
+   "company": "Marlin Ventures",
+   "encounters": [
+    {
+     "recording": "20261027-032704-badd",
+     "event": "Blockchain Week side event",
+     "venue": "Taipei, Xinyi",
+     "started": 1792756800.0,
+     "introduced_by": ""
+    },
+    {
+     "recording": "20261027-030551-c42b",
+     "event": "ETH Taipei afterparty",
+     "venue": "Taipei, Xinyi",
+     "started": 1792499400.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-032704-badd",
+     "event": "Blockchain Week side event",
+     "started": 1792756800.0,
+     "what": "deck",
+     "due": "tonight",
+     "direction": "owner_owes"
+    },
+    {
+     "recording": "20261027-032704-badd",
+     "event": "Blockchain Week side event",
+     "started": 1792756800.0,
+     "what": "propose a time for a proper call",
+     "due": "next week",
+     "direction": "owner_owes"
+    },
+    {
+     "recording": "20261027-030551-c42b",
+     "event": "ETH Taipei afterparty",
+     "started": 1792499400.0,
+     "what": "one-pager",
+     "due": "Friday",
+     "direction": "owner_owes"
+    }
+   ]
+  },
+  {
+   "key": "chlo-martin-corvane-capital",
+   "name": "Chloé Martin",
+   "company": "Corvane Capital",
+   "encounters": [
+    {
+     "recording": "20261027-032704-badd",
+     "event": "Blockchain Week side event",
+     "venue": "Taipei, Xinyi",
+     "started": 1792756800.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-032704-badd",
+     "event": "Blockchain Week side event",
+     "started": 1792756800.0,
+     "what": "one-pager",
+     "due": "",
+     "direction": "owner_owes"
+    }
+   ]
+  },
+  {
+   "key": "yuki-tanaka-sakura-ventures",
+   "name": "Yuki Tanaka",
+   "company": "Sakura Ventures",
+   "encounters": [
+    {
+     "recording": "20261027-032704-badd",
+     "event": "Blockchain Week side event",
+     "venue": "Taipei, Xinyi",
+     "started": 1792756800.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-032704-badd",
+     "event": "Blockchain Week side event",
+     "started": 1792756800.0,
+     "what": "add to the update list",
+     "due": "",
+     "direction": "owner_owes"
+    }
+   ]
+  },
+  {
+   "key": "ahmed-rahman-pandan-pay",
+   "name": "Ahmed Rahman",
+   "company": "Pandan Pay",
+   "encounters": [
+    {
+     "recording": "20261027-032704-badd",
+     "event": "Blockchain Week side event",
+     "venue": "Taipei, Xinyi",
+     "started": 1792756800.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": []
+  },
+  {
+   "key": "kenji-watanabe-hoshizora-robotics",
+   "name": "Kenji Watanabe",
+   "company": "Hoshizora Robotics",
+   "encounters": [
+    {
+     "recording": "20261027-032636-0a72",
+     "event": "Hardware meetup",
+     "venue": "Taipei, Nangang",
+     "started": 1792668600.0,
+     "introduced_by": ""
+    },
+    {
+     "recording": "20261027-030551-c42b",
+     "event": "ETH Taipei afterparty",
+     "venue": "Taipei, Xinyi",
+     "started": 1792499400.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-030551-c42b",
+     "event": "ETH Taipei afterparty",
+     "started": 1792499400.0,
+     "what": "message you",
+     "due": "",
+     "direction": "owner_owes"
+    }
+   ]
+  },
+  {
+   "key": "hana-sato-hoshizora-robotics",
+   "name": "Hana Sato",
+   "company": "Hoshizora Robotics",
+   "encounters": [
+    {
+     "recording": "20261027-032636-0a72",
+     "event": "Hardware meetup",
+     "venue": "Taipei, Nangang",
+     "started": 1792668600.0,
+     "introduced_by": "Kenji Watanabe"
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-032636-0a72",
+     "event": "Hardware meetup",
+     "started": 1792668600.0,
+     "what": "technical note on the ambisonics",
+     "due": "tomorrow",
+     "direction": "owner_owes"
+    }
+   ]
+  },
+  {
+   "key": "priya-menon-lumen-optics",
+   "name": "Priya Menon",
+   "company": "Lumen Optics",
+   "encounters": [
+    {
+     "recording": "20261027-032636-0a72",
+     "event": "Hardware meetup",
+     "venue": "Taipei, Nangang",
+     "started": 1792668600.0,
+     "introduced_by": ""
+    }
+   ],
+   "promises": [
+    {
+     "recording": "20261027-032636-0a72",
+     "event": "Hardware meetup",
+     "started": 1792668600.0,
+     "what": "introduce you to Siddharth at Quill Mesh",
+     "due": "this week",
+     "direction": "owner_owes"
+    }
+   ]
+  }
+ ],
+ "turns": [
+  {
+   "recording": "20261027-010106-543d",
+   "speaker": "1:A",
+   "text": "Hi I'm Sarah from Acme we build payment tools for um small shops"
+  },
+  {
+   "recording": "20261027-010106-543d",
+   "speaker": "1:B",
+   "text": "Nice to meet you Sarah I'm Eric from Vexi I'll send you our deck tonight"
+  },
+  {
+   "recording": "20261027-010106-543d",
+   "speaker": "1:A",
+   "text": "Great coffee on Thursday actually no Friday works better"
+  },
+  {
+   "recording": "20261027-010603-ec8f",
+   "speaker": "1:A",
+   "text": "Vexi,"
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:A",
+   "text": "Hey Eric! I'm Kevin, I'm at Northwind Labs, we do wallet infrastructure."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:B",
+   "text": "Eric, from Vexy. We build options trading."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:B",
+   "text": "I'll send you our deck tonight."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:A",
+   "text": "Nice. You should meet Siddharth, he's by the sofa."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:C",
+   "text": "Something to drink?"
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:B",
+   "text": "I'm good, thanks."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:D",
+   "text": "Restaking yields are down again this week."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:E",
+   "text": "Yeah, everyone's moving to points programs."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:F",
+   "text": "So the pilot basically paid for itself. Oh hi, you must be Eric?"
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:B",
+   "text": "That's me. Hi everyone."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:F",
+   "text": "I'm Siddharth, Siddharth Ragoo Nathan. I run Quill Mesh, we um schedule warehouse robots."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:G",
+   "text": "Margo Lefebvre, Corvane Capital."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:H",
+   "text": "Wei Ling from Pandan Pay, payments for uh hawker stalls in Singapore."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:B",
+   "text": "Margaux, are you investing this quarter?"
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:G",
+   "text": "Pre-seed, yes. Send me your one pager, en français si possible, c'est pour mon associé."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:B",
+   "text": "Will do. Wei Ling, Kevin builds wallets. I'll introduce you two."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:F",
+   "text": "And Eric, we launch in, sorry, we pilot next week. Launch is March."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:B",
+   "text": "Sorry, excuse me."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:I",
+   "text": "Ah excuse me, Eric? Siddharth said you know trading systems."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:B",
+   "text": "I do. Nice to meet you."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:I",
+   "text": "Kenji Watanabe, Hoshizora Robotics. W A T A N A B E."
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:B",
+   "text": "Coffee on Thursday?"
+  },
+  {
+   "recording": "20261027-010808-59d6",
+   "speaker": "1:I",
+   "text": "Thursday is, no, Friday. Friday is better. Could you send it in Japanese? 部長も読むので。"
+  },
+  {
+   "recording": "20261027-011327-9dba",
+   "speaker": "1:B",
+   "text": "Eric, from Hall Wise. We make this badge."
+  },
+  {
+   "recording": "20261027-011853-7ee4",
+   "speaker": "1:G",
+   "text": "Pre-seed, yes. Send me your one pager. Bon, ça c'est intéressant."
+  },
+  {
+   "recording": "20261027-011853-7ee4",
+   "speaker": "1:I",
+   "text": "Thursday is, no, Friday. Friday is better. 金曜日ね、メモしておこう。"
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:A",
+   "text": "Eric Haye, you made it."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:B",
+   "text": "Leo, good to see you."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:A",
+   "text": "So for the badge, Leo Wong, Bright Path, we build wallet infrastructure for apps."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:B",
+   "text": "I'm Eric from Hallwise, this badge."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:A",
+   "text": "A name badge that listens. Okay, I want to see that."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:A",
+   "text": "Tonight, I'll hold you to that."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:B",
+   "text": "One photo. There, now you have a face."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:B",
+   "text": "It takes a few seconds."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:A",
+   "text": "Come, you should meet Margaux and Julian."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:C",
+   "text": "Franchement, le deck d'hier, j'ai rien compris à leur modèle."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:D",
+   "text": "Pareil, zéro chiffre."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:A",
+   "text": "Margaux, Julian, this is Eric. Eric makes the badge."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:B",
+   "text": "Hi, Eric from Hallwise. May I join your conversation?"
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:E",
+   "text": "Margot Lefebvre, convine I'm with Margot. I use a diligence."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:C",
+   "text": "Yes, send me your one pager. Bon, une page avec des chiffres."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:B",
+   "text": "One page with numbers tomorrow."
+  },
+  {
+   "recording": "20261027-061133-b504",
+   "speaker": "1:E",
+   "text": "Come by our office next week and show us a demo. Wednesday afternoon."
+  },
+  {
+   "recording": "20261027-062241-d3c5",
+   "speaker": "1:A",
+   "text": "Eric Hay, you made it."
+  },
+  {
+   "recording": "20261027-062241-d3c5",
+   "speaker": "1:C",
+   "text": "Margot Lefebvre,"
+  },
+  {
+   "recording": "20261027-062241-d3c5",
+   "speaker": "1:D",
+   "text": "I was Margot, I do the diligence."
+  },
+  {
+   "recording": "20261027-062241-d3c5",
+   "speaker": "1:C",
+   "text": "Pre-seed, yes. Send me a one pager. Bon, une page avec des chiffres."
+  },
+  {
+   "recording": "20261027-062241-d3c5",
+   "speaker": "1:D",
+   "text": "Come by our office next week and show us the demo. Wednesday afternoon."
+  },
+  {
+   "recording": "20261027-062241-d3c5",
+   "speaker": "1:B",
+   "text": "Wednesday works."
+  },
+  {
+   "recording": "20261027-062241-d3c5",
+   "speaker": "1:F",
+   "text": "Eric, c'est from blockchain week. You know Kenji."
+  },
+  {
+   "recording": "20261027-062241-d3c5",
+   "speaker": "1:B",
+   "text": "It remembered both before I did. Kenji the coffee Thursday."
+  },
+  {
+   "recording": "20261027-064036-3f3e",
+   "speaker": "1:B",
+   "text": "One photo."
+  },
+  {
+   "recording": "20261027-064036-3f3e",
+   "speaker": "1:B",
+   "text": "There, now you have a face."
+  },
+  {
+   "recording": "20261027-064036-3f3e",
+   "speaker": "1:A",
+   "text": "Come, you should meet Margox and Julian."
+  },
+  {
+   "recording": "20261027-064036-3f3e",
+   "speaker": "1:A",
+   "text": "Margaux, Julian, this is Eric, Eric makes the badge."
+  },
+  {
+   "recording": "20261027-064036-3f3e",
+   "speaker": "1:C",
+   "text": "Margot Lefèvre,"
+  },
+  {
+   "recording": "20261027-064036-3f3e",
+   "speaker": "1:C",
+   "text": "Pre-seed, yes. Send me your one pager. Bon une page avec des chiffres."
+  },
+  {
+   "recording": "20261027-064036-3f3e",
+   "speaker": "1:F",
+   "text": "Eric, from blockchain week, you know Kenji."
+  },
+  {
+   "recording": "20261027-064036-3f3e",
+   "speaker": "1:G",
+   "text": "Kenji Watanabe we keep running into each other."
+  },
+  {
+   "recording": "20261027-064036-3f3e",
+   "speaker": "1:G",
+   "text": "Thursday is no Friday, Friday is better."
+  },
+  {
+   "recording": "demo/SCRIPT",
+   "speaker": "1:F",
+   "text": "Eric! Siddharth Raghunathan, Quill Mesh, we met at Blockchain Week. You know Kenji."
+  },
+  {
+   "recording": "demo/SCRIPT",
+   "speaker": "1:F",
+   "text": "Kenji Watanabe, Hoshizora Robotics. We keep running into each other."
+  }
+ ]
+}
