@@ -6,8 +6,16 @@ import numpy as np
 import pytest
 
 from hallwise.asr import FakeAsr
-from hallwise.direction import DirectionTracker, SpeakerPositions, circular_mean, wrap
-from hallwise.events import read_events
+from hallwise.direction import (
+    WEARER_MIN_ELEVATION,
+    DirectionTracker,
+    SpeakerPositions,
+    Wearer,
+    circular_mean,
+    wrap,
+)
+from hallwise.events import fold_record, read_events
+from hallwise.extract import Extractor
 from hallwise.recording import Hello, Recording
 
 RATE = 48_000
@@ -404,10 +412,10 @@ def test_recording_leaves_simulator_audio_in_the_screen_frame(tmp_path):
 @pytest.mark.parametrize("inverted", [False, True])
 def test_a_camera_frame_badge_hanging_upside_down_still_puts_left_on_the_left(tmp_path, inverted):
     # A on the wearer's left at 50°, B on the right at -40°, C straight behind; the wearer faces 20° in the room.
+    # iOS turns its ambisonic frame with the phone, so hanging top-down the audio is not mirrored (see the next test).
     gap = np.zeros((int(0.5 * RATE), 4))
     screen = np.concatenate(
-        [encode(voice(1.0), heard(50, inverted)), gap, encode(voice(1.0), heard(-40, inverted)), gap,
-         encode(voice(1.0), heard(180, inverted)), gap]
+        [encode(voice(1.0), 50), gap, encode(voice(1.0), -40), gap, encode(voice(1.0), 180), gap]
     )
     script = [
         {"start_ms": 0, "end_ms": 1000, "speaker": "A", "text": "Hi, I'm Sarah."},
@@ -430,3 +438,181 @@ def test_a_camera_frame_badge_hanging_upside_down_still_puts_left_on_the_left(tm
     device = {e["speaker"]: e["azimuth_device"] for e in positions}
     assert device["1:A"] == pytest.approx(50, abs=5) and device["1:B"] == pytest.approx(-40, abs=5)
     assert angle_off(device["1:C"], 180) < 5
+
+
+# --- measured on the owner's iPhone 17 Pro, hanging upside down on his chest ------------------------------------------
+
+
+def encode_up(signal: np.ndarray, azimuth: float, elevation: float) -> np.ndarray:
+    """A plane wave from `azimuth`, `elevation` degrees above the horizontal, as FOA: W, Y, Z, X (SN3D)."""
+    a, e = math.radians(azimuth), math.radians(elevation)
+    return np.stack(
+        [signal, signal * math.sin(a) * math.cos(e), signal * math.sin(e), signal * math.cos(a) * math.cos(e)], axis=1
+    )
+
+
+def test_a_camera_frame_badge_upside_down_is_not_negated_again():
+    # 73b5, "这是左边": the guest on the wearer's left came in at -34° in the microphones' own (camera) axes with the
+    # phone top-down. iOS had already turned the frame with the phone: after the half turn that is +146°, left.
+    tracker = DirectionTracker(RATE, "foa", "camera")
+    tracker.add(to_int16(encode(voice(1.0), -34) + diffuse(1.0, 0.02)))
+    tracker.add_pose(0, 0.0, True)
+    where = tracker.direction(0, 1000)
+    assert where["inverted"] is True  # still reported as the poses said
+    assert where["azimuth_device"] == pytest.approx(146, abs=5)  # positive: the wearer's left
+    assert where["azimuth_room"] == pytest.approx(146, abs=5)
+
+
+def test_the_screen_frame_still_negates_a_top_down_badge_and_the_camera_frame_does_not():
+    signal = to_int16(encode_up(voice(1.0), 60, 30) + diffuse(1.0, 0.02))
+    screen, camera = DirectionTracker(RATE, "foa", "screen"), DirectionTracker(RATE, "foa", "camera")
+    for tracker in (screen, camera):
+        tracker.add(signal)
+        tracker.add_pose(0, 0.0, True)
+    s, c = screen.direction(0, 1000), camera.direction(0, 1000)
+    assert s["azimuth_device"] == pytest.approx(-60, abs=5)  # top-down in the screen frame: mirrored back
+    assert s["elevation"] == pytest.approx(-30, abs=5)  # and turned over
+    assert angle_off(c["azimuth_device"], wrap(60 + 180)) < 5  # only the camera frame's half turn
+    assert c["elevation"] == pytest.approx(30, abs=5)  # iOS keeps up up
+
+
+@pytest.mark.parametrize("elevation", [70, 20, -15])
+def test_a_turn_reports_how_far_above_the_badge_it_came_from(elevation):
+    tracker = DirectionTracker(RATE, "foa", "camera")
+    tracker.add(to_int16(camera_axes(encode_up(voice(1.0), 30, elevation)) + diffuse(1.0, 0.01)))
+    where = tracker.direction(0, 1000)
+    assert where["elevation"] == pytest.approx(elevation, abs=5)
+    assert where["confidence_3d"] > 0.7
+    if elevation == 70:  # mostly vertical: the flat confidence calls it room, the 3-D one does not
+        assert where["confidence"] < 0.5
+
+
+def test_the_wearer_is_the_label_whose_confident_turns_come_from_high_above():
+    w = Wearer()
+    for elevation in (11.3, 35.7, 22.8, 8.1, 28.8):  # Ken, 73b5
+        w.update("1:A", elevation, 0.7)
+    w.update("1:B", 72.5, 0.72)
+    assert w.find() is None  # one turn is not enough
+    w.update("1:B", 64.4, 0.57)
+    assert w.find() == ("1:B", 68.5)
+
+
+def test_no_wearer_while_no_label_is_clearly_high():
+    level = Wearer()
+    for s, elevation in (("1:A", 20), ("1:A", 30), ("1:B", 35), ("1:B", 40)):
+        level.update(s, elevation, 0.8)
+    assert level.find() is None  # nobody above the threshold
+    split = Wearer()
+    for s, elevation in (("1:A", 70), ("1:A", 64), ("1:B", 55), ("1:B", 60)):
+        split.update(s, elevation, 0.8)
+    assert split.find() is None  # two voices from above: not clearly one of them
+    room = Wearer()
+    for elevation in (70, 66):
+        room.update("1:A", elevation, 0.2)  # mostly room, whichever way it leans
+    assert room.find() is None
+
+
+def test_one_guest_turn_that_reads_high_does_not_hide_the_wearer():
+    # e144: Ken's only turn opens with two seconds of the owner, the louder voice, so it can read high.
+    w = Wearer()
+    w.update("1:A", 49.8, 0.94)
+    w.update("1:A", 69.4, 0.73)
+    w.update("1:B", 71.5, 0.49)
+    assert w.find() == ("1:A", 59.6)
+    w.update("1:B", 68.0, 0.5)  # but a second one makes it a second voice from above
+    assert w.find() is None
+    assert WEARER_MIN_ELEVATION == 45.0
+
+
+def wearer_and_guest() -> tuple[np.ndarray, list[dict]]:
+    """Screen-frame audio: A, a guest at the wearer's left, nearly level; B, the wearer, from high above (so high that
+    the flat confidence reads mostly room, as the owner's turns did in 73b5); two turns each."""
+    gap = np.zeros((int(0.5 * RATE), 4))
+    parts, script = [], []
+    for i, (who, az, el, text) in enumerate((
+        ("A", 60, 15, "Hey, Eric. I'm Ken from Vexy."),
+        ("B", 0, 75, "Ken! I'll send you the deck tonight."),
+        ("A", 50, 25, "Great, thanks."),
+        ("B", 10, 78, "And you'll intro me to your CTO?"),
+    )):
+        parts += [encode_up(voice(1.0), az, el), gap]
+        script.append({"start_ms": i * 1500, "end_ms": i * 1500 + 1000, "speaker": who, "text": text})
+    return np.concatenate(parts) + diffuse(6.0, 0.01), script
+
+
+class StubSpark:
+    """Muse Spark stand-in: keeps every prompt, and names the owner as it is told to (no network)."""
+
+    def __init__(self, owner=()):
+        self.owner, self.prompts = list(owner), []
+
+    async def __call__(self, system, user, **kw):
+        self.prompts.append(user)
+        await asyncio.sleep(0)
+        return {"owner_speakers": list(self.owner), "turns": [], "people": [], "mentioned": [], "promises": [],
+                "suspect_words": [], "translations": [], "room_topics": []}
+
+
+def run_with_spark(tmp_path, foa, script, hello, spark, inverted=True):
+    rec = Recording(
+        tmp_path, hello, lambda sink, *, rate, hello: FakeAsr(sink, rate=rate, script=hello.fake_script),
+        lambda h: Extractor(spark, h.owner_name, h.owner_company, []), make_second=lambda: None,
+    )
+
+    async def run():
+        await rec.start()
+        rec.on_pose({"t_ms": 0, "yaw": 0.0, "inverted": inverted})
+        data = foa.tobytes()
+        for i in range(0, len(data), 4 * 2 * 4800):
+            await rec.on_audio(data[i : i + 4 * 2 * 4800])
+            await asyncio.sleep(0)
+        await rec.close()
+
+    asyncio.run(run())
+    return read_events(rec.dir / "events.jsonl")
+
+
+def test_an_iphone_badge_names_the_owner_by_elevation_and_the_prompt_marks_him(tmp_path):
+    foa, script = wearer_and_guest()
+    spark = StubSpark()  # names no owner itself: only the elevation can
+    events = run_with_spark(tmp_path, to_int16(camera_axes(foa)), script, badge_hello(script, owner_name="Eric"), spark)
+    positions = [e for e in events if e["type"] == "position"]
+    assert [e["elevation"] for e in positions] == [pytest.approx(x, abs=5) for x in (15, 75, 25, 78)]
+    assert all(e["confidence"] < 0.3 for e in positions if e["speaker"] == "1:B")  # the 3-D share is what counts
+    (owner,) = [e for e in events if e["type"] == "owner"]
+    assert owner["speakers"] == ["1:B"] and owner["source"] == "elevation"
+    assert owner["elevation"] == pytest.approx(76.5, abs=5)
+    assert owner["t_ms"] == script[3]["end_ms"]  # at the wearer's second turn
+    assert fold_record(events)["owner_speakers"] == ["1:B"]  # a later Spark run listing nobody does not undo it
+    last = spark.prompts[-1]
+    assert "Owner's voice: speaker 1:B" in last
+    assert "turn 4 [1:B, Eric (owner)]" in last and "turn 3 [1:A]" in last
+
+
+def test_the_elevation_joins_the_owner_spark_named_and_does_not_replace_it(tmp_path):
+    foa, script = wearer_and_guest()
+    spark = StubSpark(owner=["1:C"])  # say Spark had heard him introduce himself under another label too
+    events = run_with_spark(tmp_path, to_int16(camera_axes(foa)), script, badge_hello(script, owner_name="Eric"), spark)
+    assert fold_record(events)["owner_speakers"] == ["1:B", "1:C"]
+
+
+def test_rehearsal_audio_never_names_the_owner_by_elevation(tmp_path):
+    # The same voices, synthesised in the screen frame and streamed as the simulator (upright, as stream_wav.py
+    # sends it): Eric still reads from high above, but the owner comes from the transcript only.
+    foa, script = wearer_and_guest()
+    spark = StubSpark()
+    hello = badge_hello(script, owner_name="Eric", device="simulator")
+    events = run_with_spark(tmp_path, to_int16(foa), script, hello, spark, inverted=False)
+    assert [e["elevation"] > 45 for e in events if e["type"] == "position"] == [False, True, False, True]
+    assert not [e for e in events if e["type"] == "owner"]
+    assert all("(owner)" not in p and "Owner's voice" not in p for p in spark.prompts)
+
+
+def test_no_owner_by_elevation_when_nobody_speaks_from_above(tmp_path):
+    foa, script = wearer_and_guest()
+    level = np.concatenate([
+        encode_up(voice(1.0), az, el) if i % 2 == 0 else np.zeros((int(0.5 * RATE), 4))
+        for az, el in ((60, 15), (0, 20), (50, 25), (10, 30)) for i in range(2)
+    ]) + diffuse(6.0, 0.01)
+    events = run_with_spark(tmp_path, to_int16(camera_axes(level)), script, badge_hello(script), StubSpark())
+    assert not [e for e in events if e["type"] == "owner"]

@@ -16,8 +16,13 @@ on its left because the half turn also turns the left itself round. Which frame 
 
 The badge's "yaw" is the direction its screen faces (taken from the attitude matrix, not Euler yaw, which locks up
 on an upright phone). A phone hanging top-down on its lanyard is turned 180° about the screen normal, so its left
-and right swap: its poses say `inverted`, and the azimuth it hears is negated back into the wearer's frame before
-the yaw is added.
+and right swap, and so do its up and down: its poses say `inverted`. In the screen frame the azimuth it hears is
+negated back into the wearer's frame before the yaw is added (and the elevation with it). An iPhone's own
+ambisonics needs none of that: iOS already turns the ambisonic frame with the phone (FRAME_UPRIGHT).
+
+The elevation (Z, ACN channel 2, against the horizontal intensity) is what tells the wearer apart: the mouth is a
+hand's width above a badge on the chest, so the wearer's own voice arrives from high above and everyone else's
+from about level (Wearer).
 
 Only the louder half of a turn's 20 ms blocks counts, so the talker's own voice outweighs the room around them.
 """
@@ -34,6 +39,24 @@ BLOCK_MS = 20
 
 # How far the microphones' azimuth is turned to reach the screen frame, per `foa_frame`.
 FRAME_ROTATION = {"screen": 0.0, "camera": 180.0}
+
+# Whether the audio already arrives upright when the phone hangs top-down, per `foa_frame`. An iPhone's own
+# ambisonics does: measured on an iPhone 17 Pro hanging upside down on the owner's chest (recordings
+# 20261027-195430-73b5 and 20261027-195003-e144), the owner's own voice still read from above (+52° to +83°), and
+# with the top-down negation a guest on the wearer's left came out negative and one on the right positive; without
+# it, left came out near +145° and right near -160°. The screen frame (the rig, the rehearsal audio) does not.
+FRAME_UPRIGHT = {"screen": False, "camera": True}
+
+# The wearer's own voice arrives from above the badge. Measured on that iPhone on the owner's chest, per second,
+# 300-4000 Hz: the owner read +52° to +83°, a guest standing at his front, left, back or right -24° to +39°, and a
+# threshold near +45° split them every time. Per turn (broadband, the louder half of the blocks, as here) the owner's
+# four turns read +50° to +73° and the guest's five confident ones +8° to +36°: medians +68.5° against +22.8° (73b5).
+WEARER_MIN_ELEVATION = 45.0
+WEARER_MARGIN = 20.0  # "clearly above": the wearer's median beats every other voice's by at least this much
+WEARER_MIN_TURNS = 2
+# Of the 3-D intensity (confidence_3d): the wearer's voice comes from nearly straight up, so the flat `confidence`
+# reads it as mostly room (0.22 and 0.25 for the owner's two turns in 73b5) when it is mostly direct sound (0.72, 0.57).
+WEARER_MIN_CONFIDENCE = 0.3
 
 
 def wrap(degrees: float) -> float:
@@ -62,6 +85,7 @@ class DirectionTracker:
         self._carry = np.zeros((0, 4))
         self._ix: list[float] = []
         self._iy: list[float] = []
+        self._iz: list[float] = []
         self._energy: list[float] = []
         self._pose_t: list[int] = []
         self._pose_yaw: list[float] = []
@@ -78,9 +102,10 @@ class DirectionTracker:
             return
         b = data[: blocks * self.block].reshape(blocks, self.block, 4)
         b = b - b.mean(axis=1, keepdims=True)  # drop DC per block
-        w, y, x = b[:, :, 0], b[:, :, 1], b[:, :, 3]
+        w, y, z, x = b[:, :, 0], b[:, :, 1], b[:, :, 2], b[:, :, 3]
         self._ix.extend((w * x).sum(axis=1).tolist())
         self._iy.extend((w * y).sum(axis=1).tolist())
+        self._iz.extend((w * z).sum(axis=1).tolist())
         self._energy.extend((w * w).sum(axis=1).tolist())
 
     def add_pose(self, t_ms: int, yaw_deg: float, inverted: bool = False) -> None:
@@ -120,11 +145,15 @@ class DirectionTracker:
             return None
         ix = float(np.array(self._ix[i0:i1])[loud].sum())
         iy = float(np.array(self._iy[i0:i1])[loud].sum())
+        iz = float(np.array(self._iz[i0:i1])[loud].sum())
         # The one place the audio's own frame becomes the screen frame; everything after it is in the screen frame.
+        # The half turn of the camera frame is about the vertical axis, so it leaves the elevation alone.
         device = math.degrees(math.atan2(iy, ix)) + FRAME_ROTATION[self.frame]
+        elevation = math.degrees(math.atan2(iz, math.hypot(ix, iy)))
         inverted = self.inverted(start_ms, end_ms)
-        if inverted:
+        if inverted and not FRAME_UPRIGHT[self.frame]:
             device = -device  # top-down, the microphones' left is the wearer's right
+            elevation = -elevation  # and their up is the wearer's down
         yaw = self.yaw(start_ms, end_ms)
         # Loudness of the talker over their louder blocks, in dBFS of the omni channel: nearer is louder.
         # Together with confidence (direct sound vs room reverberation) it is the cue for distance; the UI
@@ -138,6 +167,10 @@ class DirectionTracker:
             "has_pose": yaw is not None,
             "inverted": inverted,
             "confidence": round(min(1.0, math.hypot(ix, iy) / e), 2),
+            # Degrees above the horizontal: the wearer's own voice comes from high up (Wearer). confidence_3d is the
+            # same share of direct sound as `confidence`, counting the vertical part too.
+            "elevation": round(elevation, 1),
+            "confidence_3d": round(min(1.0, math.sqrt(ix * ix + iy * iy + iz * iz) / e), 2),
             "level_db": round(level_db, 1),
         }
 
@@ -188,3 +221,41 @@ class SpeakerPositions:
         if low_confidence:
             out["low_confidence"] = True
         return out
+
+
+@dataclass
+class Wearer:
+    """Which speaker label is the badge's wearer: the one whose confident turns arrive from high above it.
+
+    A label is the wearer once it has at least WEARER_MIN_TURNS turns at or above WEARER_MIN_CONFIDENCE (of the 3-D
+    intensity), their median elevation is at least WEARER_MIN_ELEVATION, and that median is WEARER_MARGIN above the
+    median of every other label with as many confident turns. A label with fewer turns does not count against it: a
+    guest's turn often starts while the wearer is still talking (the speaker labels are wrong at the edges), and the
+    wearer, a hand's width from the microphones, is the louder voice, so a single guest turn can read high (Ken's
+    only turn in 20261027-195003-e144 opens with two seconds of the owner from +70° to +87°).
+
+    Only for an iPhone's own audio (recording.py): the rehearsal audio places Eric at +70° too, and it keeps naming
+    the owner from the transcript alone, as it always has.
+    """
+
+    _elevations: dict[str, list[float]] = field(default_factory=dict)
+
+    def update(self, speaker: str, elevation: float | None, confidence: float | None) -> None:
+        if elevation is None or (confidence or 0.0) < WEARER_MIN_CONFIDENCE:
+            return
+        self._elevations.setdefault(speaker, []).append(float(elevation))
+
+    def medians(self) -> dict[str, float]:
+        """Median elevation per label with enough confident turns to count."""
+        return {s: float(np.median(e)) for s, e in self._elevations.items() if len(e) >= WEARER_MIN_TURNS}
+
+    def find(self) -> tuple[str, float] | None:
+        """The wearer's label and its median elevation, or None while no label is clearly high."""
+        medians = self.medians()
+        if not medians:
+            return None
+        top = max(medians, key=medians.__getitem__)
+        rest = [m for s, m in medians.items() if s != top]
+        if medians[top] < WEARER_MIN_ELEVATION or (rest and medians[top] - max(rest) < WEARER_MARGIN):
+            return None
+        return top, round(medians[top], 1)

@@ -72,6 +72,35 @@ def test_prompt_lists_owner_vocabulary_and_numbered_turns():
     assert "Owner: Eric, from Vexi" in prompt
     assert "Vexi, Raghunathan" in prompt
     assert "turn 3 [1:B] 1:05.7-1:09.6: I'm Eric, from Vexi." in prompt
+    assert "(owner)" not in prompt and "Owner's voice" not in prompt  # no wearer found: as it always was
+
+
+def test_prompt_marks_the_wearer_as_the_owner():
+    turns = [Turn(0, "1:A", 17_340, 22_220, "Hey, Eric. I'm Ken from Vexy."),
+             Turn(1, "1:B", 22_300, 25_000, "I'll send you the deck tonight.")]
+    prompt = build_prompt(turns, "Eric", "Hallwise", [], wearer="1:B")
+    assert "Owner's voice: speaker 1:B" in prompt
+    assert "turn 1 [1:B, Eric (owner)] 0:22.3-0:25.0: I'll send you the deck tonight." in prompt
+    assert "turn 0 [1:A] 0:17.3-0:22.2: Hey, Eric." in prompt  # the guest is not marked
+    assert "[1:B, the owner (owner)]" in build_prompt(turns, "", "", [], wearer="1:B")
+
+
+def test_a_wearer_joins_sparks_owner_and_is_not_announced_twice():
+    llm = ScriptedLLM(state(owner_speakers=["1:C"]), state(owner_speakers=[]))
+    extractor = Extractor(llm, "Eric", "Hallwise")
+    assert extractor.set_wearer("1:B") == ["1:B"]
+    assert extractor.state["owner_speakers"] == ["1:B"]  # at once, for the fast "met before" path
+    extractor.add_turn(Turn(0, "1:B", 0, 1000, "I'll send you the deck."))
+    first = asyncio.run(extractor.run())
+    assert "turn 0 [1:B, Eric (owner)]" in llm.prompts[-1]
+    assert [e for e in first if e[0] == "owner"] == [("owner", 1000, {"speakers": ["1:B", "1:C"]})]
+    extractor.add_turn(Turn(1, "1:A", 1000, 2000, "Thanks."))
+    second = asyncio.run(extractor.run())  # Spark drops 1:C; the wearer stays
+    assert [e for e in second if e[0] == "owner"] == [("owner", 2000, {"speakers": ["1:B"]})]
+    assert extractor.set_wearer("") == []  # withdrawn: only what Spark itself listed (nothing, by now) is left
+    extractor.add_turn(Turn(2, "1:B", 2000, 3000, "Bye."))
+    asyncio.run(extractor.run())
+    assert "(owner)" not in llm.prompts[-1]
 
 
 def test_diff_emits_only_what_is_new_or_changed():

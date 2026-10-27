@@ -158,6 +158,9 @@ Rules:
   spelled-out name. Never guess a name. A person may speak under more than one speaker key.
 - The owner introduces himself with the name and company given below. List his speaker keys in owner_speakers
   and never put him in people.
+- When the prompt names the owner's voice (a speaker key the badge hears from just above, where his mouth is), that
+  key is the owner whatever is said in it: list it in owner_speakers. A commitment spoken under it is owed_by
+  "owner"; one made to it is owed_to "owner".
 - kind of each turn: conversation = part of an exchange with the owner; incidental = small talk aimed at no one in
   particular or at staff ("thanks", "excuse me", "something to drink?"); ambient = other people's conversations
   the owner is not part of; stage = an announcement or speaker addressing the room; noise = not speech.
@@ -188,24 +191,42 @@ class Turn:
     end_ms: int
     text: str
 
-    def line(self) -> str:
+    def line(self, who: str = "") -> str:
         def mmss(ms: int) -> str:
             return f"{ms // 60000}:{ms // 1000 % 60:02d}.{ms // 100 % 10}"
 
-        return f"turn {self.turn} [{self.speaker}] {mmss(self.start_ms)}-{mmss(self.end_ms)}: {self.text}"
+        label = f"{self.speaker}, {who}" if who else self.speaker
+        return f"turn {self.turn} [{label}] {mmss(self.start_ms)}-{mmss(self.end_ms)}: {self.text}"
+
+
+def owner_label(owner_name: str) -> str:
+    """How the owner's own voice is marked in the transcript: "Eric (owner)"."""
+    return f"{owner_name or 'the owner'} (owner)"
 
 
 def build_prompt(
-    turns: list[Turn], owner_name: str, owner_company: str, vocabulary: list[str], known: list[str] | None = None
+    turns: list[Turn],
+    owner_name: str,
+    owner_company: str,
+    vocabulary: list[str],
+    known: list[str] | None = None,
+    wearer: str = "",
 ) -> str:
+    """`wearer`: the speaker key the badge hears from just above, the owner's own voice (direction.Wearer), or ""."""
+    who = owner_label(owner_name)
     lines = [
         f"Owner: {owner_name or 'unknown'}" + (f", from {owner_company}" if owner_company else ""),
+        *(
+            [f"Owner's voice: speaker {wearer}, which the badge hears from just above it, where the owner's mouth is; "
+             f"its turns are marked [{wearer}, {who}]. Whatever is said under {wearer}, the owner says it."]
+            if wearer else []
+        ),
         "Vocabulary (names and terms the owner has confirmed before): " + (", ".join(vocabulary) or "none"),
         "People the owner has met at earlier events (use these spellings when one of them turns up): "
         + ("; ".join(known) if known else "none"),
         "",
         "Transcript:",
-        *(t.line() for t in turns),
+        *(t.line(who if wearer and t.speaker == wearer else "") for t in turns),
     ]
     return "\n".join(lines)
 
@@ -408,20 +429,37 @@ class Extractor:
         self.known: list[str] = []  # "Name, Company" of people met at earlier events
         self.turns: list[Turn] = []
         self.state: dict[str, Any] = {}
+        # The speaker key the badge hears from just above (direction.Wearer): the owner's own voice, measured rather
+        # than read from the transcript. It joins whatever Muse Spark lists as the owner; it never replaces it.
+        self.wearer = ""
+        self._spark_owner: list[str] = []  # owner_speakers as Muse Spark last listed them
 
     def add_turn(self, turn: Turn) -> None:
         self.turns.append(turn)
+
+    def owner_speakers(self) -> list[str]:
+        return sorted(set(self._spark_owner) | ({self.wearer} if self.wearer else set()))
+
+    def set_wearer(self, speaker: str) -> list[str]:
+        """The owner's own voice, found from elevation ("" withdraws it); returns every speaker key of the owner now.
+        The next run's prompt marks it as the owner; the picture so far has it at once, so no run re-announces it."""
+        self.wearer = speaker
+        self.state = {**self.state, "owner_speakers": self.owner_speakers()}
+        return self.state["owner_speakers"]
 
     async def run(self) -> list[tuple[str, int, dict[str, Any]]]:
         """Run Muse Spark on the transcript so far; return (type, t_ms, data) for everything new or changed."""
         if not self.turns:
             return []
         turns = list(self.turns)
-        result = await self.llm(SYSTEM, build_prompt(turns, self.owner_name, self.owner_company, self.vocabulary, self.known))
+        prompt = build_prompt(turns, self.owner_name, self.owner_company, self.vocabulary, self.known, self.wearer)
+        result = await self.llm(SYSTEM, prompt)
         return self.diff(normalize_keys(result), t_ms=turns[-1].end_ms)
 
     def diff(self, new: dict[str, Any], t_ms: int) -> list[tuple[str, int, dict[str, Any]]]:
         old = self.state
+        self._spark_owner = list(new.get("owner_speakers", []))
+        new["owner_speakers"] = self.owner_speakers()
         self.state = new
         out: list[tuple[str, int, dict[str, Any]]] = []
 

@@ -22,7 +22,7 @@ import numpy as np
 import soxr
 
 from .asr import Asr
-from .direction import FRAME_ROTATION, DirectionTracker, SpeakerPositions
+from .direction import FRAME_ROTATION, DirectionTracker, SpeakerPositions, Wearer
 from .events import EventLog, fold_record
 from .extract import Extractor, Turn, build_prompt, draft_next_moves
 from .leveler import Leveler
@@ -163,6 +163,10 @@ class Recording:
         self._pending = b""
         self.direction = DirectionTracker(hello.sample_rate, hello.layout, hello.foa_frame)
         self.speaker_positions = SpeakerPositions()
+        # The owner's own voice, by where it comes from: only an iPhone's own audio (the camera frame), measured on
+        # the chest. The rehearsal audio keeps naming the owner from the transcript alone.
+        self.wearer = Wearer() if hello.layout == "foa" and hello.foa_frame == "camera" else None
+        self._wearer_found = ""
         # Names from earlier evenings go to the transcriber as hints, so a hard surname is heard the way
         # it was spelled before, and their companies after them.
         hello.keywords = recognition_hints(hello.keywords or [], self.known)
@@ -272,6 +276,26 @@ class Recording:
         )
         if placed is not None:
             self.log.emit("speaker_position", turn["end_ms"], speaker=speaker, **placed)
+        self._find_wearer(speaker, where, turn["end_ms"])
+
+    def _find_wearer(self, speaker: str, where: dict[str, Any], t_ms: int) -> None:
+        """Once one label's turns clearly come from above the badge, that label is the owner: an `owner` event with
+        source "elevation", carrying it beside whatever Muse Spark already named, and every prompt from then on
+        marks it as the owner, so promises come out owed by or to the right person."""
+        if self.wearer is None or speaker.endswith(":?"):
+            return
+        self.wearer.update(speaker, where.get("elevation"), where.get("confidence_3d"))
+        found = self.wearer.find()
+        label = found[0] if found else ""
+        if label == self._wearer_found:
+            return
+        self._wearer_found = label
+        if self.extractor is not None:
+            speakers = self.extractor.set_wearer(label)
+        else:
+            speakers = [label] if label else []
+        extra = {"elevation": found[1]} if found else {}
+        self.log.emit("owner", t_ms, speakers=speakers, source="elevation", **extra)
 
     def _recall(self, turn: Turn) -> None:
         """A known name in this turn rings "met before" now, provisionally, for that turn's speaker."""
@@ -287,8 +311,8 @@ class Recording:
         """The transcript Muse Spark read, for the second listener: the same prompt, the same turns."""
         ex = self.extractor
         assert ex is not None
-        turns = list(ex.turns[:upto])
-        return lambda: build_prompt(turns, ex.owner_name, ex.owner_company, ex.vocabulary, ex.known)
+        turns, wearer = list(ex.turns[:upto]), ex.wearer
+        return lambda: build_prompt(turns, ex.owner_name, ex.owner_company, ex.vocabulary, ex.known, wearer)
 
     async def _extract(self) -> None:
         """Run until the latest run has seen every turn; a turn arriving mid-run triggers one more run."""
