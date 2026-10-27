@@ -173,10 +173,9 @@ struct RoomPage: View {
                                     .font(.system(size: 15, weight: .semibold, design: .serif))
                                     .foregroundStyle(Theme.ink).lineLimit(1)
                                 if let hook = live.hooks(for: p.id).first {
-                                    // the reason to write, the moment they turn up
-                                    Text(hook.tag)
-                                        .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.live).lineLimit(1)
-                                        .minimumScaleFactor(0.65)
+                                    // the reason to write, the moment they turn up: teal like "met before" below it,
+                                    // told apart by the sparkle and the heavier weight
+                                    HookTagLine(text: hook.tag, top: 12)
                                 }
                                 if let h = live.history[p.id], let e = h.encounters.first {
                                     Text("met before · \(e.event.isEmpty ? dayString(e.started) : e.event)")
@@ -186,7 +185,7 @@ struct RoomPage: View {
                                         .font(.system(size: 12)).foregroundStyle(Theme.inkSoft).lineLimit(1)
                                 }
                             }
-                            Spacer(minLength: 0)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.horizontal, 10)
                         .frame(height: tall ? 58 : 46)
@@ -405,6 +404,35 @@ struct PersonDetail: View {
             .scrollContentBackground(.hidden)
         }
         .preferredColorScheme(settings.colorScheme)
+    }
+}
+
+/// The short reason to write, in the teal accent behind a small sparkle (the MoveSheet's hook label wears the same
+/// glyph). It takes the largest size, from `top` down in steps of one point and then half a point, at which the
+/// whole line fits: a Text's own minimumScaleFactor snaps to whole sizes and does not shrink a glyph beside it, so
+/// the sparkle would push the last words into an ellipsis. Below the smallest size the words truncate.
+struct HookTagLine: View {
+    let text: String
+    let top: CGFloat
+
+    private func line(_ size: CGFloat) -> some View {
+        HStack(spacing: 1.5) {
+            Image(systemName: "sparkle").font(.system(size: size * 0.75, weight: .semibold))
+            Text(text).font(.system(size: size, weight: .semibold)).lineLimit(1)
+        }
+        .foregroundStyle(Theme.accent)
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            line(top).fixedSize()
+            line(top - 1).fixedSize()
+            line(top - 2).fixedSize()
+            line(top - 3).fixedSize()
+            line(top - 3.5).fixedSize()
+            line(top - 4).fixedSize()
+            line(top - 4.5)
+        }
     }
 }
 

@@ -181,11 +181,8 @@ struct RadarView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             if !b.tag.isEmpty {
-                Text(b.tag)
-                    .font(.system(size: Self.tagSize, weight: .semibold))
-                    .foregroundStyle(Theme.live)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                // teal, with the same sparkle the met strip and the move sheet use for a reason to write
+                HookTagLine(text: b.tag, top: Self.tagSize)
             }
         }
         .shadow(color: Theme.paper, radius: 2)
@@ -197,6 +194,8 @@ struct RadarView: View {
     static let nameSize: CGFloat = 15
     static let tagSize: CGFloat = 11
     static let tagMaxWidth: CGFloat = 132
+    /// The sparkle in front of a tag, and the gap after it.
+    static let tagGlyphWidth: CGFloat = 11
 
     struct LabelItem {
         let id: String
@@ -223,7 +222,7 @@ struct RadarView: View {
     static func labelSize(_ b: Blip) -> CGSize {
         let name = width(b.label, size: nameSize, serif: true) + 6
         guard !b.tag.isEmpty else { return CGSize(width: name, height: 19) }
-        return CGSize(width: max(name, min(tagMaxWidth, width(b.tag, size: tagSize, serif: false) + 4)), height: 33)
+        return CGSize(width: max(name, min(tagMaxWidth + tagGlyphWidth, width(b.tag, size: tagSize, serif: false) + tagGlyphWidth + 4)), height: 33)
     }
 
     /// Where each name goes. It starts on the outward side of its dot (above for people ahead, below behind,
