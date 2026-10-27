@@ -262,6 +262,10 @@ End card (2:55–3:00).
 
 ## Before the take
 
+- Move every rehearsal recording of tonight's scene (20261027-064036-3f3e and any later rehearsal) out of
+  server/data/recordings into the scratchpad first, or tonight's guests come back as "met before". Keep the four
+  dated evenings: they are the week.
+
 - Badge phone: event "Living-room rehearsal" and venue cleared so the app fills them itself; words memory reset
   to "Hallwise" only; links set; Do Not Disturb; the badge on its mount so it can't spin; forward offset
   calibrated facing the camera.
@@ -278,6 +282,16 @@ End card (2:55–3:00).
 - Rehearse once end to end and read the Owe page before the final take.
 
 ## Risks
+
+- From the rehearsals through the real pipeline:
+  - Diarization sometimes merges two introductions that follow each other closely (Margaux into Julien,
+    Siddharth into Kenji). Leave a clear 1.5 s after each guest's line before the next cue.
+  - Kenji's Japanese murmur transcribes from the rig file up close but was lost from 2.2 m at the end of the
+    simulated take. Put iPhone-K within a metre of Eric's table mark, and test this cue alone in the room first.
+  - "Julien Caron" was never transcribed in rehearsal; "Corvane Capital" only once known companies are hinted.
+    If his surname still drops, his card shows "Julian" and the morning check cannot run on him.
+  - "Met before" used to arrive 17–24 s after the introduction; a fast path is being built so the ring appears
+    at once. Rehearse the table scene and hold the "It remembered" line until the rings are up.
 
 - Margaux and Julien share a base voice. If diarization merges them, render Julien with `am_michael` for the
   French lines too (French shaping) and accept the accent.
