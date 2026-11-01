@@ -244,7 +244,7 @@ HOOK_SCHEMA: dict[str, Any] = _obj(
             reason={**_STR, "description": "one sentence: who said or promised what, where, when"},
             evidence={**_STR_LIST, "description": "evidence ids: E.. transcript lines, R.. research findings"},
             promise_key={**_STR, "description": "the promise this rests on, from Promises; empty if none"},
-            language={**_STR, "description": "the draft's language: the first person's preferred language, else English"},
+            language={**_STR, "description": "the draft's language: the language the first person spoke with the owner (People shows it when not English), else English"},
             draft={**_STR, "description": "the message to send: always for an introduction, else only when the first person has no draft ready tonight; else empty"},
             draft_english={**_STR, "description": "the draft in English; empty when the draft is English or empty"},
         ),
@@ -281,10 +281,12 @@ Rules:
 - reason: one sentence naming who said or promised what, at which event, on which day.
 - draft: for an introduction, always the message that introduces the two, to both, in English unless they share
   another language. Otherwise only when the first person has no draft ready tonight (People shows "draft ready"):
-  a message ready to send to them, 2-4 sentences, in their preferred language when one is set. Sign with the
-  owner's first name only. A draft says only what the lines say: the promise, the
-  mention, the question. Never claim how someone reacted, what was decided, or that something was sent. It may use
-  research only as given. Otherwise empty.
+  a message ready to send to them, 2-4 sentences, in their language when People shows one (the language they
+  spoke with the owner), else English. Sign with the owner's first name only. A draft says only what the lines
+  say: the promise, the mention, the question. Never claim how someone reacted, what was decided, or that
+  something was sent. It may use research only as given. Otherwise empty.
+- edge (on a People line): what that person said not to the owner, translated. A draft may act on it (a
+  one-pager, the numbers first), never quote it or let on that it was heard.
 - At most 8 hooks, strongest first. No hook is better than a weak one."""
 
 
@@ -328,8 +330,9 @@ def build_hook_context(
         people.setdefault(ik, {"key": ik, "name": p.get("name", ""), "company": p.get("company", ""), "role": p.get("role", ""),
                                "language": p.get("preferred_language", ""), "encounters": [], "promises": []})
         people[ik]["tonight"] = p["key"]
-        if p.get("preferred_language"):
-            people[ik]["language"] = p["preferred_language"]
+        # How they spoke with the owner tonight wins over an earlier evening's (which may have come from an aside).
+        people[ik]["language"] = p.get("preferred_language", "")
+        people[ik]["edges"] = [e.get("text", "") for e in tonight.record.get("edges", []) if e.get("person") == p["key"] and e.get("text")]
     tonight.index_keys.update(index_of)
     drafted = {index_of.get(m.get("person_key", ""), m.get("person_key", "")) for m in (moves or [])}
     drafted_promises = {m.get("promise_key", "") for m in (moves or [])}
@@ -411,6 +414,7 @@ def build_hook_context(
             + f" | met: {'; '.join(met) or 'never (only mentioned)'}"
             + (f" | language: {p['language']}" if p.get("language") else "")
             + (" | draft ready tonight" if p["key"] in drafted else "")
+            + "".join(f" | edge: {text}" for text in p.get("edges") or [])
         )
 
     prompt = "\n".join([

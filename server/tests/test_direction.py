@@ -556,7 +556,7 @@ class StubSpark:
 def run_with_spark(tmp_path, foa, script, hello, spark, inverted=True):
     rec = Recording(
         tmp_path, hello, lambda sink, *, rate, hello: FakeAsr(sink, rate=rate, script=hello.fake_script),
-        lambda h: Extractor(spark, h.owner_name, h.owner_company, []), make_second=lambda: None,
+        lambda h: Extractor(spark, h.owner_name, h.owner_company, []), make_edge_finder=lambda: None,
     )
 
     async def run():

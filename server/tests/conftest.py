@@ -4,8 +4,14 @@ from auth import TOKEN
 
 @pytest.fixture(autouse=True)
 def no_real_second_listener(monkeypatch):
-    """A shell that sourced ../.env must not send test transcripts to Baseten: the second listener needs this key."""
+    """A shell that sourced ../.env must not send test transcripts to Baseten: the edge finder needs this key."""
     monkeypatch.delenv("BASETEN_API_KEY", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def no_research_corpus(monkeypatch):
+    """Nor may it turn the tests' research to the demo's fictional pages."""
+    monkeypatch.delenv("HALLWISE_RESEARCH_CORPUS", raising=False)
 
 
 @pytest.fixture(autouse=True)

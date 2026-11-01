@@ -2,7 +2,9 @@
 
 research (who they are in public, rate limited) → hooks (reasons to write, across evenings) → the report:
 - reach_out: one row per person to write to today, with the hook that gives the reason and the ready follow-up
-  (the recording's next_move for that promise, else the hook's own draft), and what research says about them;
+  (the recording's next_move for that promise, else the hook's own draft), what research says about them, and
+  their edges (what they said not to the owner, translated, and what the follow-up should do about it);
+- edges: every edge of the night, by person;
 - introductions: the introductions still owed;
 - checked: research status per person, with sources;
 - due_today: follow-ups whose reminder falls on the report's day or earlier.
@@ -102,6 +104,14 @@ def assemble(
     def hooks_for(record_key: str, promise_key: str = "") -> list[dict[str, Any]]:
         return [h for h in hooks if record_key in h.get("record_keys", {}).values() or (promise_key and h.get("promise_key") == promise_key)]
 
+    # What someone said not to the owner, translated, and what a follow-up should do about it: for the owner's eyes,
+    # beside the row; the draft acts on it and never quotes it.
+    edges = [{"person": person(e["person"]), **{k: e.get(k, "") for k in ("text", "act", "language", "said", "english")},
+              "turns": e.get("turns") or []} for e in record.get("edges", [])]
+
+    def edges_for(key: str) -> list[dict[str, Any]]:
+        return [{k: v for k, v in e.items() if k != "person"} for e in edges if e["person"]["key"] == key]
+
     for h in hooks:
         h["tonight"] = bool(h.get("record_keys"))
     reach: list[dict[str, Any]] = []
@@ -133,6 +143,7 @@ def assemble(
                       "check": check(key)})
     for r in reach:
         r["earlier"] = not r["person"]["tonight"] and not (r["hook"] or {}).get("tonight")
+        r["edges"] = edges_for(r["person"]["key"])
     # Tonight's people with a reason first, then tonight's others, then people tied to tonight, then older threads.
     reach.sort(key=lambda r: (r["earlier"], not r["person"]["tonight"], r["hook"] is None))
 
@@ -170,6 +181,7 @@ def assemble(
             "languages": languages,
             "introductions": len([h for h in hooks if h["type"] == "introduction"]),
             "hooks": len(hooks),
+            "edges": len(edges),
             "unverified": len([r for r in checked if r.get("status") == "no_public_record"]),
         },
         "reach_out": reach,
@@ -179,6 +191,7 @@ def assemble(
         "unchecked": research.get("skipped", []),
         "due_today": due,
         "hooks": hooks,
+        "edges": edges,
         "notes": [n for n in (hooks_note, research.get("reason", "")) if n],
         "cost": {
             "hooks_tokens": hooks_in + hooks_out,

@@ -118,8 +118,9 @@ def read_events(path: Path) -> list[dict[str, Any]]:
 
 
 def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
-    """The latest picture in a log: people, promises, turns, translations, who was mentioned, and the hooks (reasons
-    to reach out found across evenings). Removed items are gone, later versions win.
+    """The latest picture in a log: people, promises, turns, translations, who was mentioned, the hooks (reasons
+    to reach out found across evenings) and the edges (what someone said not to the owner, translated, and what it
+    shows they want). Removed items are gone, later versions win.
     This is what the follow-up drafts are written from, live or from a file.
 
     The owner's corrections (`correction` events, see corrections.py) win over whatever Muse Spark wrote, before or
@@ -138,9 +139,16 @@ def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
     history: dict[str, dict[str, Any]] = {}
     mentions: dict[str, dict[str, Any]] = {}
     hooks: dict[str, list[dict[str, Any]]] = {}
+    edges: dict[tuple[str, tuple[int, ...]], dict[str, Any]] = {}
     for e in events:
         t = e.get("type")
-        if t == "person_history":
+        if t in ("edge", "edge_removed"):
+            key = (str(e.get("person", "")), tuple(e.get("turns") or []))
+            if t == "edge":
+                edges[key] = e
+            else:
+                edges.pop(key, None)
+        elif t == "person_history":
             history[e["key"]] = e
         elif t == "person_history_removed":  # a provisional "met before" that Muse Spark did not confirm
             history.pop(e.get("key", ""), None)
@@ -203,4 +211,5 @@ def fold_record(events: list[dict[str, Any]]) -> dict[str, Any]:
         "history": history,
         "mentions": list(mentions.values()),
         "hooks": hooks,
+        "edges": [e for e in edges.values() if e.get("person") in people],
     }

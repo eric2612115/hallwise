@@ -542,10 +542,12 @@ def test_spark_listing_a_corrected_person_under_a_new_key_keeps_the_owners_key()
     renamed = {**KEN, "key": "ken-vexi", "company": "Vexi"}
     deck = {"key": "deck", "owed_by": "owner", "owed_to": "ken-vexi", "what": "deck", "due": "", "replaces": "",
             "evidence_turns": [2]}
-    result = refine(state(people=[renamed], promises=[deck], mentioned=[{"name": "Lena", "by": "ken-vexi", "turn": 2}]),
+    result = refine(state(people=[renamed], promises=[deck], mentioned=[{"name": "Lena", "by": "ken-vexi", "turn": 2}],
+                          edges=[{"person": "ken-vexi", "turns": [2], "said": "no slides"}]),
                     turns=[], corrections=corrections)
     assert [(p["key"], p["company"]) for p in result["people"]] == [("ken-vexy", "Vexi")]
     assert result["promises"][0]["owed_to"] == "ken-vexy" and result["mentioned"][0]["by"] == "ken-vexy"
+    assert result["edges"][0]["person"] == "ken-vexy"
     # someone else entirely is left alone
     other = refine(state(people=[{**KEN, "key": "kenji", "name": "Kenji", "company": "Hoshizora"}]), turns=[],
                    corrections=corrections)

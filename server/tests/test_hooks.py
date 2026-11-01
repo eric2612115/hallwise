@@ -26,6 +26,10 @@ def test_the_hook_prompt_carries_the_evidence(tmp_path):
     assert f"Chloé Martin [chlo-martin-corvane-capital] said the name “Margaux” | evidence: {chloe}" in p
     assert "kenji-watanabe-hoshizora-robotics | Kenji Watanabe, Hoshizora Robotics | met: ETH Taipei afterparty" in p
     assert "tonight | draft ready tonight" in p
+    # Tonight he spoke English with the owner: an earlier evening's language (a murmur) no longer sets his drafts'.
+    assert "language: Japanese" not in p
+    margot = next(line for line in p.splitlines() if line.startswith("- margot-lef-vre | "))
+    assert margot.endswith("| edge: Said to herself, in French: 'with numbers'.") and "language" not in margot
     assert "R1 | recent: Hoshizora Robotics opened a Taipei office (source: https://hoshizora.example/news)" in p
     assert "unsourced claim" not in p  # research without a source never reaches the model
     assert ctx.tonight["margot-lef-vre"] == "margot-lefevre"

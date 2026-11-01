@@ -69,6 +69,9 @@ def apply_person_corrections(result: dict[str, Any], corrections: dict[str, dict
     for m in result.get("mentioned", []):
         if m.get("by") in rename:
             m["by"] = rename[m["by"]]
+    for e in result.get("edges", []):
+        if e.get("person") in rename:
+            e["person"] = rename[e["person"]]
     return result
 
 

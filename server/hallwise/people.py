@@ -78,7 +78,7 @@ def people_index(data: Path, exclude: str | None = None) -> list[dict[str, Any]]
                 continue
             entry = index.setdefault(key, {
                 "key": key, "name": p.get("name", ""), "company": p.get("company", ""), "role": p.get("role", ""),
-                "language": p.get("preferred_language", ""), "encounters": [], "promises": [],
+                "language": p.get("preferred_language", ""), "encounters": [], "promises": [], "edges": [],
             })
             if p.get("corrected"):  # the owner's spelling wins over any evening's hearing of it
                 entry["name"], entry["company"] = p.get("name", ""), p.get("company", "")
@@ -98,12 +98,17 @@ def people_index(data: Path, exclude: str | None = None) -> list[dict[str, Any]]
                         "what": q.get("what", ""), "due": q.get("due", ""),
                         "direction": "owner_owes" if q.get("owed_by") == "owner" else ("they_owe" if q.get("owed_to") == "owner" else "between_others"),
                     })
+            for e in record.get("edges", []):  # what they said not to the owner, and what it shows they want
+                if e.get("person") == p["key"]:
+                    entry["edges"].append({"recording": rid, "event": meta.get("event", ""), "started": meta.get("started", 0.0),
+                                           "text": e.get("text", ""), "act": e.get("act", "")})
     out = list(index.values())
     faces = data / "faces"
     for entry in out:
         entry["face"] = (faces / f"{entry['key']}.jpg").exists()
         entry["encounters"].sort(key=lambda e: e["started"], reverse=True)
         entry["promises"].sort(key=lambda e: e["started"], reverse=True)
+        entry["edges"].sort(key=lambda e: e["started"], reverse=True)
     out.sort(key=lambda e: e["encounters"][0]["started"] if e["encounters"] else 0, reverse=True)
     return out
 

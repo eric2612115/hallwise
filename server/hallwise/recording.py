@@ -24,12 +24,12 @@ import soxr
 from .asr import Asr
 from .direction import FRAME_ROTATION, DirectionTracker, SpeakerPositions, Wearer
 from .events import EventLog, fold_record
-from .extract import Extractor, Turn, draft_next_moves
+from .extract import Extractor, Turn, deck_source, draft_next_moves
 from .leveler import Leveler
 from .hooks import Threads
 from .people import history_event, match, people_index
 from .recall import Recall
-from .second import SecondListener
+from .edge_finder import EdgeFinder
 from .places import parse_place
 from .vocabulary import Vocabulary, keywords as vocabulary_keywords
 
@@ -37,17 +37,24 @@ ASR_RATE = 24_000
 LAYOUT_CHANNELS = {"mono": 1, "stereo": 2, "foa": 4}
 IPHONE_BADGE = "iPhone badge"  # what the app's hello says for `device`
 MAX_HINT_NAMES = 40
+MAX_HINT_MENTIONS = 10
 MAX_HINT_COMPANIES = 20
 
 
-def recognition_hints(own: list[str], index: list[dict[str, Any]], vocabulary: list[str] | None = None) -> list[str]:
+def recognition_hints(own: list[str], index: list[dict[str, Any]], vocabulary: list[str] | None = None,
+                      mentioned: list[str] | None = None) -> list[str]:
     """The badge's own hints, then the spellings the owner fixed on the phone (vocabulary.py), then the names of
-    people met at earlier evenings, then their companies (each once): in rehearsal "Corvane Capital" was never
-    transcribed while only Chloé Martin's name was a hint."""
+    people met at earlier evenings, then names only mentioned there (newest first), then the companies of the people
+    met (each once): in rehearsal "Corvane Capital" was never transcribed while only Chloé Martin's name was a hint,
+    and Margaux, whom Chloé had named on Oct 23 ("my colleague Margaux"), came out "Margot" in every run until her
+    name was a hint too. A mentioned name that is the first name of someone met is already there."""
     names = [e["name"] for e in index[:MAX_HINT_NAMES] if e.get("name")]
+    firsts = {n.split()[0].casefold() for n in names if n.split()}
+    mentions = [m for m in dict.fromkeys(m.strip() for m in mentioned or [] if m and m.strip())
+                if m.split()[0].casefold() not in firsts][:MAX_HINT_MENTIONS]
     companies = list(dict.fromkeys(e["company"] for e in index if e.get("company")))[:MAX_HINT_COMPANIES]
     out: dict[str, str] = {}
-    for word in [*own, *(vocabulary or []), *names, *companies]:
+    for word in [*own, *(vocabulary or []), *names, *mentions, *companies]:
         out.setdefault(word.strip().casefold(), word.strip())
     return [w for w in out.values() if w]
 
@@ -139,7 +146,7 @@ class Recording:
         hello: Hello,
         make_asr: Callable[..., Asr],
         make_extractor: Callable[[Hello], Extractor | None] | None = None,
-        make_second: Callable[[], SecondListener | None] | None = None,
+        make_edge_finder: Callable[[], EdgeFinder | None] | None = None,
     ):
         self.id = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]
         self.dir = root / "recordings" / self.id
@@ -169,10 +176,17 @@ class Recording:
         # the chest. The rehearsal audio keeps naming the owner from the transcript alone.
         self.wearer = Wearer() if hello.layout == "foa" and hello.foa_frame == "camera" else None
         self._wearer_found = ""
-        # The owner's fixed spellings and the names from earlier evenings go to the transcriber as hints, so a hard
-        # surname is heard the way it was spelled before, and their companies after them.
+        # Open introductions and mentions from earlier evenings: a person who turns up gets a `hook` event, the
+        # reason to write that the room shows under their name and the drafts use at Stop.
+        try:
+            self.threads: Threads | None = Threads.load(root, exclude=self.id, before=self.started, tz=hello.tz)
+        except Exception:  # an unreadable old log must not stop a recording
+            self.threads = None
+        # The owner's fixed spellings, the names from earlier evenings and the names said there go to the transcriber
+        # as hints, so a hard surname is heard the way it was spelled before, and their companies after them.
         vocabulary = Vocabulary(root).load()
-        hello.keywords = recognition_hints(hello.keywords or [], self.known, vocabulary_keywords(vocabulary))
+        mentioned = [m["name"] for m in sorted(self.threads.mentions, key=lambda m: -m["started"])] if self.threads else []
+        hello.keywords = recognition_hints(hello.keywords or [], self.known, vocabulary_keywords(vocabulary), mentioned)
         # The conversation's transcriber gets the server's default languages when the badge names none; a question
         # asked by voice (start_ask) keeps the badge's own, so it is not steered away from the owner's language.
         self.asr = make_asr(self._on_asr, rate=ASR_RATE, hello=replace(hello, language_bias=bias))
@@ -181,12 +195,6 @@ class Recording:
         self._ask_turns: list[str] = []
         self.extractor = make_extractor(hello) if make_extractor else None
         self._history_sent: set[str] = set()
-        # Open introductions and mentions from earlier evenings: a person who turns up gets a `hook` event, the
-        # reason to write that the room shows under their name and the drafts use at Stop.
-        try:
-            self.threads: Threads | None = Threads.load(root, exclude=self.id, before=self.started, tz=hello.tz)
-        except Exception:  # an unreadable old log must not stop a recording
-            self.threads = None
         self._hooks_sent: set[tuple[str, str]] = set()
         if self.extractor is not None:
             self.extractor.known = [
@@ -196,12 +204,15 @@ class Recording:
             self.extractor.spellings = vocabulary["words"]
             self.extractor.rejected = vocabulary["rejected"]
         # "Met before" the moment a known person says who they are, before Muse Spark runs (recall.py), and a
-        # second Meta model re-hearing the transcript (second.py). Both only beside Spark, and neither can stop it.
+        # second Meta model reading the transcript for edges (edge_finder.py). Both only beside Spark, and neither
+        # can stop it.
         self.recall = (
             Recall(self.known, hello.owner_name, hello.owner_company, threads=self.threads, exclude=self.id, before=self.started)
             if self.extractor is not None else None
         )
-        self.second = (make_second or SecondListener.from_env)() if self.extractor is not None else None
+        self.finder = (make_edge_finder or EdgeFinder.from_env)() if self.extractor is not None else None
+        if self.finder is not None and self.extractor is not None:
+            self.extractor.edge_finder = True  # Spark leaves edges to it, until a call fails
         self._extract_task: asyncio.Task[None] | None = None
         self._extracted_upto = 0  # how many turns the latest finished run had seen
 
@@ -314,7 +325,7 @@ class Recording:
             self.log.emit("extract_error", self.now_ms, message=f"recall: {err.__class__.__name__}: {err}"[:300])
 
     def _prompt(self, upto: int) -> Callable[[], str]:
-        """The transcript Muse Spark read, for the second listener: the same prompt, the same turns."""
+        """The transcript Muse Spark read, for the edge finder: the same prompt, the same turns."""
         ex = self.extractor
         assert ex is not None
         turns, wearer = list(ex.turns[:upto]), ex.wearer
@@ -362,9 +373,10 @@ class Recording:
                 if self.recall is not None:  # confirm or withdraw what the fast path rang
                     for kind, t, data in self.recall.after_run(self.extractor.state, seen_turn, self._history_sent, self.now_ms):
                         self.log.emit(kind, t, **data)
-                if self.second is not None:
+                if self.finder is not None and self.extractor.edge_finder:
                     ex = self.extractor
-                    self.second.after_spark_run(self.log.emit, self._prompt(seen), lambda: ex.state, seen_turn, lambda: self.now_ms)
+                    self.finder.after_spark_run(self.log.emit, self._edges_found, self._prompt(seen), lambda: ex.state,
+                                                seen_turn, lambda: self.now_ms)
             except Exception as err:  # a failed run must not stop the recording
                 self.log.emit("extract_error", self.now_ms, message=f"{err.__class__.__name__}: {err}"[:300])
             self._extracted_upto = seen
@@ -381,7 +393,8 @@ class Recording:
         if self.recall is not None:  # a ring Spark never confirmed does not outlive the recording
             for kind, t_ms, data in self.recall.close(self.now_ms):
                 self.log.emit(kind, t_ms, **data)
-        await asyncio.gather(self._next_moves(), self._second_last())
+        await self._edges_last()  # before the drafts, so they act on what it finds
+        await self._next_moves()
         self._wav.close()
         self.log.emit("recording_end", self.now_ms)
         self.log.close()
@@ -408,16 +421,36 @@ class Recording:
         self.log.emit("ask", self.now_ms, question=question)
         return question
 
-    async def _second_last(self) -> None:
-        """The second listener's last call, on the whole transcript, beside the drafts."""
+    def _edges_found(self, edges: list[dict[str, Any]] | None, t_ms: int) -> None:
+        """The edge finder answered: its edges go into the picture (checked as Spark's own are) and the log. It failed
+        (None): Muse Spark finds edges again from its next run, so the recording never loses them."""
         ex = self.extractor
-        if self.second is None or ex is None or not ex.turns:
+        if ex is None:
             return
-        try:
-            await self.second.finish(self.log.emit, self._prompt(len(ex.turns)), lambda: ex.state, ex.turns[-1].turn,
-                                     lambda: self.now_ms)
-        except Exception as err:
-            self.log.emit("second_error", self.now_ms, message=f"{err.__class__.__name__}: {err}"[:300])
+        if edges is None:
+            ex.edge_finder = False
+            return
+        if ex.edge_finder:
+            for kind, t, data in ex.take_edges(edges, t_ms):
+                self.log.emit(kind, t, **data)
+
+    async def _edges_last(self) -> None:
+        """The edge finder's last call, on the whole transcript. When it is off nothing is needed (Spark's runs had
+        the edges); when it failed, now or earlier, or could not run, one more Muse Spark run finds them."""
+        ex = self.extractor
+        if self.finder is None or ex is None or not ex.turns:
+            return
+        ok = False
+        if ex.edge_finder:
+            try:
+                ok = await self.finder.finish(self.log.emit, self._edges_found, self._prompt(len(ex.turns)), lambda: ex.state,
+                                              ex.turns[-1].turn, lambda: self.now_ms)
+            except Exception as err:
+                self.log.emit("second_error", self.now_ms, message=f"{err.__class__.__name__}: {err}"[:300])
+        if not ok:
+            ex.edge_finder = False
+            self._extracted_upto = 0  # one more run, this time with edges
+            await self._extract()
 
     async def _next_moves(self) -> None:
         """After the last extraction: one ready-to-send follow-up per promise, before the log closes, so a
@@ -437,6 +470,7 @@ class Recording:
                 busy=self.hello.busy or [],
                 links=self.hello.links or {},
                 spellings=self.extractor.spellings,
+                deck=deck_source(),  # with his own lines, the only facts about his product a draft may state
             )
         except Exception as err:  # drafts are a bonus; the record is already safe
             self.log.emit("extract_error", self.now_ms, message=f"next moves: {err.__class__.__name__}: {err}"[:300])

@@ -4,16 +4,23 @@ Each run sends the whole transcript so far (it fits easily) and gets back the fu
 constrained by SCHEMA. `Extractor` compares it with the previous picture and emits only what is new or changed,
 so the dashboard sees people appear and promises change as the conversation goes.
 
+What someone says not to the owner (an aside to themselves, a word to a colleague) never sets the language of
+their follow-up; when it shows what they want, it becomes an edge: translated, for the owner's eyes, and acted on
+by the draft without ever being quoted back (`asides_kept_aside`, `overheard`).
+
 Speaker keys are "<session>:<label>" because Muse Voice Transcribe restarts its labels in every session.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 import httpx
@@ -46,7 +53,7 @@ SCHEMA: dict[str, Any] = _obj(
             company=_STR,
             role=_STR,
             speakers={**_STR_LIST, "description": "speaker keys this person spoke as"},
-            preferred_language={**_STR, "description": "language they want follow-ups in; empty if unknown"},
+            preferred_language={**_STR, "description": "the language they spoke with the owner, or asked follow-ups in, when not English; never from an aside; empty if English"},
             introduced_by={**_STR, "description": "person key or 'owner' who sent them; empty if none"},
             evidence_turns=_INT_LIST,
         ),
@@ -82,10 +89,24 @@ SCHEMA: dict[str, Any] = _obj(
             turn={"type": "integer"},
             language={**_STR, "description": "the non-English language in this turn, e.g. 'Japanese'"},
             english={**_STR, "description": "the whole turn in English"},
+            aside={"type": "boolean", "description": "the non-English words were said to themselves or to someone other than the owner"},
+        ),
+    },
+    edges={
+        "type": "array",
+        "items": _obj(
+            person={**_STR, "description": "the person key from people who said it"},
+            turns={**_INT_LIST, "description": "the turns it rests on, at least one of them that person's own"},
+            language={**_STR, "description": "the language it was said in, e.g. 'French'"},
+            said={**_STR, "description": "their own words, copied from the transcript as heard"},
+            english={**_STR, "description": "the same words in English"},
+            text={**_STR, "description": "for the owner, in English, one or two short sentences: how and to whom it was said, translated, and what it shows"},
+            act={**_STR, "description": "what a follow-up should do about it, under 10 words, e.g. 'one page, numbers first'"},
         ),
     },
     room_topics={**_STR_LIST, "description": "short topics from ambient speech only; never names or quotes"},
 )
+SCHEMA_NO_EDGES: dict[str, Any] = _obj(**{k: v for k, v in SCHEMA["properties"].items() if k != "edges"})
 
 NEXT_SCHEMA: dict[str, Any] = _obj(
     moves={
@@ -116,6 +137,10 @@ Write exactly one move per promise:
 - A promise the owner owes becomes a message to that person, ready to send: 2-4 sentences, warm and specific.
   Name the thing promised and one concrete detail from what was said. No padding ("I hope this finds you well").
   When a due date was agreed ("by Friday"), say so. Never invent facts, prices, names or dates.
+- The owner's product and company: say only what "Owner's sources" give (his own lines tonight, marked owner, and
+  his deck when there is one): what it does, who it is for, how it makes money, customers, prices, numbers, plans.
+  Nothing else about them, however likely: "Hallwise makes money by selling our badge to event organizers" when
+  no source says so is an invented fact.
 - Names and companies: spell them as the People lines do, never as the transcript heard them; "Spellings the owner
   corrected" lists what the transcriber got wrong.
 - Attachments and products: say what is attached or shown, never what it contains. Do not describe the contents of
@@ -130,8 +155,14 @@ Write exactly one move per promise:
   introduction the owner still owes, a question left open), the message may use it in one natural clause, in the
   message's language ("Chloé told me you'd want to see this"; "and the introduction to Lena I still owe you").
   Use only what the reason and its quote say; never add a relation, a reaction or a fact it does not give.
+- What they said not to you: when a person has an edge listed (something they said to themselves or to someone
+  else, translated), the message acts on it as if it were simply a good idea ("act" says how: a one-pager, the
+  numbers first), and only as a next step their role and company would explain on their own: a robotics founder
+  gets "a demo for your robots", never the specific thing they said ("your field logs"). Never quote it, translate
+  it back, paraphrase it, hint at it ("as you mentioned", "I know you prefer") or let on that it was heard.
 - A promise owed to the owner becomes kind "nudge": a short, friendly reminder the owner can send a few days later.
-- body is in the person's preferred_language when one is set, else English. body_english is the same message in
+- body is in the person's preferred_language when one is set, else English: the language they spoke with the
+  owner. Something said to themselves in another language never changes it. body_english is the same message in
   English, empty when body is already English. language names the language of body.
 - kind "calendar" when the promise is to meet, call, visit or demo. Pick a specific start from the owner's free
   time: never inside a busy window, weekdays 10:00-18:00 in the owner's zone unless the conversation said
@@ -149,7 +180,20 @@ Write exactly one move per promise:
 - Sign off with the owner's first name only."""
 
 
-SYSTEM = """You read a live transcript from a badge worn at a networking event and keep a precise record for the
+# What someone said not to the owner, as Muse Spark finds it when the edge finder (edge_finder.py) is off; the edge
+# finder reads the same rule.
+EDGE_RULE = """- edges: what someone in people said not to the owner (an aside, a murmur, their talk with someone else before or
+  after they met him), in any language, that shows what they want, dislike or plan. One per insight, citing every
+  turn it rests on; when one of them is in another language, said is those words and text says how and in which
+  language they were said. said is their own words copied from one turn exactly as the transcript has them, never
+  words it does not have; language is the name of the language said is in ("French"); text is for the owner, short, in English, translated, e.g. "Said to herself, in French: 'with numbers'.
+  Yesterday's founder lost her with twenty slides and no numbers."; act is what a follow-up should do about it, in
+  under 10 words: its form, length, order or what to bring ("one page, numbers first", "bring a live demo"), never
+  a fact or claim to state and never the specific thing they said. Never for someone not in people, never from the
+  owner's own words. No edge is better than a weak one.
+"""
+
+_SYSTEM = """You read a live transcript from a badge worn at a networking event and keep a precise record for the
 person wearing it (the owner).
 
 The transcript has numbered turns with a speaker key ("<session>:<label>"). Labels come from automatic speaker
@@ -167,14 +211,20 @@ Rules:
   particular or at staff ("thanks", "excuse me", "something to drink?"); ambient = other people's conversations
   the owner is not part of; stage = an announcement or speaker addressing the room; noise = not speech.
 - Only conversation turns may create people, promises or mentions. Ambient turns only feed room_topics, as short
-  topics with no names and no quotes.
+  topics with no names and no quotes, and the edges of someone in people who said them.
 - A promise is a commitment to do something later. When someone corrects it ("Thursday — no, Friday"), keep one
   promise with the final version in due and the earlier one in replaces.
-- preferred_language: a language the person spoke other than English (an aside, a murmur, a phrase), or one
-  they asked for; follow-ups go in that language. Empty if they only spoke English.
+- A proposal the owner takes on is his promise: when someone proposes something ("let's do a call next week, the
+  three of us, with Chloé") and the owner answers that he will arrange it ("I'll send an invite", "I'll set it up",
+  "I'll book it"), the promise is owed_by "owner" and owed_to the person who proposed it; what is sending the
+  invite and names everyone the proposal named ("send an invite: a call with Margaux and Chloé"); due as agreed.
+- preferred_language: the language the person spoke with the owner, when it was not English, or one they asked
+  follow-ups in; follow-ups go in that language. An aside never sets it: words said to themselves or to someone
+  other than the owner are not how they talk to him. Empty if they spoke English with the owner.
 - translations: one entry for every turn that is partly or wholly not in English, with the whole turn in
-  English. People mutter to themselves in their own language mid-conversation; that is still conversation.
-- suspect_words: words the transcriber probably got wrong, mainly names, companies and product terms.
+  English; aside is true when those words were said to themselves or to someone other than the owner. People
+  mutter to themselves in their own language mid-conversation; that is still conversation.
+{EDGE_RULE}- suspect_words: words the transcriber probably got wrong, mainly names, companies and product terms.
   - A word close to one in the vocabulary below is a suspect; likely = the vocabulary word.
   - When the same name appears in two spellings (for example a self-introduction and someone addressing that
     person), list each spelling as a suspect with likely = the other spelling. Do not decide which one is right.
@@ -189,6 +239,9 @@ Rules:
     keep the key and use exactly the owner's name and company.
 - Never infer accent, nationality, ethnicity or personality.
 - Every person and promise must cite the turns it comes from. Keep keys stable between runs."""
+SYSTEM = _SYSTEM.replace("{EDGE_RULE}", EDGE_RULE)
+# While the edge finder is on, Muse Spark leaves edges to it: no rule, and no edges in its schema.
+SYSTEM_NO_EDGES = _SYSTEM.replace("{EDGE_RULE}", "")
 
 
 @dataclass
@@ -286,9 +339,11 @@ def build_next_prompt(
     busy: list[list[str]] | None = None,
     links: dict[str, str] | None = None,
     spellings: list[dict[str, str]] | None = None,
+    deck: str = "",
 ) -> str:
     """`spellings`: the owner's vocabulary ({heard, use}); this recording's own word corrections and every corrected
-    person's heard name and company join it, so a draft never repeats what the transcriber misheard."""
+    person's heard name and company join it, so a draft never repeats what the transcriber misheard. `deck`: the
+    owner's deck as text (deck_source), the one place besides his own lines a draft may take facts about his product."""
     translations = record.get("translations", {})
     kinds = record.get("turn_kinds", {})
     heard = [
@@ -310,6 +365,10 @@ def build_next_prompt(
         + "".join(f" | “{e.get('quote', '')}”" for e in (h.get("evidence") or [])[:2] if e.get("quote"))
         for key, hooks in (record.get("hooks") or {}).items() for h in hooks
         if key in {p["key"] for p in record.get("people", [])}
+    ] or ["- none"]
+    edge_lines = [
+        f"- {e['person']}: {e.get('text', '')}" + (f" | act: {e['act']}" if e.get("act") else "")
+        for e in record.get("edges") or [] if e.get("person") in {p["key"] for p in record.get("people", [])}
     ] or ["- none"]
     met_lines = [
         f"- {key}" + (f" ({h['name']})" if h.get("name") else "") + ": " + met(h) + (
@@ -355,12 +414,21 @@ def build_next_prompt(
         "Reasons to write (from earlier evenings, per person key; use one only for that person):",
         *hook_lines,
         "",
+        "What they said not to you (edges, per person key: act on it for that person; never quote it or let on it was heard):",
+        *edge_lines,
+        "",
+        "Owner's sources (the only facts about his product and company a draft may state): his own lines in the"
+        " transcript, marked owner" + ("; and his deck:" if deck.strip() else "; no deck."),
+        *([deck.strip()[:MAX_DECK_CHARS]] if deck.strip() else []),
+        "",
         "Transcript (conversation turns):",
     ]
+    owner = set(record.get("owner_speakers") or [])
     for t in record.get("turns", []):
         if kinds.get(t["turn"], "conversation") != "conversation":
             continue
-        line = f"turn {t['turn']} [{t.get('speaker', '?')}]: {t.get('text', '')}"
+        mark = ", owner" if f"{t.get('session', 1)}:{t.get('speaker') or '?'}" in owner else ""
+        line = f"turn {t['turn']} [{t.get('speaker', '?')}{mark}]: {t.get('text', '')}"
         tr = translations.get(t["turn"])
         if tr:
             line += f"  (English: {tr.get('english', '')})"
@@ -392,10 +460,40 @@ def _day(started: Any) -> str:
 
 
 async def draft_next_moves(llm: LLM, record: dict[str, Any], **context: Any) -> list[dict[str, Any]]:
-    """One ready-to-send move per promise, from Muse Spark; keys normalised, attachments limited to what exists."""
+    """One ready-to-send move per promise, from Muse Spark; keys normalised, attachments limited to what exists.
+
+    Two things a draft may never do, checked in code: let on what its person said not to the owner (`overheard`: their
+    words, or a close paraphrase of the distinctive ones), and state something about the owner's product or company
+    that his sources do not (`unsupported_claims`: his own lines tonight, his deck, his settings). Drafts that do are
+    written once more, told what; a sentence that still does it after that is dropped from an English draft (another
+    language keeps the second version, the check reads its English)."""
     if not record.get("promises"):
         return []
-    result = await llm(NEXT_SYSTEM, build_next_prompt(record, **context), schema=NEXT_SCHEMA, name="hallwise_next_moves")
+    prompt = build_next_prompt(record, **context)
+    moves = _moves(await llm(NEXT_SYSTEM, prompt, schema=NEXT_SCHEMA, name="hallwise_next_moves"), record, context)
+    found = {m["promise_key"]: problems for m in moves if (problems := draft_problems(m, record, context))}
+    if not found:
+        return moves
+    notes = []
+    for key, problems in found.items():
+        notes += [f"- {key}: it lets on what they said not to you (“{p['text']}”); act on it only as a next step their "
+                  f"role would explain, without those words or their meaning" if p["kind"] == "overheard" else
+                  f"- {key}: “{p['text']}” states something about the owner's product that no source gives; say only "
+                  f"what his own lines or deck say, or leave it out" for p in problems]
+    again = prompt + "\n\nWrite these drafts again; everything else as before:\n" + "\n".join(notes)
+    fresh = {m["promise_key"]: m for m in _moves(await llm(NEXT_SYSTEM, again, schema=NEXT_SCHEMA, name="hallwise_next_moves"),
+                                                 record, context) if m["promise_key"] in found}
+    out = []
+    for m in moves:
+        m = fresh.get(m["promise_key"], m) if m["promise_key"] in found else m
+        left = draft_problems(m, record, context) if m["promise_key"] in found else []
+        if left and _language(m.get("language") or "English") == "english":
+            m = {**m, "body": _drop_sentences(m.get("body", ""), [p["sentence"] for p in left]), "trimmed": [p["text"] for p in left]}
+        out.append(m)
+    return out
+
+
+def _moves(result: dict[str, Any], record: dict[str, Any], context: dict[str, Any]) -> list[dict[str, Any]]:
     have = {k for k, v in (context.get("links") or {}).items() if v}
     known = {q["key"] for q in record["promises"]}
     moves = []
@@ -410,6 +508,181 @@ async def draft_next_moves(llm: LLM, record: dict[str, Any], **context: Any) -> 
         m["duration_minutes"] = int(m.get("duration_minutes") or 30)
         moves.append(m)
     return moves
+
+
+MAX_DECK_CHARS = 6000
+
+# Words that carry no meaning of their own in an edge or a claim: they never make one distinctive or unsupported.
+COMMON = set("""
+about after again also another back because been before being both came come could does doing done down each even
+ever from have having here into just know like look made make maybe might more most much must need only other over
+really right said same should some something such sure than that their them then there these they thing things think
+this those through told very want wants well were what when where which while will with would yeah your yours okay
+good great nice love lovely happy thanks thank person people usable used using nothing everything anything work
+works working talk talked tell next week today tonight tomorrow morning evening night monday tuesday wednesday
+thursday friday saturday sunday looking forward hope hear hearing chat chatting meet meeting meeting send sending
+sent attached share sharing time times quick quickly once soon promised promise asked
+""".split())
+
+
+def _stem(word: str) -> str:
+    """'organizers' -> 'organizer', 'selling' -> 'sell', 'makes' -> 'make', 'business' stays: enough to match words."""
+    if word.endswith("ies") and len(word) > 4:
+        return word[:-3] + "y"
+    if word.endswith(("sses", "xes", "zes", "ches", "shes")):
+        return word[:-2]
+    if word.endswith("s") and not word.endswith("ss") and len(word) > 3:
+        return word[:-1]
+    for suffix in ("ing", "ed"):
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+            return word[: -len(suffix)]
+    return word
+
+
+def _near(a: str, b: str) -> bool:
+    return a == b or (min(len(a), len(b)) >= 3 and (a.startswith(b) or b.startswith(a)))
+
+
+def _content(text: str) -> list[str]:
+    """The words that carry meaning: four letters or more, or a number; folded, stemmed, common words left out."""
+    stems = [(w, _stem(w)) for w in fold_words(text).split() if len(w) >= 4 or w.isdigit()]
+    return [s for w, s in stems if w not in COMMON and s not in COMMON]
+
+
+def _sentences(text: str) -> list[str]:
+    return [x.strip() for x in re.split(r"(?<=[.!?])\s+|\n+", text or "") if x.strip()]
+
+
+def _drop_sentences(text: str, drop: list[str]) -> str:
+    gone = {d.strip() for d in drop}
+    lines = []
+    for line in (text or "").split("\n"):
+        kept = [x for x in re.split(r"(?<=[.!?])\s+", line) if x.strip() not in gone]
+        if kept or not line.strip():
+            lines.append(" ".join(kept))
+    return "\n".join(lines).strip()
+
+
+def _english(move: dict[str, Any]) -> str:
+    return move.get("body_english") or move.get("body", "") if _language(move.get("language") or "English") != "english" \
+        else move.get("body", "")
+
+
+def _voice(t: dict[str, Any]) -> str:
+    return f"{t.get('session', 1)}:{t.get('speaker') or '?'}"
+
+
+def draft_problems(move: dict[str, Any], record: dict[str, Any], context: dict[str, Any] | None = None) -> list[dict[str, str]]:
+    """What is wrong with one draft: [{kind: overheard | claim, text, sentence}]."""
+    out = []
+    words = overheard(move, record, context)
+    if words:
+        sentence = next((x for x in _sentences(_english(move)) if any(_near(a, b) for a in _content(x) for b in _content(words))), "")
+        out.append({"kind": "overheard", "text": words, "sentence": sentence})
+    for sentence in unsupported_claims(move, record, context or {}):
+        out.append({"kind": "claim", "text": sentence, "sentence": sentence})
+    return out
+
+
+def overheard(move: dict[str, Any], record: dict[str, Any], context: dict[str, Any] | None = None) -> str:
+    """The words of one of the person's edges that a draft to them gives back, or "": what they said not to the owner
+    stays with him. Caught two ways:
+    - quoted: their own words from two, the English of them from four (a one-pager "with numbers" is just the
+      promise), unless they said those words to the owner too, in a turn the edge does not rest on;
+    - paraphrased: the edge's distinctive words, those that nothing the person said to the owner, nothing the owner
+      said and nothing about who they are (name, company, role) or what was promised explains, two of them, or one of
+      five letters or more. Kenji told someone on the phone the badge might do for his robots' field logs: "a demo for
+      your robots" is what his company explains, "your field logs" is what he said."""
+    edges = [e for e in record.get("edges") or [] if e.get("person") == move.get("person_key")]
+    if not edges:
+        return ""
+    text = " ".join(str(move.get(f, "")) for f in ("subject", "body", "body_english"))
+    body = f" {fold_words(text)} "
+    person = next((p for p in record.get("people", []) if p.get("key") == move.get("person_key")), {})
+    speakers, kinds = set(person.get("speakers") or []), record.get("turn_kinds", {})
+    cited = {n for e in edges for n in e.get("turns") or []}
+    for e in edges:
+        aloud = [f" {fold_words(t.get('text', ''))} " for t in record.get("turns", [])
+                 if t.get("turn") not in (e.get("turns") or []) and kinds.get(t.get("turn"), "conversation") == "conversation"
+                 and _voice(t) in speakers]
+        for said, least in ((e.get("said", ""), 2), (e.get("english", ""), 4)):
+            words = fold_words(said)
+            if len(words.split()) >= least and f" {words} " in body and not any(f" {words} " in a for a in aloud):
+                return str(said).strip()
+    owner = set(record.get("owner_speakers") or [])
+    explained = _content(" ".join(
+        [t.get("text", "") for t in record.get("turns", []) if (_voice(t) in speakers and t.get("turn") not in cited)
+         or _voice(t) in owner]
+        + [person.get(f, "") for f in ("name", "company", "role")]
+        + [str((context or {}).get(k, "")) for k in ("owner_name", "owner_company")]
+        + [f"{q.get('what', '')} {q.get('due', '')}" for q in record.get("promises", [])
+           if move.get("person_key") in (q.get("owed_to"), q.get("owed_by"))]))
+    drafted = [(w, _stem(w)) for w in fold_words(text).split() if len(w) >= 4 or w.isdigit()]
+    for e in edges:
+        # their words in English; when a model wrapped them in its own account ("Said to himself, in Japanese: '...'"),
+        # only the quoted words
+        english = e.get("english", "")
+        quoted = re.findall(r"[“\"]([^”\"]+)[”\"]|(?<!\w)'(.+?)'(?!\w)", english)
+        english = " ".join(a or b for a, b in quoted) or english
+        own = english + (" " + e.get("said", "") if _language(e.get("language")) in ("english", "") else "")
+        distinctive = [w for w in dict.fromkeys(_content(own)) if not any(_near(w, x) for x in explained)]
+        hits = list(dict.fromkeys(raw for raw, stem in drafted if any(_near(stem, d) for d in distinctive)))
+        if len(hits) >= 2 or any(len(h) >= 5 and not h.isdigit() for h in hits):
+            return " ".join(hits)
+    return ""
+
+
+# A sentence that says something about the owner's business: his company named, or "we / our" with a business word.
+CLAIM = re.compile(
+    r"\b(we|our|us)\b[^.!?]*\b(make|makes|making|made|sell|sells|selling|sold|charge|charges|charging|earn|earns|"
+    r"revenue|customers?|clients?|users?|pricing|priced|prices?|margins?|subscriptions?|licen[cs]es?|organi[sz]ers?|"
+    r"partners?|partnered|investors?|funding|funded|raised?|valuation|growth|traction|profit|profitable|paying|"
+    r"deployed|shipped|launched|money|business model)\b", re.I)
+
+
+def unsupported_claims(move: dict[str, Any], record: dict[str, Any], context: dict[str, Any]) -> list[str]:
+    """The sentences of a draft (its English) that state something about the owner's product or company that his
+    sources do not give: two or more of their meaningful words (a number counts) found nowhere in the owner's own
+    lines tonight, his deck, his settings, the promises, or who the person is. "Hallwise makes money by selling our
+    badge to event organizers": money, selling, organizers, in no source."""
+    company = fold_words(context.get("owner_company", ""))
+    owner = set(record.get("owner_speakers") or [])
+    person = next((p for p in record.get("people", []) if p.get("key") == move.get("person_key")), {})
+    sources = _content(" ".join(
+        [t.get("text", "") for t in record.get("turns", []) if _voice(t) in owner]
+        + [str(context.get(k, "")) for k in ("owner_name", "owner_company", "event", "venue", "deck")]
+        + list((context.get("links") or {}).keys())
+        + [f"{q.get('what', '')} {q.get('due', '')}" for q in record.get("promises", [])]
+        + [person.get(f, "") for f in ("name", "company", "role")]
+        + ["deck one pager page numbers demo introduction coffee call blurb link badge"]))
+    out = []
+    for sentence in _sentences(_english(move)):
+        folded = f" {fold_words(sentence)} "
+        if not ((company and f" {company} " in folded) or CLAIM.search(sentence)):
+            continue
+        missing = [w for w in dict.fromkeys(_content(sentence)) if not any(_near(w, x) for x in sources)]
+        if len(missing) >= 2:
+            out.append(sentence)
+    return out
+
+
+def deck_source() -> str:
+    """The owner's deck (HALLWISE_DECK, Markdown) as plain text for the drafts, its comments left out; "" if none."""
+    path = os.environ.get("HALLWISE_DECK", "").strip()
+    if not path:
+        return ""
+    try:
+        text = Path(path).read_text()
+    except OSError:
+        return ""
+    return re.sub(r"<!--.*?-->", "", text, flags=re.S).strip()[:MAX_DECK_CHARS]
+
+
+def fold_words(text: str) -> str:
+    """'Une page, avec des chiffres...' -> 'une page avec des chiffres': lowercase words without accents or
+    punctuation, to find one text's words in another."""
+    n = unicodedata.normalize("NFKD", str(text or "").casefold())
+    return " ".join(re.findall(r"\w+", "".join(c for c in n if not unicodedata.combining(c))))
 
 
 def slug(text: str) -> str:
@@ -427,7 +700,55 @@ def normalize_keys(result: dict[str, Any]) -> dict[str, Any]:
             promise[field] = slug(promise[field])
     for mention in result.get("mentioned", []):
         mention["by"] = slug(mention["by"])
+    for edge in result.get("edges", []):
+        edge["person"] = slug(edge.get("person", ""))
     return result
+
+
+def _language(name: Any) -> str:
+    """'French' and 'french (Paris)' are one language: its first word, lowercase."""
+    return (str(name or "").casefold().split() or [""])[0]
+
+
+def asides_kept_aside(result: dict[str, Any], turns: list[Turn]) -> dict[str, Any]:
+    """What the transcript backs, for what someone said not to the owner.
+
+    preferred_language stays only when the person spoke that language to the owner (a translated turn of theirs not
+    marked aside) or named it ("in French, please"): Margaux spoke English to him all evening and said "avec des
+    chiffres" to herself, so her follow-up is in English. An edge stays only for someone in people, resting on a
+    turn in their own voice whose text has their words (`said`): an edge on words nobody heard, or on someone the
+    owner never met, is worse than none."""
+    translated = {tr.get("turn"): tr for tr in result.get("translations", [])}
+    people = {p.get("key", ""): p for p in result.get("people", [])}
+    for p in people.values():
+        lang = _language(p.get("preferred_language"))
+        if not lang or lang == "english":
+            continue
+        mine = [t for t in turns if t.speaker in set(p.get("speakers") or [])]
+        spoken = any(_language(translated.get(t.turn, {}).get("language")) == lang and not translated[t.turn].get("aside")
+                     for t in mine)
+        named = any(re.search(rf"\b{re.escape(lang)}\b", t.text.casefold()) for t in mine)
+        if not (spoken or named):
+            p["preferred_language"] = ""
+    result["edges"] = kept_edges(result.get("edges", []), list(people.values()), turns)
+    return result
+
+
+def kept_edges(edges: list[dict[str, Any]], people: list[dict[str, Any]], turns: list[Turn]) -> list[dict[str, Any]]:
+    """The edges the transcript backs, whoever found them (Muse Spark or the edge finder): for someone in people,
+    resting on a turn in their own voice whose text has their words (`said`)."""
+    voice = {t.turn: t for t in turns}
+    by_key = {p.get("key", ""): p for p in people}
+    out = []
+    for e in edges:
+        p = by_key.get(e.get("person", ""))
+        if p is None:
+            continue
+        own = [voice[n] for n in e.get("turns") or [] if n in voice and voice[n].speaker in set(p.get("speakers") or [])]
+        said = fold_words(e.get("said", ""))
+        if said and any(f" {said} " in f" {fold_words(t.text)} " for t in own):
+            out.append(e)
+    return out
 
 
 class SparkClient:
@@ -491,6 +812,10 @@ class Extractor:
         # than read from the transcript. It joins whatever Muse Spark lists as the owner; it never replaces it.
         self.wearer = ""
         self._spark_owner: list[str] = []  # owner_speakers as Muse Spark last listed them
+        # While the edge finder (edge_finder.py) is on, Muse Spark looks for no edges: the finder's latest ones, with
+        # the speaker keys their person had, stand in every picture. Off again (it failed), Spark finds them itself.
+        self.edge_finder = False
+        self.found_edges: list[tuple[dict[str, Any], frozenset[str]]] = []
 
     def add_turn(self, turn: Turn) -> None:
         self.turns.append(turn)
@@ -506,7 +831,7 @@ class Extractor:
         return self.state["owner_speakers"]
 
     def prompt(self, turns: list[Turn], wearer: str | None = None) -> str:
-        """The prompt for these turns, with everything the extractor knows; the second listener reads the same one."""
+        """The prompt for these turns, with everything the extractor knows; the edge finder reads the same one."""
         return build_prompt(
             turns, self.owner_name, self.owner_company, self.vocabulary, self.known,
             self.wearer if wearer is None else wearer,
@@ -519,14 +844,43 @@ class Extractor:
         if not self.turns:
             return []
         turns = list(self.turns)
-        result = await self.llm(SYSTEM, self.prompt(turns))
+        finder = self.edge_finder
+        if finder:
+            result = await self.llm(SYSTEM_NO_EDGES, self.prompt(turns), schema=SCHEMA_NO_EDGES)
+        else:
+            result = await self.llm(SYSTEM, self.prompt(turns))
         from .corrections import refine  # here, not at the top: corrections reads helpers that import this module
 
+        if finder:
+            result["edges"] = self.finder_edges(result.get("people", []))
         result = refine(
             normalize_keys(result), turns=turns, corrections=self.corrections, spellings=self.spellings,
             rejected=self.rejected, known=self.known_people,
         )
-        return self.diff(result, t_ms=turns[-1].end_ms)
+        return self.diff(asides_kept_aside(result, turns), t_ms=turns[-1].end_ms)
+
+    def finder_edges(self, people: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """The edge finder's edges under the keys of `people`: a person Spark has since listed under another key (the
+        company heard at last) keeps their edges, found again by the speaker keys they had."""
+        keys = {slug(p.get("key", "")) for p in people}
+        out = []
+        for e, speakers in self.found_edges:
+            key = e.get("person", "")
+            if key not in keys:
+                key = next((slug(p.get("key", "")) for p in people if speakers & set(p.get("speakers") or [])), key)
+            out.append({**e, "person": key})
+        return out
+
+    def take_edges(self, edges: list[dict[str, Any]], t_ms: int) -> list[tuple[str, int, dict[str, Any]]]:
+        """The edge finder's latest edges, checked as Spark's own are (kept_edges) against the picture now; they
+        stand in the picture until its next answer, and come back as the events for what changed."""
+        people = self.state.get("people", [])
+        speakers = {p.get("key", ""): frozenset(p.get("speakers") or []) for p in people}
+        fresh = [{**e, "person": slug(e.get("person", ""))} for e in edges]
+        kept = kept_edges(fresh, people, self.turns)
+        self.found_edges = [(e, speakers.get(e["person"], frozenset())) for e in kept]
+        old, self.state = self.state, {**self.state, "edges": kept}
+        return self._section(old, self.state, "edges", t_ms)
 
     def diff(self, new: dict[str, Any], t_ms: int) -> list[tuple[str, int, dict[str, Any]]]:
         old = self.state
@@ -545,23 +899,35 @@ class Extractor:
 
         # Each run is the whole picture, so anything the new run no longer lists is withdrawn: the model may
         # merge two people, rename a promise's key, or drop a suspect word once a name is confirmed.
-        for section, event, ident, id_fields in (
-            ("people", "person", lambda x: x["key"], ("key",)),
-            ("promises", "promise", lambda x: x["key"], ("key",)),
-            ("mentioned", "mention", lambda x: x["name"].lower(), ("name", "turn")),
-            ("suspect_words", "suspect_word", lambda x: (x["heard"].lower(), x["turn"]), ("heard", "turn")),
-            ("translations", "translation", lambda x: x["turn"], ("turn",)),
-        ):
-            before = {ident(x): x for x in old.get(section, [])}
-            after = {ident(x): x for x in new.get(section, [])}
-            for key, item in after.items():
-                previous = before.get(key)
-                if previous != item:
-                    out.append((event, t_ms, {**item, "new": previous is None}))
-            for key, item in before.items():
-                if key not in after:
-                    out.append((f"{event}_removed", t_ms, {f: item[f] for f in id_fields}))
+        for section in SECTIONS:
+            out += self._section(old, new, section, t_ms)
 
         if new.get("room_topics", []) != old.get("room_topics", []):
             out.append(("room_topics", t_ms, {"topics": list(new.get("room_topics", []))}))
         return out
+
+    @staticmethod
+    def _section(old: dict[str, Any], new: dict[str, Any], section: str, t_ms: int) -> list[tuple[str, int, dict[str, Any]]]:
+        event, ident, id_fields = SECTIONS[section]
+        before = {ident(x): x for x in old.get(section, [])}
+        after = {ident(x): x for x in new.get(section, [])}
+        out: list[tuple[str, int, dict[str, Any]]] = []
+        for key, item in after.items():
+            previous = before.get(key)
+            if previous != item:
+                out.append((event, t_ms, {**item, "new": previous is None}))
+        for key, item in before.items():
+            if key not in after:
+                out.append((f"{event}_removed", t_ms, {f: item[f] for f in id_fields}))
+        return out
+
+
+# A picture's sections: the event for an item, how an item is told apart, and what its withdrawal carries.
+SECTIONS: dict[str, tuple[str, Callable[[dict[str, Any]], Any], tuple[str, ...]]] = {
+    "people": ("person", lambda x: x["key"], ("key",)),
+    "promises": ("promise", lambda x: x["key"], ("key",)),
+    "mentioned": ("mention", lambda x: x["name"].lower(), ("name", "turn")),
+    "suspect_words": ("suspect_word", lambda x: (x["heard"].lower(), x["turn"]), ("heard", "turn")),
+    "translations": ("translation", lambda x: x["turn"], ("turn",)),
+    "edges": ("edge", lambda x: (x["person"], tuple(x.get("turns") or [])), ("person", "turns")),
+}

@@ -22,15 +22,15 @@ def make_app(tmp_path, calls, prompts=None):
         if name == "hallwise_next_moves":
             return {"moves": [{
                 "promise_key": "one-pager-to-margot-lefevre", "person_key": "margot-lefevre", "kind": "email",
-                "language": "French", "subject": "Une page", "body": "Bonjour Margot, Chloé m'a dit que vous voudriez voir ça. Eric",
-                "body_english": "Chloé told me you'd want to see this.", "when": "", "duration_minutes": 30, "attach": "",
+                "language": "English", "subject": "One page", "body": "Hi Margot, Chloé told me you'd want to see this: one page, the numbers first. Eric",
+                "body_english": "", "when": "", "duration_minutes": 30, "attach": "",
                 "why": "", "remind_at": "2000-01-01T10:00:00+08:00", "nudge": "One-pager for Margot"}]}
         chloe = next(line.split(" | ")[0] for line in user.splitlines() if "My colleague Margaux" in line)
         intro = next(line.split(" | ")[0] for line in user.splitlines() if "introduce you two" in line)
         return {"hooks": [
             {"type": "mutual_connection", "people": ["margot-lefevre", "chlo-martin-corvane-capital"], "title": "Chloé's colleague",
              "tag": "Chloé's colleague · Oct 23", "reason": "Chloé said her colleague Margaux would want to see this.",
-             "evidence": [chloe], "promise_key": "", "language": "French", "draft": "", "draft_english": ""},
+             "evidence": [chloe], "promise_key": "", "language": "English", "draft": "", "draft_english": ""},
             {"type": "introduction", "people": ["kenji-watanabe-hoshizora-robotics", "lena-novak-brightline-grid"],
              "title": "Introduce Lena to Kenji", "tag": "you owe Lena an intro", "reason": "Promised on Oct 20.",
              "evidence": [intro], "promise_key": "introduce-lena", "language": "English",
@@ -58,14 +58,21 @@ def test_report_runs_stores_and_serves(tmp_path):
     # Kenji is looked up (Margot has no company to search); the drafts written without a reason are written again
     assert calls == ["search", "hallwise_hooks", "hallwise_next_moves"]
     assert "margot-lefevre: Chloé's colleague | Chloé said her colleague Margaux" in prompts["hallwise_next_moves"]
+    assert "- margot-lefevre: Said to herself, in French: 'with numbers'. | act: one page, numbers first" in prompts["hallwise_next_moves"]
+    assert "edge: Said to herself, in French: 'with numbers'." in prompts["hallwise_hooks"]
     assert report["redrafted"] == ["one-pager-to-margot-lefevre"]
     assert (tmp_path / "reports" / "c-tonight.json").exists()
 
     rows = {row["person"]["name"]: row for row in report["reach_out"]}
     margot = rows["Margot Lefèvre"]
     assert margot["hook"]["title"] == "Chloé's colleague"
-    assert margot["followup"]["source"] == "next_move" and margot["followup"]["move"]["language"] == "French"
-    assert margot["followup"]["move"]["body"].startswith("Bonjour Margot, Chloé m'a dit")
+    # She spoke English with the owner: her draft is in English, and acts on what she said to herself.
+    assert margot["followup"]["source"] == "next_move" and margot["followup"]["move"]["language"] == "English"
+    assert margot["followup"]["move"]["body"].startswith("Hi Margot, Chloé told me")
+    assert margot["edges"] == [{"text": "Said to herself, in French: 'with numbers'.", "act": "one page, numbers first",
+                                "language": "French", "said": "Avec des chiffres", "english": "With numbers", "turns": [5]}]
+    assert rows["Kenji Watanabe"]["edges"] == []
+    assert [(e["person"]["name"], e["act"]) for e in report["edges"]] == [("Margot Lefèvre", "one page, numbers first")]
     kenji_move = rows["Kenji Watanabe"]["followup"]["move"]
     assert kenji_move["body"] == "Coffee Friday? Eric" and "redrafted" not in kenji_move  # not in the new drafts: kept
     assert margot["check"]["status"] == "unchecked"
@@ -77,7 +84,9 @@ def test_report_runs_stores_and_serves(tmp_path):
     assert {s["name"] for s in report["unchecked"]} == {"Margot Lefèvre"}
     assert [d["promise_key"] for d in report["due_today"]] == ["one-pager-to-margot-lefevre"]
     assert report["due_today"][0]["overdue"] is True
-    assert report["summary"]["people"] == 2 and report["summary"]["languages"] == ["French"]
+    assert report["summary"]["people"] == 2 and report["summary"]["languages"] == [] and report["summary"]["edges"] == 1
+    margot_index = next(p for p in client.get("/api/people").json() if p["name"] == "Margot Lefèvre")
+    assert [(e["event"], e["act"]) for e in margot_index["edges"]] == [("Living-room rehearsal", "one page, numbers first")]
 
     again = client.post("/api/report/run", params={"recording": "c-tonight"}).json()
     assert again["cached"] is True and len(calls) == 3  # within the hour: the stored one
