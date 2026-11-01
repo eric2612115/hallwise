@@ -1,7 +1,12 @@
 import asyncio
 import json
+from pathlib import Path
 
-from hallwise.research import RESEARCH_SCHEMA, Researcher, candidates, ground, parse_response
+import httpx
+
+from hallwise.research import (
+    CORPUS_NOTE, RESEARCH_SCHEMA, RESEARCH_SYSTEM, CorpusSearch, Researcher, SearchClient, candidates, ground, parse_response,
+)
 
 
 class FakeClock:
@@ -113,3 +118,86 @@ def test_candidates_need_a_name_and_a_company():
     assert found[0]["key"] == "kenji-watanabe-hoshizora-robotics" and found[0]["record_key"] == "kenji"
     assert {s["name"]: s["reason"] for s in skipped} == {
         "Julian": "no company to search", "Margot Lefèvre": "no company to search", "Sid": "first name only"}
+
+
+PAGES = [
+    {"url": "https://acme.example/", "title": "Acme", "text": "Acme builds robots for warehouses."},
+    {"url": "https://acme.example/team", "title": "Team | Acme", "text": "Jo Park, CTO, leads hardware at Acme."},
+]
+
+
+def corpus_reply(findings, status="matched", annotations=()):
+    """A Responses API answer with no web_search_call in it: the model only read the pages it was given."""
+    text = json.dumps({"status": status, "findings": findings})
+    return {"output": [{"type": "message", "content": [{"type": "output_text", "text": text, "annotations": list(annotations)}]}],
+            "usage": {"total_tokens": 3000, "input_tokens": 2600, "output_tokens": 400}}
+
+
+def corpus_client(sent, reply, pages=PAGES):
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return httpx.Response(200, json=reply)
+    return CorpusSearch("k", pages, transport=httpx.MockTransport(handler))
+
+
+def test_corpus_search_sends_the_pages_instead_of_a_search_tool():
+    sent = []
+    client = corpus_client(sent, corpus_reply([], status="no_public_record",
+                                              annotations=[{"type": "url_citation", "url": "https://elsewhere.org/x"}]))
+    out = asyncio.run(client(RESEARCH_SYSTEM, "Person: Jo Park\nCompany: Acme"))
+    body = sent[0]
+    assert "tools" not in body and "include" not in body  # nothing searched
+    assert body["model"] == SearchClient("k").model and body["text"]["format"]["schema"] is not None
+    assert body["instructions"] == RESEARCH_SYSTEM + CORPUS_NOTE
+    assert body["input"].startswith("Person: Jo Park\nCompany: Acme")
+    assert all(p["url"] in body["input"] and p["text"] in body["input"] for p in PAGES)
+    assert out["results"] == [{"url": p["url"], "title": p["title"], "snippet": p["text"]} for p in PAGES]
+    assert out["cited"] == [] and out["searches"] == 1  # a citation off the pages is no source
+
+
+def test_corpus_findings_must_cite_a_page(tmp_path):
+    clock, sent = FakeClock(), []
+    client = corpus_client(sent, corpus_reply([
+        {"kind": "company", "text": "Acme builds robots for warehouses.", "url": "https://acme.example/"},
+        {"kind": "profile", "text": "Jo Park is CTO at Acme.", "url": "https://acme.example/team"},
+        {"kind": "recent", "text": "Acme raised a seed round.", "url": "https://news.example/acme-raises"},  # not a page
+    ]))
+    r = Researcher(tmp_path, client, clock=clock, sleep=clock.sleep)
+    person = {"key": "jo-park-acme", "record_key": "jo", "name": "Jo Park", "company": "Acme", "role": ""}
+    out = asyncio.run(r.run([person]))
+    got = out["people"][0]
+    assert got["status"] == "matched" and got["corpus"] is True
+    assert [(f["kind"], f["source"]) for f in got["findings"]] == [
+        ("company", "https://acme.example/"), ("profile", "https://acme.example/team")]
+    assert out["searches"] == 1 and out["requests"] == 1
+
+    assert (tmp_path / "research" / "corpus" / "jo-park-acme.json").exists()  # cached apart from the web's
+    assert not (tmp_path / "research" / "jo-park-acme.json").exists()
+    web = Researcher(tmp_path, fake_search(clock, []), clock=clock, sleep=clock.sleep)
+    assert web.cached("jo-park-acme") is None  # the web never sees a corpus result
+    assert asyncio.run(r.run([person]))["people"][0]["cached"] is True and len(sent) == 1
+
+
+def test_from_env_reads_the_corpus_when_it_is_set(tmp_path, monkeypatch):
+    monkeypatch.setenv("MODEL_API_KEY", "x")
+    monkeypatch.delenv("HALLWISE_RESEARCH", raising=False)
+    assert type(Researcher.from_env(tmp_path).search) is SearchClient  # the web by default
+
+    corpus = tmp_path / "web.json"
+    corpus.write_text(json.dumps({"pages": PAGES}))
+    monkeypatch.setenv("HALLWISE_RESEARCH_CORPUS", str(corpus))
+    r = Researcher.from_env(tmp_path)
+    assert isinstance(r.search, CorpusSearch) and r.search.pages == PAGES
+    assert r.dir == tmp_path / "research" / "corpus"
+
+    monkeypatch.setenv("HALLWISE_RESEARCH_CORPUS", str(tmp_path / "missing.json"))
+    off = Researcher.from_env(tmp_path)
+    assert off.search is None and "HALLWISE_RESEARCH_CORPUS" in off.off_reason  # never the web instead
+
+
+def test_the_demo_corpus_points_at_no_real_site():
+    pages = CorpusSearch.load("k", Path(__file__).parents[2] / "demo" / "rig" / "fictional-web.json").pages
+    assert 12 <= len(pages) <= 18
+    assert all(httpx.URL(p["url"]).host.endswith(".example") for p in pages)  # RFC 2606
+    corvane = " ".join(p["text"] for p in pages if httpx.URL(p["url"]).host == "corvane.example")
+    assert "Margaux Lefèvre" in corvane and "Chloé Martin" in corvane and "Julien" not in corvane

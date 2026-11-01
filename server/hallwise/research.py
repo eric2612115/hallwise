@@ -18,6 +18,11 @@ So research only reports what public sources say, and a fictional person comes b
 Rate limited: at most `max_people` lookups per run, one request at a time with at least `min_gap_s` between
 requests, a token budget per run, and each result cached per person for seven days under data/research/.
 HALLWISE_RESEARCH=off turns it off.
+
+Corpus mode, for a demo whose guests are fictional: HALLWISE_RESEARCH_CORPUS=<a JSON file of pages> keeps the
+same model, instructions and schema but drops the web_search tool and puts the file's pages (url, title, text)
+in the input as the search results. Those pages are the `results`, so `ground` holds findings to them exactly as
+it holds real ones to a real search. Results say "corpus": true and are cached apart, under data/research/corpus/.
 """
 
 from __future__ import annotations
@@ -70,6 +75,11 @@ URL, and do not open pages. status: matched when a result ties the person to the
 company exists but nothing ties the person to it; no_public_record when neither turns up. If nothing is found,
 return no findings. Never guess, never describe the person beyond what a source says."""
 
+CORPUS_NOTE = """
+
+Here the search has already run: the pages below the request are its results, and the only ones. Use them as
+search results; every finding cites one of their urls exactly."""
+
 
 Search = Callable[..., Awaitable[dict[str, Any]]]  # (instructions, input, schema=..., name=...) -> {"answer", "results", "usage"}
 
@@ -77,11 +87,13 @@ Search = Callable[..., Awaitable[dict[str, Any]]]  # (instructions, input, schem
 class SearchClient:
     """Muse Spark with search grounding, over the Responses API, with JSON-schema output."""
 
-    def __init__(self, api_key: str, model: str = "muse-spark-1.3", effort: str = "low", timeout: float = 120):
+    def __init__(self, api_key: str, model: str = "muse-spark-1.3", effort: str = "low", timeout: float = 120,
+                 transport: httpx.AsyncBaseTransport | None = None):
         self.api_key = api_key
         self.model = model
         self.effort = effort
         self.timeout = timeout
+        self.transport = transport
 
     def body(self, instructions: str, input: str, schema: dict[str, Any], name: str) -> dict[str, Any]:
         return {
@@ -98,13 +110,43 @@ class SearchClient:
     async def __call__(
         self, instructions: str, input: str, schema: dict[str, Any] = RESEARCH_SCHEMA, name: str = "hallwise_research"
     ) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             response = await client.post(
                 RESPONSES_URL, json=self.body(instructions, input, schema, name),
                 headers={"Authorization": f"Bearer {self.api_key}"},
             )
         response.raise_for_status()
         return parse_response(response.json())
+
+
+class CorpusSearch(SearchClient):
+    """The same lookup over a fixed set of pages instead of the web: no search tool, the pages in the input, and
+    those pages as the results the findings are held to."""
+
+    def __init__(self, api_key: str, pages: list[dict[str, str]], **kw: Any):
+        super().__init__(api_key, **kw)
+        self.pages = pages
+
+    @classmethod
+    def load(cls, api_key: str, path: Path, **kw: Any) -> "CorpusSearch":
+        """Pages from a JSON file: a list of {url, title, text}, or {"pages": [...]}."""
+        data = json.loads(Path(path).read_text())
+        pages = data.get("pages", []) if isinstance(data, dict) else data
+        return cls(api_key, [{"url": str(p["url"]), "title": str(p.get("title", "")), "text": str(p.get("text", ""))}
+                             for p in pages if p.get("url")], **kw)
+
+    def body(self, instructions: str, input: str, schema: dict[str, Any], name: str) -> dict[str, Any]:
+        listed = "\n\n".join(f"[{i}] {p['url']}\n{p['title']}\n{p['text']}" for i, p in enumerate(self.pages, 1))
+        body = super().body(instructions + CORPUS_NOTE, f"{input}\n\nSearch results:\n\n{listed}", schema, name)
+        del body["tools"], body["include"]
+        return body
+
+    async def __call__(
+        self, instructions: str, input: str, schema: dict[str, Any] = RESEARCH_SCHEMA, name: str = "hallwise_research"
+    ) -> dict[str, Any]:
+        reply = await super().__call__(instructions, input, schema=schema, name=name)
+        results = [{"url": p["url"], "title": p["title"], "snippet": p["text"]} for p in self.pages]
+        return {**reply, "results": results, "cited": [], "searches": 1}  # no source but the pages, cited or not
 
 
 def parse_response(data: dict[str, Any]) -> dict[str, Any]:
@@ -239,7 +281,8 @@ class Researcher:
         sleep: Callable[[float], Awaitable[Any]] = asyncio.sleep,
         off_reason: str = "",
     ):
-        self.dir = data / "research"
+        self.corpus = isinstance(search, CorpusSearch)
+        self.dir = data / "research" / "corpus" if self.corpus else data / "research"  # never mixed with the web's
         self.search = search
         self.max_people = max_people
         self.min_gap_s = min_gap_s
@@ -259,9 +302,15 @@ class Researcher:
             return cls(data, None, off_reason="HALLWISE_RESEARCH=off")
         if not key:
             return cls(data, None, off_reason="MODEL_API_KEY is not set")
+        model = os.environ.get("HALLWISE_SPARK_MODEL", "muse-spark-1.3")
+        corpus = os.environ.get("HALLWISE_RESEARCH_CORPUS", "")
+        try:
+            search = CorpusSearch.load(key, Path(corpus), model=model) if corpus else SearchClient(key, model=model)
+        except (OSError, ValueError, TypeError, AttributeError) as err:  # a bad file never falls back to the web
+            return cls(data, None, off_reason=f"HALLWISE_RESEARCH_CORPUS unreadable ({err.__class__.__name__})")
         return cls(
             data,
-            SearchClient(key, model=os.environ.get("HALLWISE_SPARK_MODEL", "muse-spark-1.3")),
+            search,
             max_people=int(os.environ.get("HALLWISE_RESEARCH_MAX", MAX_PEOPLE)),
             min_gap_s=float(os.environ.get("HALLWISE_RESEARCH_GAP_S", MIN_GAP_S)),
             budget=int(os.environ.get("HALLWISE_RESEARCH_TOKENS", TOKEN_BUDGET)),
@@ -325,6 +374,8 @@ class Researcher:
                     "sources": list(dict.fromkeys(f["source"] for f in findings)),
                     "searched": bool(reply.get("searches")), "checked_at": self.clock(), "tokens": used,
                 }
+                if self.corpus:
+                    result["corpus"] = True
                 self.dir.mkdir(parents=True, exist_ok=True)
                 self._cache_path(p["key"]).write_text(json.dumps(result, ensure_ascii=False, indent=1))
                 out.append({**result, "cached": False, "record_key": p.get("record_key", "")})

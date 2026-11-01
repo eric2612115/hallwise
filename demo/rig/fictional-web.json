@@ -1,0 +1,90 @@
+{
+ "note": "The web the demo's research reads (HALLWISE_RESEARCH_CORPUS). Every company and person here is invented, and every URL is on the reserved .example domain (RFC 2606), so nothing points at a real company. One page is a decoy: a different Julien Caron, who must not count as Corvane's.",
+ "pages": [
+  {
+   "url": "https://brightpath.example/",
+   "title": "Bright Path | Embedded wallets for mobile apps",
+   "text": "Bright Path builds embedded wallet infrastructure for mobile apps. Developers add a wallet to an iOS or Android app with one SDK, and Bright Path handles keys, recovery and payments. Apps in Hong Kong, Singapore and Taipei run it in production."
+  },
+  {
+   "url": "https://brightpath.example/team",
+   "title": "Team | Bright Path",
+   "text": "Leo Wong, co-founder and CEO, leads product and partnerships. Mei Chan, co-founder and CTO, runs the SDK and key-management team. Bright Path is fourteen people across Hong Kong and Taipei."
+  },
+  {
+   "url": "https://brightpath.example/news/sdk-3-passkey-recovery",
+   "title": "Bright Path ships SDK 3.0 with passkey recovery (October 14, 2026)",
+   "text": "October 14, 2026. Bright Path released SDK 3.0, which lets users recover a wallet with the passkey already on their phone instead of a seed phrase. \"Recovery is where wallets lose people,\" said co-founder Leo Wong. SDK 3.0 is available to every app on the platform today."
+  },
+  {
+   "url": "https://corvane.example/",
+   "title": "Corvane Capital | Early-stage venture",
+   "text": "Corvane Capital is an early-stage fund investing at pre-seed and seed in software and hardware founders across Europe and Asia. First cheques range from EUR 250k to EUR 1.5M. The team works from Paris and Singapore."
+  },
+  {
+   "url": "https://corvane.example/team",
+   "title": "Team | Corvane Capital",
+   "text": "Margaux Lefèvre, Partner, leads Corvane's pre-seed investments. Chloé Martin, Principal, covers fintech and infrastructure. Antoine Girard, Partner, leads seed and follow-on rounds."
+  },
+  {
+   "url": "https://corvane.example/news/q4-2026-pre-seed-window",
+   "title": "Corvane opens its Q4 2026 pre-seed window (October 6, 2026)",
+   "text": "October 6, 2026. Corvane Capital's pre-seed window for Q4 2026 is open until December 12. Founders apply with a one-page summary that includes their numbers. Partner Margaux Lefèvre leads the window this quarter."
+  },
+  {
+   "url": "https://chez-caron-lyon.example/",
+   "title": "Chez Caron | Natural wine bar, Lyon",
+   "text": "Chez Caron is a natural-wine bar on the slopes of the Croix-Rousse in Lyon, opened in 2019 by sommelier Julien Caron. Tastings every Thursday, small plates from producers in the Beaujolais. Open Tuesday to Saturday from 6 pm."
+  },
+  {
+   "url": "https://quillmesh.example/",
+   "title": "Quill Mesh | One schedule for every robot in the warehouse",
+   "text": "Quill Mesh schedules mixed fleets of warehouse robots from different vendors, so pickers, movers and inspection cameras work from one plan. It runs alongside the warehouse management system a site already has."
+  },
+  {
+   "url": "https://quillmesh.example/about",
+   "title": "About | Quill Mesh",
+   "text": "Quill Mesh was founded in 2024 by Siddharth Raghunathan, CEO, and Aditi Rao, CTO. Siddharth leads the company and its warehouse pilots in Singapore and Taipei. The team is twelve people."
+  },
+  {
+   "url": "https://quillmesh.example/blog/depth-camera-pilot",
+   "title": "Quill Mesh to pilot depth cameras from Lumen Optics (October 24, 2026)",
+   "text": "October 24, 2026. Quill Mesh will pilot its scheduler with depth cameras from Lumen Optics in a Taipei warehouse from November. The cameras let the scheduler see shelf occupancy and send robots only where work is waiting."
+  },
+  {
+   "url": "https://hoshizora-robotics.example/",
+   "title": "Hoshizora Robotics | Compact robot arms for small factories",
+   "text": "Hoshizora Robotics designs and builds compact robot arms and grippers for small factories, in Tokyo. Each arm ships with an on-board perception stack, so a line can be taught a new part in an afternoon."
+  },
+  {
+   "url": "https://hoshizora-robotics.example/team",
+   "title": "Team | Hoshizora Robotics",
+   "text": "Kenji Watanabe, co-founder, leads hardware at Hoshizora Robotics: the arm, the grippers and the drive electronics. Hana Sato runs the perception team. The company has twenty-two people in Tokyo."
+  },
+  {
+   "url": "https://hoshizora-robotics.example/news/k2-gripper",
+   "title": "Hoshizora Robotics launches the K2 gripper (October 19, 2026)",
+   "text": "October 19, 2026. Hoshizora Robotics launched the K2, a two-finger gripper with tactile sensors in each fingertip. The first units are shipping to pilot customers in Japan and Taiwan."
+  },
+  {
+   "url": "https://brightline-grid.example/",
+   "title": "Brightline Grid | Energy storage for data centres",
+   "text": "Brightline Grid builds battery storage for data centres, sized to carry a server hall through demand peaks and grid outages. Its systems run in Singapore and Taiwan."
+  },
+  {
+   "url": "https://brightline-grid.example/team",
+   "title": "Team | Brightline Grid",
+   "text": "Lena Novak, co-founder, leads partnerships and deployments at Brightline Grid. Before Brightline she built grid-scale storage projects across Southeast Asia."
+  },
+  {
+   "url": "https://brightline-grid.example/news/taipei-commissioning",
+   "title": "Brightline Grid commissions its first Taipei system (October 9, 2026)",
+   "text": "October 9, 2026. Brightline Grid commissioned a 4 MWh storage system at a data centre in Taipei, its first in Taiwan. The system covers the site's evening peak and two hours of backup."
+  },
+  {
+   "url": "https://nangang-hardware.example/meetups/2026-11-05-first-robot",
+   "title": "Nangang Hardware Meetup #19: The first robot on a small line (Thursday, November 5, 2026)",
+   "text": "Thursday, November 5, 2026, 19:00 to 21:30, Nangang, Taipei. This month's meetup is about putting the first robot on a small production line. Ben Walker, co-founder of Stride Mobility, talks about why an e-bike maker that still builds its frames by hand in Taoyuan wants a robot arm on the line, and what he needs from the first one. After the talk, an open bench: makers of robot arms, grippers and sensors are welcome to bring hardware and show it working. Free; register on this page."
+  }
+ ]
+}
