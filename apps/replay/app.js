@@ -47,11 +47,11 @@
     for (const a of angles) { x += Math.cos((a * Math.PI) / 180); y += Math.sin((a * Math.PI) / 180); }
     return (Math.atan2(y, x) * 180) / Math.PI;
   }
-  function bearingWords(a) {
-    const m = Math.abs(a);
-    if (m < 12) return 'straight ahead';
-    if (m > 168) return 'behind you';
-    return `${Math.round(m)}° to your ${a > 0 ? 'left' : 'right'}`;
+  /** Direction in words only: a chest badge tells left from right roughly and front from back not at all, so a
+   *  voice is "to your left", never a number of degrees; "?" when the array itself was unsure. */
+  function bearingWords(a, low) {
+    const side = a > 12 ? 'to your left' : a < -12 ? 'to your right' : 'about ahead';
+    return low ? `${side}, not sure` : side;
   }
   function durationWords(ms) {
     const s = Math.floor(ms / 1000);
@@ -69,7 +69,57 @@
       people: new Map(), positions: new Map(), turns: new Map(), partial: new Map(), kinds: new Map(),
       translations: new Map(), suspects: new Map(), promises: new Map(), history: new Map(),
       topics: [], moves: new Map(), photos: [], ended: false, endT: null,
+      x: freshXray(),
     };
+  }
+
+  /** What the X-ray folds on top of the replay's own state: the machinery events the panels never showed. */
+  function freshXray() {
+    return {
+      positions: new Map(), firstPos: null, edges: new Map(), edgesRemoved: 0, hooks: new Map(), runs: [],
+      confirmed: new Map(), unconfirmed: [], disagreements: [], rebuilt: [], recall: new Map(),
+      spark: [], firstSpark: null, lastCheckT: null, lastWordsT: null,
+    };
+  }
+
+  /** Runs before the replay's own fold of the same event (so a promise's previous due date is still readable). */
+  function applyXray(S, e) {
+    const x = S.x;
+    const push = (kind, text) => { x.spark.push({ t: e.t_ms, kind, text }); if (x.spark.length > 16) x.spark.shift(); x.lastWordsT = e.t_ms; };
+    switch (e.type) {
+      case 'position': x.positions.set(e.turn, e); break;
+      case 'speaker_position': if (x.firstPos == null) x.firstPos = e.t_ms; break;
+      case 'edge': x.edges.set(`${e.person}|${(e.turns || []).join(',')}`, e); x.lastCheckT = e.t_ms; x.lastWordsT = e.t_ms; break;
+      case 'edge_removed': x.edges.delete(`${e.person}|${(e.turns || []).join(',')}`); x.edgesRemoved++; break;
+      case 'hook': x.hooks.set(`${e.person_key}|${e.title}`, e); break;
+      case 'hook_removed': x.hooks.delete(`${e.person_key}|${e.title}`); break;
+      case 'second_run': x.runs.push(e); x.lastWordsT = e.t_ms; break;
+      case 'confirmed': x.confirmed.set(`${e.kind}:${e.key}`, e); x.lastCheckT = e.t_ms; break;
+      case 'confirmed_removed': x.confirmed.delete(`${e.kind}:${e.key}`); x.unconfirmed.push(e); x.lastCheckT = e.t_ms; break;
+      case 'disagreement': x.disagreements.push(e); x.lastCheckT = e.t_ms; break;
+      case 'rebuilt': x.rebuilt.push(e); break;
+      case 'person_history': { const r = x.recall.get(e.key); if (r) r.last = e; else x.recall.set(e.key, { first: e, last: e }); break; }
+      case 'person_history_removed': x.recall.delete(e.key); break;
+      case 'person': {
+        if (x.firstSpark == null) x.firstSpark = e.t_ms;
+        const prev = S.people.get(e.key);
+        if (!prev) push('person', [e.name, e.company].filter(Boolean).join(' · '));
+        else if (['company', 'role', 'preferred_language', 'introduced_by', 'name'].some((k) => e[k] && e[k] !== prev[k])) push('details', [e.name, e.company, e.role].filter(Boolean).join(' · '));
+        break;
+      }
+      case 'promise': {
+        const prev = S.promises.get(e.key);
+        const c = correction(prev, e);
+        if (c) { x.lastCheckT = e.t_ms; push('promise corrected', `${e.what} · ${c.from} → ${c.to}`); }
+        else if (!prev) push('promise', `${e.what}${e.due ? ' · ' + e.due : ''}`);
+        break;
+      }
+      case 'translation': if (!S.translations.has(e.turn)) push(`translation · ${e.language || ''}`, e.english || ''); break;
+      case 'suspect_word': if (!S.suspects.has(skey(e))) push('misheard?', `${e.heard} → ${e.likely}`); break;
+      case 'room_topics': { const now = (e.topics || []).join(' · '); if (now && now !== S.topics.join(' · ')) push('overheard', now); break; }
+      case 'turn_kind': if (KIND_LABEL[e.kind] && S.kinds.get(e.turn) !== e.kind) push('set aside', `turn ${e.turn} · ${KIND_LABEL[e.kind]}`); break;
+      default: break;
+    }
   }
 
   /** What a promise event changes about the date, if anything: "Thursday" -> "Friday". */
@@ -84,6 +134,7 @@
   }
 
   function apply(S, e) {
+    applyXray(S, e);
     switch (e.type) {
       case 'device_pose':
         if (typeof e.yaw === 'number') S.yaw = e.yaw;
@@ -122,7 +173,7 @@
         S.ownerT = e.t_ms;
         break;
       case 'speaker_position':
-        S.positions.set(e.speaker, { az: Number(e.azimuth) || 0, level: e.level_db, spread: e.spread, turns: e.turns });
+        S.positions.set(e.speaker, { az: Number(e.azimuth) || 0, level: e.level_db, spread: e.spread, turns: e.turns, low: e.low_confidence === true });
         break;
       case 'person': {
         const prev = S.people.get(e.key);
@@ -205,6 +256,7 @@
     P.layout = meta.layout || '';
     P.hasDirection = evs.some((e) => e.type === 'speaker_position');
     P.multiSession = new Set([...F.speakers.values()].map((s) => s.session)).size > 1;
+    P.xPersonOf = personBySpeaker(F);  // the X-ray colours a voice by who it turned out to be, like the transport
 
     P.colour = new Map();
     for (const e of evs) if (e.type === 'person' && !P.colour.has(e.key)) P.colour.set(e.key, P.colour.size);
@@ -322,7 +374,7 @@
           case 'speaker_position':
             if (!placed.has(e.speaker)) {
               placed.add(e.speaker);
-              if (!S.owner.has(e.speaker)) add(t, 'array', `voice placed ${bearingWords(wrap180((Number(e.azimuth) || 0) - S.yaw))}`);
+              if (!S.owner.has(e.speaker)) add(t, 'array', `a voice placed, roughly ${bearingWords(wrap180((Number(e.azimuth) || 0) - S.yaw), e.low_confidence === true)}`, 'a soft region, never a degree');
             }
             break;
           case 'person': {
@@ -439,6 +491,10 @@
         else if (!prev) out.push({ lane: 'promise', t: e.t_ms, label: `Promise: ${e.what}${e.due ? ', ' + e.due : ''}` });
       } else if (e.type === 'translation' && !S.translations.has(e.turn)) {
         out.push({ lane: 'translation', t: e.t_ms, label: `Translated from ${e.language || 'another language'}` });
+      } else if (e.type === 'edge' && e.new && !S.x.edges.has(`${e.person}|${(e.turns || []).join(',')}`)) {
+        out.push({ lane: 'edge', t: e.t_ms, label: `Edge: “${truncate(e.said || '', 60)}” → ${e.act || ''}` });
+      } else if (e.type === 'hook' && !S.x.hooks.has(`${e.person_key}|${e.title}`)) {
+        out.push({ lane: 'hook', t: e.t_ms, label: `Reason to write: ${e.title}` });
       }
       apply(S, e);
     }
@@ -492,13 +548,14 @@
   // ---------------------------------------------------------------- the page
   const els = {};
   [
-    'app', 'radar', 'radar-static', 'blips', 'wearer', 'wearer-mark', 'new-voice', 'new-voice-label', 'radar-note',
+    'app', 'radar', 'radar-static', 'radar-wedges', 'blips', 'wearer', 'wearer-mark', 'new-voice', 'new-voice-label', 'radar-note',
     'captions', 'people', 'intro', 'evening-name', 'evening-meta', 'evening-stats', 'play-big', 'play-len',
     'audio-note', 'skip-end', 'skip-end-2', 'transcript', 'promises', 'suspects', 'suspects-box', 'after',
     'waiting', 'moves', 'morning', 'morning-when', 'morning-count', 'm-hooks-part', 'm-hooks', 'm-redrafts-part',
     'm-redrafts', 'm-checks-box', 'm-checks', 'm-due-box', 'm-due', 'morning-cost', 'week', 'week-sub', 'chips', 'places-box', 'places', 'places-note', 'map', 'foot-id', 'bar', 'pp', 'pp-icon', 'time', 'scrub',
-    'track', 'segs', 'fill', 'head', 'lane-person', 'lane-promise', 'lane-translation', 'tip', 'toast', 'pick',
+    'track', 'segs', 'fill', 'head', 'lane-person', 'lane-promise', 'lane-translation', 'lane-edge', 'lane-hook', 'tip', 'toast', 'pick',
     'theme', 'theme-label', 'brand', 'mute', 'mute-waves', 'mute-cross',
+    'xray', 'xray-btn', 'x-stamp', 'x-legend', 'x-close', 'x-caption', 'x-cols', 'x-tape',
   ].forEach((id) => { els[id] = $(id); });
 
   let P = null;            // the prepared recording
@@ -728,7 +785,8 @@
       const turn = a === 90 ? -90 : a === -90 ? 90 : 0;
       return `<text class="compass" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle"${turn ? ` transform="rotate(${turn} ${x} ${y})"` : ''}>${text}</text>`;
     };
-    s += label(0, 'ahead') + label(180, 'behind') + label(90, 'left') + label(-90, 'right');
+    // left / right is what a chest badge can tell; front / back it cannot, and the labels say so
+    s += label(0, 'ahead · unreliable') + label(180, 'behind · unreliable') + label(90, 'left') + label(-90, 'right');
     s += `<line class="ahead" x1="50" y1="50" x2="50" y2="${50 - ring * 0.3}"/>`;
     g.innerHTML = s;
   }
@@ -780,13 +838,15 @@
       if (!st.speakers.has(sp) && !st.owner.has(sp)) unplaced.push({ id: `v:${sp}`, person: personOf.get(sp), speakers: [sp] });
     }
     for (const gr of groups.values()) {
-      let az = null, level = null;
+      let az = null, level = null, spread = 0, low = false;
       if (P.hasDirection) {
         const pos = gr.speakers.map((s) => st.positions.get(s)).filter(Boolean);
         if (pos.length) {
           az = circMean(pos.map((x) => x.az));
           const lv = pos.map((x) => x.level).filter(Number.isFinite);
           level = lv.length ? Math.max(...lv) : null;
+          spread = Math.max(...pos.map((x) => Number(x.spread) || 0));
+          low = pos.every((x) => x.low === true);
         }
       } else {
         const slot = gr.speakers.map((s) => P.slots.get(s)).find((v) => v != null);
@@ -800,6 +860,8 @@
         id: gr.id, person: gr.person, speakers: gr.speakers, bearing: wrap180(az - st.yaw), d,
         talking: isTalking, known: key ? metBefore(P, st, key).length > 0 : false,
         colour: key ? P.colour.get(key) : null,
+        // a soft region, not a point: wider when the turns disagreed, much wider when the array was unsure
+        placed: P.hasDirection, half: P.hasDirection ? clamp(Math.max(spread, 10) + (low ? 28 : 12), 16, 60) : 0, low,
       });
     }
     // the wearer's own voice, once recognised, slides into the centre
@@ -814,7 +876,7 @@
     for (const b of blips) { b.radius = R * (0.64 + 0.36 * b.d); b.drawn = b.bearing; }
     const named = blips.filter((b) => b.person && !b.absorbing).sort((a, b) => a.bearing - b.bearing);
     if (named.length > 1) {
-      const minGap = 22;
+      const minGap = 36;
       for (let it = 0; it < 14; it++) {
         for (let k = 0; k < named.length; k++) {
           const a = named[k], c = named[(k + 1) % named.length];
@@ -846,10 +908,37 @@
     return { side: pref === 'below' ? 'below' : 'above', shift };
   }
 
+  /** The voices as soft regions on the radar: one blurred wedge per voice in its person's colour, centred where the
+   *  array put it, as wide as the array was unsure. Drawn on a canvas under the labels, only when something moved. */
+  function renderRadarRegions(blips, W) {
+    const c = els['radar-wedges'];
+    const sig = blips.map((b) => `${b.id}|${b.drawn.toFixed(1)}|${b.radius.toFixed(1)}|${b.half}|${b.talking ? 1 : 0}|${b.colour}|${b.placed ? 1 : 0}`).join(';') +
+      `|${W}|${document.documentElement.getAttribute('data-theme') || ''}|${els.radar.classList.contains('ghost') ? 'g' : ''}`;
+    if (c._sig === sig) return;
+    c._sig = sig;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (c._w !== W || c._dpr !== dpr) { c.width = Math.round(W * dpr); c.height = Math.round(W * dpr); c._w = W; c._dpr = dpr; }
+    const ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, W);
+    const cs = getComputedStyle(els.radar);
+    const ghost = els.radar.classList.contains('ghost');
+    for (const b of blips) {
+      if (!b.placed || b.absorbing) continue;
+      const hex = (b.colour == null ? cs.getPropertyValue('--accent') : cs.getPropertyValue(`--p${b.colour % 8}`)).trim() || '#2F7F72';
+      const th = rad(-90 - b.drawn);  // the radar's angles run anticlockwise from ahead: left is positive
+      const r = (b.radius * W) / 100, half = rad(b.half);
+      const a = (ghost ? 0.5 : 1) * (b.talking ? 0.6 : b.person ? 0.34 : 0.22);
+      softWedge(ctx, W / 2, W / 2, Math.max(10, r - W * 0.09), r + W * 0.09, th - half, th + half, hex, a);
+      if (b.talking) softWedge(ctx, W / 2, W / 2, Math.max(8, r - W * 0.14), r + W * 0.14, th - half * 1.5, th + half * 1.5, hex, a * 0.3);
+    }
+  }
+
   function renderRadar(st, t) {
     const { blips, unplaced, ownerTalking } = computeBlips(st, t);
     const W = els.radar.clientWidth || 600;
     const short = W < 480;
+    renderRadarRegions(blips, W);
     const keep = new Set();
     for (const b of blips) {
       if (!blipEls.has(b.id) && b.person) {
@@ -876,9 +965,9 @@
       if (b.person) {
         const name = !short && b.person.name.length <= 15 ? b.person.name : shortName(b.person.name);
         const sub = [b.person.company].filter(Boolean).join('');
-        label = `${esc(name)}<small>${esc(sub)}${b.known ? `${sub ? ' · ' : ''}<span class="met">met before</span>` : ''}</small>`;
+        label = `${esc(name)}${b.low ? ' <span class="unsure" title="the array was not sure where">?</span>' : ''}<small>${esc(sub)}${b.known ? `${sub ? ' · ' : ''}<span class="met">met before</span>` : ''}</small>`;
       } else {
-        label = 'new voice';
+        label = b.low ? 'new voice ?' : 'new voice';
       }
       const labelEl = el.querySelector('.label');
       if (el._label !== label) { el._label = label; labelEl.innerHTML = label; el._lw = 0; }
@@ -894,6 +983,7 @@
       if (b.talking) cls.push('talking');
       if (b.known) cls.push('known');
       if (b.absorbing) cls.push('absorbing');
+      if (b.placed) cls.push('placed');  // the wedge is the position; the dot shrinks to a label anchor
       const className = cls.join(' ');
       if (el.className !== className) el.className = className;
       const pos = `${x.toFixed(2)}|${y.toFixed(2)}|${b.colour}`;
@@ -1786,7 +1876,7 @@
 
     // markers, clustered per lane when they would overlap
     markerEls = [];
-    for (const lane of ['person', 'promise', 'translation']) {
+    for (const lane of ['person', 'promise', 'translation', 'edge', 'hook']) {
       const box = els[`lane-${lane}`];
       box.innerHTML = '';
       const list = P.markers.filter((m) => m.lane === lane).sort((a, b) => a.t - b.t);
@@ -1857,6 +1947,762 @@
     els.app.classList.toggle('is-playing', player.playing);
   }
 
+  // ---------------------------------------------------------------- X-ray: the machinery, in step with the clock
+  /** Paper cards over the dimmed replay, one per thing the badge's own code or a model did, each a function of the
+   *  fold at t plus the sidecar data/<id>.xray.json (server/scripts/export_xray.py: per-block channel levels, the
+   *  leveler's gain and direction recomputed with direction.py, all read-only from audio.wav). Every number on a card
+   *  comes from events.jsonl, that sidecar or the saved report, and the card's receipt says which. Direction is words
+   *  only (left / ahead / right) and soft regions, never a degree; the direction cards wear PENDING until the FOA
+   *  comparison lands; a verdict replayed here rather than logged is stamped as such. */
+  const XRAY_LIT = 3200;       // ms a card stays lit after its latest change
+  const XRAY_WINDOW = 12000;   // ms of sound the sound cards show
+  const XRAY_LEAD = 1500;      // of which this much lies ahead of the playhead
+  const XRAY_P = ['#2F7F72', '#C8702F', '#7A4FA3', '#B8862B', '#3B63A8', '#5F8A3C', '#B8475F', '#5B6B78'];
+  const XRAY_INK = '#2A2622', XRAY_SOFT = '#6E675E', XRAY_RULE = '#D3CBB9', XRAY_ACCENT = '#2F7F72', XRAY_LIVE = '#C8402F', XRAY_PENDING = '#E0B45A';
+  const XRAY_MONO = '500 10px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+  const XRAY_SERIF = '600 12px "Newsreader", "New York", Georgia, serif';
+  const XRAY_SANS = '500 10px "Instrument Sans", system-ui, sans-serif';
+  const PENDING_CHIP = ['pending', 'pending · FOA comparison running'];
+  const NO_MODEL_CHIP = ['none', 'no model call'];
+  let xrayOn = false;
+  let xFocus = null;         // &focus=NN: hold that beat's card large in the centre (phone legibility, a film still)
+  let xFit = 'auto';         // &fit / &nofit: scale the columns to the frame so every card is in view (auto: when wide)
+  let xLast = '';            // the signature of the last X-ray draw; nothing is redrawn while it holds
+  const xCards = new Map();  // beat id -> { el, body, chips, receipt, canv, sig }
+
+  /** '#<id>', '#<id>@<ms>', '#<id>@<ms>&xray' or '#<id>&xray': the recording, a moment to land on, and the X-ray.
+   *  Capture flags after it: &still (no transitions), &focus=NN (one card held large), &fit / &nofit. */
+  function parseHash(h) {
+    const raw = decodeURIComponent(String(h || '').replace(/^#/, ''));
+    if (!raw) return { id: '', at: null, xray: false };
+    const parts = raw.split('&');
+    const [id, at] = parts[0].split('@');
+    const flags = new Set(parts.slice(1).map((s) => s.trim().toLowerCase()));
+    const ms = at != null && at !== '' && Number.isFinite(Number(at)) ? Number(at) : null;
+    let focus = null;
+    for (const f of flags) { const m = f.match(/^focus=(\d{1,2})$/); if (m) focus = Number(m[1]); }
+    return { id, at: ms, xray: flags.has('xray'), still: flags.has('still'), focus, fit: flags.has('fit') ? 'on' : flags.has('nofit') ? 'off' : 'auto' };
+  }
+
+  /** Land on the moment the hash names, paused, with the X-ray open if asked; a plain id changes nothing. */
+  function applyHashState(w) {
+    if (!P || (w.at == null && !w.xray)) return;
+    if (w.still) els.app.classList.add('is-still');  // a composed frame for a headless capture: no transitions
+    xFocus = w.focus || null;
+    xFit = w.fit || 'auto';
+    xLayoutReset();
+    enterLive();
+    endScrolled = true;
+    stickTranscript = true;
+    player.pause(clamp(w.at != null ? w.at : 0, 0, P.total));
+    if (w.xray) setXray(true);
+    xLast = '';
+    render(player.paused);
+  }
+
+  /** The transport bar's real height, so the overlay's scroll padding ends exactly where the bar begins. */
+  function measureBar() {
+    const h = els.bar.offsetHeight;
+    if (h && els.app._barH !== h) { els.app._barH = h; els.app.style.setProperty('--bar-h', `${h}px`); }
+  }
+  if (window.ResizeObserver) new ResizeObserver(measureBar).observe(els.bar);
+
+  function setXray(on) {
+    on = !!on && !!P;
+    if (on === xrayOn) return;
+    const wasIntro = mode === 'intro';
+    xrayOn = on;
+    els.app.classList.toggle('is-xray', on);
+    els.xray.hidden = !on;
+    els['xray-btn'].setAttribute('aria-pressed', String(on));
+    xLayoutReset();
+    if (!on) { xFocus = null; els.app.classList.remove('is-focus', 'is-compact'); render(player.now()); return; }
+    enterLive();
+    measureBar();
+    if (wasIntro) { endScrolled = false; player.seek(0); player.play(); }
+    ensureSidecar();
+    render(player.now());
+  }
+
+  function ensureSidecar() {
+    if (!P || P.xrayState !== 'idle') return;
+    const id = P.id;
+    P.xrayState = 'loading';
+    loadJSON(`data/${id}.xray.json`)
+      .then((x) => { if (P && P.id === id) { P.xray = x; P.xrayState = 'ok'; } })
+      .catch(() => { if (P && P.id === id) { P.xray = null; P.xrayState = 'none'; } });
+  }
+
+  function resetXray() {
+    for (const c of xCards.values()) c.el.remove();
+    xCards.clear();
+    els['x-caption']._html = '';
+    els['x-caption'].innerHTML = '';
+    els['x-tape'].innerHTML = '';
+  }
+
+  // ---- small helpers for the cards
+  /** extract.fold_words, for the fallback when the sidecar carries no verdicts: casefold (so ß is ss), NFKD, every
+   *  combining mark dropped (Japanese dakuten included), words of letters, digits and underscores. */
+  const foldWords = (s) => (String(s || '').toLowerCase().replace(/ß/g, 'ss').normalize('NFKD').replace(/\p{M}/gu, '').match(/[\p{L}\p{N}_]+/gu) || []).join(' ');
+  const xchip = (kind, text, colour) => `<span class="xchip ${kind}"${colour ? ` style="--c:${colour}"` : ''}>${esc(text)}</span>`;
+  const xchips = (list) => list.map((c) => xchip(c[0], c[1], c[2])).join('');
+  const xrec = (parts) => parts.filter((p) => p != null && p !== '').map((p) => esc(p)).join('<span class="sep">·</span>');
+  const secs = (ms, d = 1) => `${(ms / 1000).toFixed(d)} s`;
+  const sdb = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)} dB`;
+  const row = (mark, html, src) => `<div class="xr"><span class="xmk ${mark === '✓' ? 'ok' : mark === '✕' || mark === '!' ? 'no' : 'soft'}">${mark}</span><span class="tx">${html}</span>${src ? `<span class="src">${esc(src)}</span>` : ''}</div>`;
+  const rad = (d) => (d * Math.PI) / 180;
+  const hexA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`; };
+  const sideWord = (az) => (az > 12 ? 'left' : az < -12 ? 'right' : 'ahead');
+  const laneOf = (az) => (az > 12 ? 0 : az < -12 ? 2 : 1);
+  const colourHex = (key) => XRAY_P[(P.colour.get(key) ?? 7) % 8];
+  const xName = (st, key) => (st.people.get(key) || P.final.people.get(key) || {}).name || key;
+
+  function xColourOf(spk) {
+    if (P.final.owner.has(spk)) return XRAY_INK;
+    const p = P.xPersonOf.get(spk);
+    return p ? colourHex(p.key) : XRAY_SOFT;
+  }
+  /** Index of the last span starting at or before ms (spans are sorted by start), -1 if none. */
+  function xSpanBefore(ms) {
+    const sp = P.spans;
+    let lo = 0, hi = sp.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (sp[mid].start <= ms) lo = mid + 1; else hi = mid; }
+    return lo - 1;
+  }
+  function xSpeakerAt(ms) {
+    const sp = P.spans;
+    // turns rarely overlap, and never by more than a few; look back from the last one that had started
+    for (let i = xSpanBefore(ms), n = 0; i >= 0 && n < 6; i--, n++) if (ms < sp[i].end) return sp[i].speaker;
+    return null;
+  }
+  function xLastTurnStart(t) {
+    const i = xSpanBefore(t);
+    return i < 0 ? -Infinity : P.spans[i].start;
+  }
+  /** When the first speech began, as the log says (speech_start, else the first turn): the leveler card waits for
+   *  it rather than lighting on the leveler's own flag, which flickers while its room-floor estimate warms up. */
+  function xFirstSpeech() {
+    if (P._firstSpeech === undefined) {
+      const ev = P.evs.find((e) => e.type === 'speech_start');
+      P._firstSpeech = ev ? ev.t_ms : P.spans.length ? P.spans[0].start : null;
+    }
+    return P._firstSpeech;
+  }
+
+  function xCard(beat, idx) {
+    let card = xCards.get(beat.id);
+    if (card) return card;
+    const el = document.createElement('article');
+    el.className = 'xcard off';
+    el.innerHTML = `<p class="xtitle"><span class="n">${String(idx + 1).padStart(2, '0')}</span>${esc(beat.title)}</p><div class="xbody"></div><div class="xfoot"><span class="xchips"></span><span class="xreceipt"></span></div>`;
+    card = { el, body: el.querySelector('.xbody'), chips: el.querySelector('.xchips'), receipt: el.querySelector('.xreceipt'), canv: {}, sig: '' };
+    xCards.set(beat.id, card);
+    els['x-cols'].querySelectorAll('.xstack')[beat.col].appendChild(el);
+    return card;
+  }
+  function xTitle(card, text) {
+    const el = card.el.querySelector('.xtitle');
+    if (el._text !== text) { el._text = text; el.lastChild.nodeValue = text; }
+  }
+  function xSet(card, html, chips, receipt) {
+    const sig = `${html}|${chips}|${receipt}`;
+    if (card.sig === sig) return;
+    card.sig = sig;
+    card.body.innerHTML = html;
+    card.chips.innerHTML = chips;
+    card.receipt.innerHTML = receipt;
+  }
+  /** A canvas in the card's .xcanv holder, sized to the card and the device pixel ratio, cleared for drawing. */
+  function xCanvas(card, key, h) {
+    let c = card.canv[key];
+    if (!c) { c = document.createElement('canvas'); c.setAttribute('aria-hidden', 'true'); card.canv[key] = c; }
+    const holder = card.body.querySelector(`.xcanv[data-k="${key}"]`) || card.body.querySelector('.xcanv');
+    if (holder && c.parentNode !== holder) holder.appendChild(c);
+    const w = Math.max(160, Math.round((holder || card.body).clientWidth || card.body.clientWidth || 300));
+    const dpr = Math.min(2, window.devicePixelRatio || 1) * (card.el.classList.contains('focus') ? 2 : 1);  // crisp at 2×
+    if (c._w !== w || c._h !== h || c._dpr !== dpr) {
+      c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+      c.style.width = `${w}px`; c.style.height = `${h}px`;
+      c._w = w; c._h = h; c._dpr = dpr;
+    }
+    const ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    return { ctx, w, h };
+  }
+  function softWedge(ctx, cx, cy, r0, r1, a0, a1, hex, alpha) {
+    const steps = 6;
+    for (let i = 0; i < steps; i++) {
+      const k = i / steps, pad = (a1 - a0) * 0.35 * k;
+      const mid = (r0 + r1) / 2;
+      const rr0 = r0 + (mid - r0) * k * 0.6, rr1 = r1 + (mid - r1) * k * 0.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rr1, a0 + pad, a1 - pad);
+      ctx.arc(cx, cy, rr0, a1 - pad, a0 + pad, true);
+      ctx.closePath();
+      ctx.fillStyle = hexA(hex, alpha / steps);
+      ctx.fill();
+    }
+  }
+  function xWindow(t) { return { t0: t - XRAY_WINDOW + XRAY_LEAD, t1: t + XRAY_LEAD }; }
+  function xPlayhead(ctx, x, h) { ctx.fillStyle = XRAY_LIVE; ctx.fillRect(Math.round(x) - 0.5, 0, 1.5, h); }
+
+  function noSidecar() {
+    if (P.xrayState === 'loading' || P.xrayState === 'idle') return '<p class="xempty">Reading the sound analysis…</p>';
+    return `<p class="xempty">No sound analysis for this recording yet. In <code>server/</code>: <code>uv run python scripts/export_xray.py ${esc(P.id)}</code>, then reload.</p>`;
+  }
+
+  // ---- the beats, in the film's order: each draws its card from (st, t) and says whether it is up, when it last
+  // changed and, when the moment deserves its own line, the caption (one sentence, at most 60 characters)
+  const XRAY_CAP_MAX = 60;
+  const capFit = (s) => (String(s).length > XRAY_CAP_MAX ? String(s).slice(0, XRAY_CAP_MAX - 1).trimEnd() + '…' : String(s));
+  /** "Oct 29": the evening's date, from the recording's own start, for a note that says when something was logged. */
+  const logDate = () => { const w = P.started ? wallDate(P.started, P.tzOffset) : null; return w ? `${MONTHS[w.mo]} ${w.d}` : P.id.slice(0, 8); };
+  /** The sidecar's replay of extract.kept_edges for one logged edge, if export_xray.py carried it. */
+  function xVerdict(e) {
+    const C = P.xray && P.xray.checks;
+    if (!C || !C.edges) return null;
+    const turns = (e.turns || []).join(',');
+    return C.edges.find((r) => r.t_ms === e.t_ms && r.person === e.person && (r.turns || []).join(',') === turns) || null;
+  }
+
+  const XBEATS = [
+    { id: 'channels', col: 0, title: 'Four channels in', cap: 'Four channels in. The original is kept.',
+      draw(card, st, t) {
+        const X = P.xray;
+        if (P.xrayState !== 'ok') { xSet(card, noSidecar(), xchips([['code', 'code · recording.py']]), xrec(['audio.wav'])); return { show: true, moment: 0, dim: true }; }
+        const names = X.channel_names, rows = X.blocks.rms_db, n = names.length;
+        const mono = n === 1;
+        xTitle(card, mono ? 'One channel in' : 'Four channels in');
+        const rh = n > 1 ? 24 : 44, h = rh * n + 4;
+        xSet(card, '<div class="xcanv" data-k="ch"></div>',
+          xchips([['code', 'code · recording.py'], ['p', `${X.channels} ch kept · ${mono ? 'mono' : 'W'} → transcriber`, XRAY_ACCENT]]),
+          xrec(['audio.wav', `${X.channels} ch ${X.layout}`, `${X.rate / 1000} kHz`, `${X.block_ms} ms blocks`, 'rms_db']));
+        const { ctx, w, h: H } = xCanvas(card, 'ch', h);
+        const { t0, t1 } = xWindow(t);
+        const L = 26, R = n > 1 ? 44 : 10, W = w - L - R;
+        for (let c = 0; c < n; c++) {
+          const y = c * rh + rh / 2 + 2;
+          ctx.fillStyle = c === 0 ? XRAY_ACCENT : XRAY_SOFT;
+          ctx.font = XRAY_MONO; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+          ctx.fillText(names[c], 0, y);
+          ctx.fillStyle = hexA(XRAY_RULE, 0.9); ctx.fillRect(L, y, W, 1);
+          const dbs = rows[c];
+          let lastHex = null;
+          for (let px = 0; px < W; px++) {
+            const ms = t0 + (px / W) * (t1 - t0);
+            if (ms < 0) continue;
+            const i = Math.floor(ms / X.block_ms);
+            if (i >= dbs.length) break;
+            const k = clamp((dbs[i] + 62) / 48, 0, 1);
+            if (k <= 0.02) continue;
+            const spk = xSpeakerAt(ms);
+            const hex = spk ? xColourOf(spk) : (c === 0 ? XRAY_ACCENT : XRAY_SOFT);
+            const a = (ms <= t ? 0.85 : 0.22) * (spk ? 1 : 0.55);
+            if (hex !== lastHex || px % 8 === 0) { ctx.fillStyle = hexA(hex, a); lastHex = hex; }
+            const hh = Math.max(1, k * (rh - 6));
+            ctx.fillRect(L + px, y - hh / 2, 1, hh);
+          }
+        }
+        if (n > 1) {  // the W channel peels off toward the transcriber; the four stay on disk
+          const y0 = rh / 2 + 2, x0 = L + W + 4;
+          ctx.strokeStyle = hexA(XRAY_ACCENT, 0.9); ctx.lineWidth = 1.4; ctx.beginPath();
+          ctx.moveTo(x0, y0); ctx.bezierCurveTo(x0 + 16, y0, x0 + 16, H - 10, x0 + 30, H - 10); ctx.stroke();
+          ctx.fillStyle = XRAY_ACCENT; ctx.beginPath(); ctx.arc(x0 + 32, H - 10, 2.6, 0, Math.PI * 2); ctx.fill();
+        }
+        xPlayhead(ctx, L + ((t - t0) / (t1 - t0)) * W, H);
+        return { show: true, moment: 0, lit: t - xLastTurnStart(t) < 900, cap: mono ? 'One channel in. The original is kept.' : null };
+      } },
+    { id: 'leveler', col: 0, title: 'Levelled for the transcriber', cap: 'Levelled for the transcriber: you down, far guests up.',
+      draw(card, st, t) {
+        const X = P.xray;
+        if (P.xrayState !== 'ok') return { show: false };
+        const first = xFirstSpeech();
+        if (first == null || t < first) return { show: false };
+        const { t0, t1 } = xWindow(t);
+        const inWin = X.turns.filter((tr) => tr.gain_db != null && tr.end_ms > t0 && tr.start_ms < Math.min(t1, t));
+        const you = inWin.filter((tr) => P.final.owner.has(tr.speaker)).map((tr) => tr.gain_db);
+        const guests = inWin.filter((tr) => !P.final.owner.has(tr.speaker)).map((tr) => tr.gain_db);
+        const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+        const chips = [['code', 'code · leveler.py']];
+        if (you.length) chips.push(['p', `you ${sdb(mean(you))}`, XRAY_INK]);
+        if (guests.length) chips.push(['p', guests.length > 1 && Math.min(...guests) !== Math.max(...guests) ? `guests ${sdb(Math.min(...guests))} … ${sdb(Math.max(...guests))}` : `guests ${sdb(mean(guests))}`, XRAY_ACCENT]);
+        chips.push(['stamp', 're-run offline on audio.wav']);
+        const p = X.lev.params;
+        xSet(card, '<div class="xcanv" data-k="g"></div>', xchips(chips),
+          xrec([`target ${p.target_db} dBFS`, `${p.ratio}:1`, `cap +${p.max_boost_db} / −${p.max_cut_db} dB`, `${p.block_ms} ms steps`]));
+        const H = 56, { ctx, w } = xCanvas(card, 'g', H);
+        const L = 26, W = w - L - 6, y0 = H / 2, sc = (H / 2 - 4) / 12;
+        ctx.font = XRAY_MONO; ctx.textBaseline = 'middle'; ctx.fillStyle = XRAY_SOFT;
+        ctx.fillText('+12', 0, 6); ctx.fillText('0 dB', 0, y0); ctx.fillText('−12', 0, H - 6);
+        ctx.strokeStyle = hexA(XRAY_SOFT, 0.5); ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(L, y0 + 0.5); ctx.lineTo(L + W, y0 + 0.5); ctx.stroke(); ctx.setLineDash([]);
+        const g = X.lev.gain_db, sp = X.lev.speech;
+        let lastFill = null;
+        for (let px = 0; px < W; px++) {
+          const ms = t0 + (px / W) * (t1 - t0);
+          if (ms < 0) continue;
+          const i = Math.floor(ms / X.lev.step_ms);
+          if (i >= g.length) break;
+          const v = g[i]; if (v == null) continue;
+          const spk = xSpeakerAt(ms);
+          const hex = spk ? xColourOf(spk) : XRAY_SOFT;
+          const a = (ms <= t ? 0.9 : 0.25) * (sp[i] === '1' ? 1 : 0.3);
+          const fill = hexA(hex, a);
+          if (fill !== lastFill) { ctx.fillStyle = fill; lastFill = fill; }
+          const y = y0 - clamp(v, -12, 12) * sc;
+          ctx.fillRect(L + px, Math.min(y, y0), 1, Math.max(1, Math.abs(y - y0)));
+        }
+        xPlayhead(ctx, L + ((t - t0) / (t1 - t0)) * W, H);
+        return { show: true, moment: first, lit: t - xLastTurnStart(t) < 900 };
+      } },
+    { id: 'hints', col: 1, title: 'Names expected before anyone speaks', cap: 'Names expected before anyone speaks.',
+      draw(card, st, t) {
+        const idx = (P.rec.people_index && P.rec.people_index.people) || [];
+        const known = idx.filter((p) => (p.encounters || []).some((e) => e.recording !== P.id && (e.started || 0) < P.started - 1));
+        const names = known.map((p) => p.name).filter(Boolean).slice(0, 40);
+        const companies = [...new Set(known.map((p) => p.company).filter(Boolean))].slice(0, 20);
+        const own = (P.meta.keywords || []).filter(Boolean);
+        // two groups, as recording.recognition_hints builds the list: the badge's own words, then the people index
+        let html = '<div class="xpills">';
+        if (own.length) html += `<span class="xk">badge</span>${own.map((k) => `<span class="xpill badge">${esc(k)}</span>`).join('')}`;
+        const shown = names.slice(0, 10), more = names.length - shown.length + companies.length;
+        html += `<span class="xk">index</span>${shown.map((n) => `<span class="xpill">${esc(n)}</span>`).join('')}${more > 0 ? `<span class="xpill co">+${more} more · ${companies.length} ${plural(companies.length, 'company', 'companies')}</span>` : ''}</div>`;
+        const A = P.xray && P.xray.accents;
+        if (A) {
+          const strip = (key) => `<span class="xstrip">${A.rows.map((r) => `<i class="${r[key] && r[key].name === 'yes' ? 'on' : ''}" title="${esc(`${r.accent} · ${r.gender}`)}"></i>`).join('')}</span>`;
+          html += `<div class="xstat-row"><span class="xstat">${A.name_right.nohints} → ${A.name_right.hints}</span><span>of ${A.voices} names right · ${A.accents.length} accents · ${esc(A.note)}</span></div>`;
+          html += `<div class="xstrips"><span class="xk">no hints</span>${strip('nohints')}<span class="xk">hints</span>${strip('hints')}</div>`;
+          const fr = A.rows.find((r) => r.id === 'fr_f');
+          const trim = (s) => String(s || '').replace(/^Hi[,.]? I'm /, '').replace(/\. We build.*$/, '');
+          if (fr && fr.nohints && fr.hints) html += `<div class="xpair"><span><span class="xk">no hints</span>${esc(trim(fr.nohints.text))}</span><span class="on"><span class="xk">hints</span>${esc(trim(fr.hints.text))}</span></div>`;
+        }
+        html += `<p class="xnote">${own.length ? 'the badge\'s own words, then ' : ''}the people-index names the hint list is built from; the list itself is not logged</p>`;
+        xSet(card, html, xchips([['model', 'Muse Voice Transcribe'], ['code', 'code · recording.py · recognition_hints']]),
+          xrec(['people index', `${names.length} ${plural(names.length, 'name')}`, `${companies.length} ${plural(companies.length, 'company', 'companies')}`, A ? A.source : null]));
+        return { show: true, moment: 0 };
+      } },
+    { id: 'regions', col: 0, title: 'Voices placed as soft regions', cap: 'Voices placed as soft regions, never degrees.',
+      draw(card, st, t) {
+        const X = P.xray;
+        if (P.xrayState !== 'ok' || !X.win400 || st.x.firstPos == null) return { show: false };
+        const personOf = personBySpeaker(st);
+        const talking = talkingSpeakers(st, t);
+        const groups = new Map();
+        for (const [spk, pos] of st.positions) {
+          if (st.owner.has(spk)) continue;
+          const p = personOf.get(spk);
+          const id = p ? `p:${p.key}` : `v:${spk}`;
+          if (!groups.has(id)) groups.set(id, { id, person: p, spks: [], pos: [] });
+          groups.get(id).spks.push(spk); groups.get(id).pos.push(pos);
+        }
+        const gs = [...groups.values()].map((g) => {
+          const az = wrap180(circMean(g.pos.map((x) => x.az)) - st.yaw);
+          const spread = Math.max(...g.pos.map((x) => Number(x.spread) || 0));
+          const low = g.pos.every((x) => x.low === true);
+          const lv = g.pos.map((x) => x.level).filter(Number.isFinite);
+          return { ...g, az, spread, low, level: lv.length ? Math.max(...lv) : null, live: g.spks.some((s) => talking.has(s)),
+            hex: g.person ? colourHex(g.person.key) : XRAY_SOFT, name: g.person ? shortName(g.person.name) : 'a voice' };
+        });
+        const named = gs.filter((g) => g.person).length;
+        xSet(card, '<div class="xcanv" data-k="dome"></div><div class="xcanv" data-k="lanes"></div><p class="xnote">left / right, roughly · front / back not told apart · a region, never a number · the lanes are the badge\'s own frame, 100 ms at a time</p>',
+          xchips([['code', 'code · direction.py'], PENDING_CHIP]),
+          xrec(['speaker_position', `${gs.length} ${plural(gs.length, 'voice')} placed`, `${named} named`, 'win400 · az_device', 'conf ≥ 0.3']));
+        // the half dome: wedges in the person's colour, wider when the direction is less sure
+        const H = 118, { ctx, w } = xCanvas(card, 'dome', H);
+        const CX = w / 2, CY = H - 8, RIM = Math.min(w / 2 - 78, 96);
+        ctx.lineWidth = 1;
+        for (const r of [RIM * 0.45, RIM * 0.72, RIM]) { ctx.strokeStyle = hexA(XRAY_SOFT, r === RIM ? 0.45 : 0.25); ctx.beginPath(); ctx.arc(CX, CY, r, rad(-178), rad(-2)); ctx.stroke(); }
+        ctx.strokeStyle = hexA(XRAY_SOFT, 0.35); ctx.setLineDash([2, 5]);
+        for (const az of [12, -12]) { const th = rad(-90 - az); ctx.beginPath(); ctx.moveTo(CX + Math.cos(th) * 18, CY + Math.sin(th) * 18); ctx.lineTo(CX + Math.cos(th) * RIM, CY + Math.sin(th) * RIM); ctx.stroke(); }
+        ctx.setLineDash([]);
+        ctx.font = XRAY_MONO; ctx.fillStyle = XRAY_SOFT; ctx.textBaseline = 'middle';
+        ctx.textAlign = 'right'; ctx.fillText('left', CX - RIM - 4, CY - 4);
+        ctx.textAlign = 'left'; ctx.fillText('right', CX + RIM + 4, CY - 4);
+        const loud = Math.max(-99, ...gs.map((g) => g.level).filter(Number.isFinite));
+        const labels = gs.map((g) => ({ g, az: g.az })).sort((a, b) => a.az - b.az);
+        for (let pass = 0; pass < 8; pass++) for (let i = 1; i < labels.length; i++) { const gap = labels[i].az - labels[i - 1].az; if (gap < 36) { labels[i].az += (36 - gap) / 2; labels[i - 1].az -= (36 - gap) / 2; } }
+        for (const { g, az: labAz } of labels) {
+          const d = Number.isFinite(g.level) ? clamp((loud - g.level) / 18, 0, 1) : 0.5;
+          const r = RIM * (0.42 + 0.4 * d);
+          const half = rad(clamp(Math.max(g.spread, 10) + (g.low ? 28 : 12), 16, 60));
+          const th = rad(-90 - clamp(g.az, -88, 88));
+          softWedge(ctx, CX, CY, Math.max(14, r - 22), r + 22, th - half, th + half, g.hex, g.live ? 0.62 : 0.34);
+          if (g.live) softWedge(ctx, CX, CY, Math.max(10, r - 34), r + 34, th - half * 1.5, th + half * 1.5, g.hex, 0.14);
+          const lt = rad(-90 - clamp(labAz, -84, 84));
+          const lx = CX + Math.cos(lt) * (RIM + 8), ly = CY + Math.sin(lt) * (RIM + 8) + 6;
+          ctx.strokeStyle = hexA(g.hex, 0.55); ctx.beginPath(); ctx.moveTo(CX + Math.cos(th) * (r + 20), CY + Math.sin(th) * (r + 20)); ctx.lineTo(CX + Math.cos(lt) * (RIM - 2), CY + Math.sin(lt) * (RIM - 2)); ctx.stroke();
+          ctx.textAlign = Math.cos(lt) < 0 ? 'right' : 'left';
+          ctx.fillStyle = g.hex; ctx.font = XRAY_SERIF; ctx.textBaseline = 'alphabetic';
+          ctx.fillText(g.name + (g.low ? ' ?' : ''), lx, ly - 2);
+          ctx.fillStyle = XRAY_SOFT; ctx.font = XRAY_SANS; ctx.fillText(sideWord(g.az), lx, ly + 9);
+        }
+        ctx.textAlign = 'left';
+        ctx.fillStyle = XRAY_INK; ctx.beginPath(); ctx.arc(CX, CY - 1, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.font = XRAY_MONO; ctx.textBaseline = 'middle'; ctx.fillText('you', CX + 9, CY - 2);
+        // where the sound came from, 100 ms at a time: three lanes in the badge's own frame (az_device, so a turn of
+        // the wearer's body later on never flips an earlier sample), the dot in the colour of who was talking
+        const LH = 54, L = 36, lanes = xCanvas(card, 'lanes', LH);
+        const W2 = lanes.w - L - 6;
+        const { t0, t1 } = xWindow(t);
+        const Wn = X.win400, ys = [10, 27, 44];
+        const azAt = (i) => (Wn.az_device ? Wn.az_device[i]
+          : Wn.az_room[i] == null ? null : wrap180(Wn.az_room[i] - (Wn.yaw && Wn.yaw[i] != null ? Wn.yaw[i] : st.yaw)));
+        lanes.ctx.font = XRAY_MONO; lanes.ctx.textBaseline = 'middle'; lanes.ctx.fillStyle = XRAY_SOFT;
+        ['left', 'ahead', 'right'].forEach((s, k) => { lanes.ctx.fillText(s, 0, ys[k]); lanes.ctx.fillStyle = hexA(XRAY_RULE, 0.9); lanes.ctx.fillRect(L, ys[k], W2, 1); lanes.ctx.fillStyle = XRAY_SOFT; });
+        for (let i = Math.max(0, Math.floor(t0 / Wn.step_ms)); i < Math.min(Wn.az_room.length, Math.ceil(t1 / Wn.step_ms)); i++) {
+          const ms = i * Wn.step_ms;
+          const az = azAt(i), conf = Wn.conf[i], lv = Wn.level_db[i];
+          if (az == null || conf == null || conf < 0.3 || lv == null || lv <= -45) continue;
+          const spk = xSpeakerAt(ms);
+          if (spk && st.owner.has(spk)) continue;  // the wearer's own voice is the next card's business
+          const hex = spk ? xColourOf(spk) : XRAY_SOFT;
+          const x = L + ((ms - t0) / (t1 - t0)) * W2;
+          lanes.ctx.fillStyle = hexA(hex, ms <= t ? 0.4 + 0.55 * conf : 0.15);
+          lanes.ctx.beginPath(); lanes.ctx.arc(x, ys[laneOf(az)] + Math.sin(i * 1.7) * 2.5, 2, 0, Math.PI * 2); lanes.ctx.fill();
+        }
+        xPlayhead(lanes.ctx, L + ((t - t0) / (t1 - t0)) * W2, LH);
+        return { show: true, moment: st.x.firstPos, lit: t - xLastTurnStart(t) < 900 || t - st.x.firstPos < XRAY_LIT };
+      } },
+    { id: 'above', col: 0, title: 'Your voice, from above', cap: 'Your own voice, found because it comes from above.',
+      draw(card, st, t) {
+        const X = P.xray;
+        if (P.xrayState !== 'ok' || !X.wearer || st.ownerT == null) return { show: false };
+        const ownerEv = X.owner_events.find((e) => e.t_ms === st.ownerT) || X.owner_events[0] || {};
+        const byElevation = ownerEv.source === 'elevation';
+        const found = X.wearer.found ? X.wearer.found[0] : null;
+        const agree = found && st.owner.has(found);
+        const c = X.wearer.constants;
+        // who found the wearer: the code, from the elevation, or Muse Spark from the transcript (then the code's
+        // Wearer is re-run here on audio.wav, and the card shows both)
+        const chips = byElevation
+          ? [['code', 'code · direction.py · Wearer'], PENDING_CHIP]
+          : [['model', 'Muse Spark'], ['code', 'code · direction.py · Wearer · re-run offline'], PENDING_CHIP];
+        const notes = [];
+        notes.push(byElevation ? `owner event from the elevation at ${secs(st.ownerT)}` : `owner event at ${secs(st.ownerT)} from the transcript`);
+        notes.push(found ? `offline re-run: ${found} is the voice from above${agree ? ' · the same voice' : ''}` : 'offline re-run: no label clearly above yet');
+        if (P.meta.device === 'simulator') notes.push('rehearsal mix: the wearer\'s height is in the render');
+        xSet(card, `<div class="xcanv" data-k="side"></div><p class="xnote">${esc(notes.join(' · '))}</p>`, xchips(chips),
+          xrec(['rule', `median ≥ ${c.min_elevation}° up`, `${c.margin}° above every other voice`, `≥ ${c.min_turns} turns`, `conf ≥ ${c.min_confidence}`]));
+        const H = 104, { ctx, w } = xCanvas(card, 'side', H);
+        const bx = 54, by = H - 14, span = w - bx - 70;
+        ctx.strokeStyle = hexA(XRAY_RULE, 1); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(bx, by + 0.5); ctx.lineTo(w - 12, by + 0.5); ctx.stroke();
+        const ray = (deg, len) => [bx + Math.cos(rad(deg)) * len, by - Math.sin(rad(deg)) * len];
+        const [tx, ty] = ray(c.min_elevation, Math.min(span, H - 18) / Math.sin(rad(c.min_elevation)) * 0.95);
+        ctx.strokeStyle = hexA(XRAY_SOFT, 0.8); ctx.setLineDash([4, 5]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke(); ctx.setLineDash([]);
+        ctx.font = XRAY_MONO; ctx.fillStyle = XRAY_SOFT; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+        ctx.fillText('wearer threshold · code constant', Math.min(tx + 6, w - 150), Math.max(ty, 12));
+        ctx.textAlign = 'center'; ctx.fillText('UP', bx, 10); ctx.fillText('guests · near level', bx + span * 0.62, by - 16);
+        ctx.strokeStyle = hexA(XRAY_SOFT, 0.5); ctx.beginPath(); ctx.moveTo(bx, by - 2); ctx.lineTo(bx, 14); ctx.stroke();
+        const talking = talkingSpeakers(st, t);
+        for (const [spk, med] of Object.entries(X.wearer.medians)) {
+          const own = spk === found;
+          const [x, y] = ray(clamp(med, -10, 85), own ? Math.min(span * 0.78, H - 30) : span * 0.6);
+          ctx.save(); ctx.translate(x, y); ctx.rotate(-rad(clamp(med, -10, 85)));
+          const g = ctx.createRadialGradient(0, 0, 0, 0, 0, own ? 26 : 34);
+          const hex = xColourOf(spk);
+          g.addColorStop(0, hexA(hex, talking.has(spk) ? 0.7 : 0.5)); g.addColorStop(1, hexA(hex, 0));
+          ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, own ? 26 : 34, own ? 12 : 9, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+          if (own) { ctx.font = XRAY_SERIF; ctx.fillStyle = XRAY_INK; ctx.textAlign = 'left'; ctx.fillText('you ← wearer', x + 30, y + 4); }
+        }
+        ctx.fillStyle = '#F4F0E7'; ctx.strokeStyle = XRAY_INK; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.roundRect(bx - 6, by - 11, 12, 17, 2); ctx.fill(); ctx.stroke();
+        ctx.textAlign = 'left';
+        return { show: true, moment: st.ownerT };
+      } },
+    { id: 'recall', col: 1, title: 'A known name, instantly', cap: 'A known name, instantly, with no model.',
+      draw(card, st, t) {
+        const items = [...st.x.recall.values()].sort((a, b) => a.first.t_ms - b.first.t_ms);
+        if (!items.length) return { show: false };
+        // recall.py matches the name the moment it is heard (provisional, no model call); people.py only looks a
+        // name up after Muse Spark has named the person, so the two paths wear different chips
+        const isLocal = (r) => !!(r.first.matched || r.first.provisional != null);
+        const local = items.filter(isLocal).length, lookedUp = items.length - local;
+        xTitle(card, local ? 'A known name, instantly' : 'A known name, looked up');
+        const personT = (key) => { const p = st.people.get(key) || P.final.people.get(key); return p ? p.firstT ?? p.t_ms : null; };
+        const html = `<div class="xrows">${items.map((r) => {
+          const { first, last } = r;
+          const where = (last.encounters || []).map((e) => e.event).filter(Boolean).join(', ');
+          const how = first.matched ? ` · matched: ${esc(first.matched)}` : '';
+          const state = first.provisional ? (last.provisional ? ' · <span class="xk">provisional</span>' : ` · provisional → confirmed ${esc(secs(last.t_ms))}`) : '';
+          const pt = isLocal(r) ? null : personT(first.key);
+          return row('◎', `<b style="color:${colourHex(first.key)}">${esc(first.name)}</b> · met before${where ? ` · ${esc(where)}` : ''}${how}${state}${pt != null ? ` · <span class="xk">looked up</span>after Muse Spark named them at ${esc(secs(pt))}` : ''}`,
+            isLocal(r) ? `recall.py · ${secs(first.t_ms)}` : `people.py · ${secs(first.t_ms)}`);
+        }).join('')}</div>`;
+        const chips = [];
+        if (local) chips.push(['code', 'code · recall.py'], NO_MODEL_CHIP);
+        if (lookedUp) chips.push(['model', 'Muse Spark'], ['code', 'after Muse Spark named them · code · people.py']);
+        const receipt = items.map((r) => { const pt = isLocal(r) ? null : personT(r.first.key); return `${pt != null ? `person ${secs(pt)} → ` : ''}person_history ${secs(r.first.t_ms)}`; });
+        xSet(card, html, xchips(chips), xrec(receipt));
+        return { show: true, moment: Math.max(...items.map((r) => r.last.t_ms)), cap: local ? null : 'A known name, looked up after Muse Spark named it.' };
+      } },
+    { id: 'hooks', col: 1, title: 'From the log, not a model', cap: 'A reason to write, from the log, not a model.',
+      draw(card, st, t) {
+        const hooks = [...st.x.hooks.values()].sort((a, b) => a.t_ms - b.t_ms);
+        if (!hooks.length) return { show: false };
+        const html = `<div class="xrows">${hooks.map((h) => {
+          const ev = (h.evidence || [])[0] || {};
+          const who = xName(st, h.person_key);
+          return row('→', `<b style="color:${colourHex(h.person_key)}">${esc(shortName(who))}</b> · <b>${esc(h.title)}</b>${ev.quote ? ` · <i>“${esc(truncate(ev.quote, 110))}”</i>` : ''}${h.provisional ? ' · <span class="xk">provisional</span>' : ''}`,
+            ev.recording ? `evidence ${ev.recording.slice(-4)} · turn ${ev.turn}` : secs(h.t_ms));
+        }).join('')}</div>`;
+        xSet(card, html, xchips([['code', 'code · hooks.py'], NO_MODEL_CHIP]), xrec(['hook', `${hooks.length} ${plural(hooks.length, 'reason')}`, 'quotes from earlier evenings\' logs']));
+        return { show: true, moment: Math.max(...hooks.map((h) => h.t_ms)) };
+      } },
+    { id: 'models', col: 1, title: 'Each model’s output, labelled', cap: 'Each model’s output, labelled.',
+      draw(card, st, t) {
+        let lastTurn = null;
+        for (const tr of st.turns.values()) if (tr.done && (!lastTurn || tr.end > lastTurn.end)) lastTurn = tr;
+        if (!lastTurn) return { show: false };
+        const lang = P.turnLang.get(lastTurn.turn) || 'English';
+        const parts = [];
+        parts.push(xchip('model', 'Muse Voice Transcribe') + `<div class="v"><span class="xk">turn ${lastTurn.turn} · ${esc(lastTurn.speaker)} · ${esc(lang)}</span><i>${esc(truncate(lastTurn.text, 90))}</i></div>`);
+        // the newest run's output, the most telling kinds first: a promise, a translation, a name, a misheard word
+        const rank = (k) => (k === 'promise corrected' ? 6 : k === 'promise' ? 5 : k.startsWith('translation') ? 4 : k === 'person' ? 3 : k === 'misheard?' ? 2 : k === 'details' ? 1.5 : k === 'set aside' ? 1 : 0);
+        const newest = st.x.spark.length ? Math.max(...st.x.spark.map((s) => s.t)) : null;
+        const latest = newest == null ? [] : st.x.spark.filter((s) => s.t === newest).sort((a, b) => rank(b.kind) - rank(a.kind));
+        const spark = latest.slice(0, 2);
+        parts.push(xchip('model', 'Muse Spark') + `<div class="v${spark.length ? '' : ' soft'}">${spark.length ? spark.map((s) => `<span class="xk">${esc(s.kind)}</span>${esc(truncate(s.text, 70))}`).join('<br>') : 'nothing yet'}</div>`);
+        // a promise whose date a later run replaced: the model's own correction (promise.replaces is a field Muse
+        // Spark fills in); extract.diff only logs that it changed
+        const corrected = [...st.promises.values()].filter((q) => (q.struck || []).length).sort((a, b) => (a.correctedT ?? a.t_ms) - (b.correctedT ?? b.t_ms));
+        for (const q of corrected) {
+          parts.push(xchip('model', 'Muse Spark') + `<div class="v"><span class="xk">corrected its own promise</span>${esc(q.what)} · <span class="xstrike">${esc(q.struck.join(', '))}</span> ${esc(q.due || 'no date')}<span class="xk" style="margin-left:6px">${esc(secs(q.correctedT ?? q.t_ms))}</span></div>`);
+        }
+        const edges = [...st.x.edges.values()].sort((a, b) => b.t_ms - a.t_ms);
+        const run = st.x.runs[st.x.runs.length - 1];
+        if (edges.length || run) {
+          const e = edges[0];
+          const tokens = run && run.usage && Number.isFinite(Number(run.usage.total_tokens)) ? ` · ${Number(run.usage.total_tokens).toLocaleString('en-US')} tokens` : '';
+          const runLine = run ? `<span class="xk">call ${esc(run.call)}</span>${Number(run.seconds).toFixed(2)} s${tokens} · up to turn ${esc(run.upto_turn)}` : '';
+          parts.push(xchip('model', 'Muse Spark Open on Baseten') + `<div class="v">${e ? `<span class="xk">edge</span><i>“${esc(truncate(e.said, 60))}”</i> → ${esc(e.act)}` : ''}${run ? `${e ? '<br>' : ''}${runLine}` : ''}</div>`);
+        } else {
+          parts.push(xchip('model', 'Muse Spark Open on Baseten') + '<div class="v soft">no second model in this log</div>');
+        }
+        parts.push(xchip('model', 'SAM 3.1') + `<div class="v soft">${st.photos.length ? `${st.photos.length} ${plural(st.photos.length, 'photo')} · ${st.photos.reduce((a, p) => a + (p.faces || []).length, 0)} faces` : 'no photo this evening'}</div>`);
+        const chips = corrected.length ? [['code', 'code · extract.py · diff']] : [];
+        xSet(card, `<div class="xledger">${parts.join('')}</div><p class="xnote">no token count is logged for Muse Spark runs${corrected.length ? ' · a corrected date is the model\'s own later word; the diff only logs the change' : ''}</p>`, xchips(chips),
+          xrec(['events.jsonl', 'turn', 'person', 'promise', corrected.length ? 'promise.replaces' : null, 'translation', edges.length || run ? 'edge · second_run' : null]));
+        // the caption follows the newest thing a model said, the most telling kind first; fixed lines, so it never wraps
+        const top = latest[0] || null;
+        const cap = !top ? null
+          : top.kind === 'promise corrected' ? 'A later word replaces the earlier one.'
+          : top.kind === 'promise' ? (top.text.includes(' · ') ? 'A promise caught, with its due date.' : 'A promise caught, no date yet.')
+          : top.kind.startsWith('translation') ? `Translated from ${top.kind.replace('translation · ', '') || 'another language'}, kept as spoken.`
+          : top.kind === 'person' ? 'A name from the introduction.'
+          : top.kind === 'details' ? 'A person’s details filled in.'
+          : top.kind === 'misheard?' ? 'A misheard word flagged.'
+          : top.kind === 'set aside' ? 'Small talk set aside, not deleted.'
+          : 'Overheard nearby, kept apart.';
+        return { show: true, moment: newest ?? lastTurn.end, lit: st.x.lastWordsT != null && t - st.x.lastWordsT < XRAY_LIT, cap };
+      } },
+    { id: 'checks', col: 2, title: 'The code strikes what isn’t backed', cap: 'The code strikes what the transcript doesn’t back.',
+      draw(card, st, t) {
+        const rows = [];
+        const verbatim = [];
+        let sidecar = false, replayed = false;
+        // every edge on the picture now, with kept_edges' verdict: from the sidecar (the shipping function, re-run by
+        // export_xray.py on the logged events) when it has one, else the page's own port of it
+        for (const e of st.x.edges.values()) {
+          const p = st.people.get(e.person);
+          const who = p ? shortName(p.name) : e.person;
+          const v = xVerdict(e);
+          let kept, where = null, reason = null;
+          if (v) { sidecar = true; kept = v.kept; where = v.in_turn; reason = v.reason; }
+          else {
+            replayed = true;
+            const sps = new Set((p && p.speakers) || []);
+            const said = foldWords(e.said);
+            for (const n of e.turns || []) { const tr = st.turns.get(n); if (tr && tr.done && sps.has(tr.speaker) && ` ${foldWords(tr.text)} `.includes(` ${said} `)) { where = n; break; } }
+            kept = where != null;
+            if (!kept) reason = !p ? 'no such person yet' : 'no turn of theirs with these words yet';
+          }
+          rows.push({ t: e.t_ms, html: kept
+            ? row('✓', `edge <i class="xkept">“${esc(truncate(e.said, 70))}”</i> · ${esc(who)}'s words, in turn ${where} in ${esc(who)}'s own voice · <b>kept</b>`, 'kept_edges')
+            : row('✕', `edge <i class="xstrike">“${esc(truncate(e.said, 70))}”</i> · ${esc(who)} · ${esc(reason || 'not backed')} · <b>dropped</b>`, 'kept_edges') });
+          verbatim.push(`edge · ${secs(e.t_ms, 3)} · ${e.person} · turns [${(e.turns || []).join(', ')}] · act "${e.act}"`);
+        }
+        // the retired two-model comparison (edge_finder.py): its confirmed / disagreement events stay in a log that has
+        // them, and a withdrawn confirmation is the one logged strike there is
+        const retired = st.x.disagreements.length || st.x.confirmed.size;
+        for (const d of st.x.disagreements) {
+          const gone = st.x.unconfirmed.some((u) => u.kind === d.kind && u.key === d.key);
+          const who = xName(st, d.key);
+          rows.push({ t: d.t_ms, html: row('✕', `<span class="xstrike">${esc(who)} · ${esc(d.a.text)} · confirmed</span> · ${esc(d.a.by)} says “${esc(d.a.text)}”, ${esc(d.b.by)} “${esc(d.b.text)}”${gone ? ' · confirmation withdrawn' : ''} · <span class="xk">retired comparison</span>`, `disagreement ${secs(d.t_ms)}`) });
+          verbatim.push(`disagreement · ${secs(d.t_ms, 3)} · ${d.id} · ${d.a.by} "${d.a.text}" · ${d.b.by} "${d.b.text}"`);
+          if (gone) verbatim.push(`confirmed_removed · ${secs(d.t_ms, 3)} · ${d.kind} · ${d.key}`);
+        }
+        const agreed = [...st.x.confirmed.values()];
+        if (agreed.length) {
+          const last = agreed[agreed.length - 1];
+          const claim = (a) => (a.kind === 'promise' ? `promise · ${(st.promises.get(a.key) || P.final.promises.get(a.key) || {}).what || a.key}` : `${a.kind} · ${shortName(xName(st, a.key))}`);
+          rows.push({ t: last.t_ms, html: row('✓', `${agreed.length} ${plural(agreed.length, 'claim')} where two models agreed · ${esc([...new Set(agreed.flatMap((a) => a.by || []))].join(' + '))} · ${esc(agreed.slice(-3).map(claim).join(' · '))} · <span class="xk">retired comparison</span>`, `confirmed ${secs(last.t_ms)}`) });
+          verbatim.push(`confirmed · ${secs(last.t_ms, 3)} · ${last.kind} · ${last.key} · by ${(last.by || []).join(', ')}`);
+        }
+        if (!rows.length) return { show: false };
+        rows.sort((a, b) => a.t - b.t);
+        let html = `<div class="xrows">${rows.map((r) => r.html).join('')}</div>`;
+        if (st.x.edgesRemoved) html += `<p class="xnote">${st.x.edgesRemoved} ${plural(st.x.edgesRemoved, 'edge')} re-cited by a later run (edge_removed is a diff, not a rejection)</p>`;
+        if (retired) html += `<p class="xnote">the two-model comparison has since been retired (edge_finder.py); its events stay in this log, from ${esc(logDate())}</p>`;
+        html += `<p class="xnote">${esc(verbatim.slice(-2).join('\n')).replace(/\n/g, '<br>')}</p>`;
+        const chips = [];
+        if (sidecar || replayed) chips.push(['code', 'code · extract.py · kept_edges'], ['stamp', sidecar ? 'verdicts re-run offline by export_xray.py · check events not logged yet' : 'verdicts re-run in the page · check events not logged yet']);
+        if (retired) chips.push(['stamp', `retired two-model comparison · logged ${logDate()}`]);
+        xSet(card, html, xchips(chips), xrec(['events.jsonl', sidecar || replayed ? 'edge' : null, sidecar ? 'xray.json · checks' : null, st.x.disagreements.length ? 'disagreement → confirmed_removed' : null]));
+        return { show: true, moment: st.x.lastCheckT ?? rows[rows.length - 1].t };
+      } },
+    { id: 'research', col: 2, title: 'Research: no source, no line', cap: 'Research: no source, no line.',
+      draw(card, st, t) {
+        const report = P.rec.report;
+        if (!st.ended || !report || !(report.checked || []).length) return { show: false };
+        // the telling case first (a company found but nobody tied to it, or nothing public), its findings in full;
+        // the others as one line each, so the card stays the height of a beat
+        const weak = (c) => (c.status === 'no_public_record' ? 0 : c.status === 'partial' ? 1 : 2);
+        const checked = report.checked.slice().sort((a, b) => weak(a) - weak(b) || (a.name || '').localeCompare(b.name || ''));
+        const host = (u) => { try { const x = new URL(u); return x.host.replace(/^www\./, '') + (x.pathname === '/' ? '' : x.pathname); } catch (_) { return String(u); } };
+        const html = `<div class="xrows">${checked.slice(0, 5).map((c, i) => {
+          const [tag, said] = CHECK[c.status] || [String(c.status || '').replace(/_/g, ' '), ''];
+          const n = (c.findings || []).length;
+          const head = row('◎', `<b style="color:${colourHex(c.record_key || c.key)}">${esc(c.name)}</b>${c.company ? ` · ${esc(c.company)}` : ''} · <span class="xk">${esc(tag)}</span>${i ? ` · ${n ? `${n} ${plural(n, 'finding')} kept` : 'nothing public found'}` : ''}`, c.searched === false ? 'no search ran' : i ? '' : `${n} kept`);
+          if (i) return head;
+          const lines = (c.findings || []).slice(0, 3).map((f) => row('✓', `<span class="xk">${esc(f.kind || 'found')}</span>${esc(truncate(f.text, 96))}`, f.source ? host(f.source) : '')).join('');
+          const none = n ? '' : row('—', `nothing public found · ${esc(said)}`, 'status');
+          const gap = c.status === 'partial' || c.status === 'no_public_record' ? row('—', `<span class="xk">profile</span>nothing public ties ${esc(firstName(c.name))} to ${esc(c.company || 'the company')} · ${esc(said)}`, 'status') : '';
+          return head + lines + none + gap;
+        }).join('')}</div><p class="xnote">a finding whose page was not in the search results is dropped; the status is the weaker of the model's claim and what the kept findings show</p>`;
+        const cost = report.cost || {};
+        const searched = report.checked.filter((c) => c.searched !== false).length;
+        xSet(card, html, xchips([['model', 'Muse Spark with web search'], ['code', 'code · research.py · ground']]),
+          xrec(['report.checked', `${report.checked.length} checked`, `${searched} searched`, Number.isFinite(Number(cost.searches)) ? `${cost.searches} web ${plural(Number(cost.searches), 'search', 'searches')}` : null, Number(cost.research_tokens) ? `${Number(cost.research_tokens).toLocaleString('en-US')} tokens` : null]));
+        return { show: true, moment: st.endT ?? t };
+      } },
+    { id: 'deck', col: 2, title: 'The deck, rebuilt', cap: 'The deck, rebuilt. Every number held to the slides.',
+      draw(card, st, t) {
+        const r = st.x.rebuilt[st.x.rebuilt.length - 1];
+        const moves = [...st.moves.values()];
+        const movesNote = moves.length ? `<p class="xnote">${moves.length} ${plural(moves.length, 'follow-up')} drafted, one per promise · next_move · a draft that quotes the person's own words is written again (overheard); redrafts are not logged</p>` : '';
+        if (!r) {
+          if (!st.ended) return { show: false };
+          xSet(card, `<p class="xempty">No <code>rebuilt</code> event in this log. The notification's data is <code>onepager.rebuilt_event</code>; the page is cued on request.</p>${movesNote}`,
+            xchips([['code', 'code · onepager.py']]), xrec(['rebuilt', 'none logged', moves.length ? 'next_move' : null]));
+          return { show: true, dim: true };
+        }
+        const slides = (r.slides || []).length;
+        const dropped = Array.isArray(r.dropped) ? r.dropped.length : null;
+        const bits = [];
+        if (slides) bits.push(`${slides} slides → 1 page`);
+        if (r.shape) bits.push(r.shape);
+        if (dropped != null) bits.push(`${dropped} ${plural(dropped, 'line')} dropped`);
+        if (r.retried != null) bits.push(`retried: ${r.retried}`);
+        if (Number.isFinite(Number(r.seconds))) bits.push(`${Number(r.seconds).toFixed(2)} s`);
+        if (r.usage && Number.isFinite(Number(r.usage.total_tokens))) bits.push(`${Number(r.usage.total_tokens).toLocaleString('en-US')} tokens`);
+        if (r.model) bits.push(r.model);
+        const html = `<div class="xrows">${row('✓', `<b>${esc(r.name || xName(st, r.person_key))}</b> · ${esc(bits.join(' · ') || r.format || 'html')} · every number on the page must appear in the slides (onepager.numbers)`, r.cued ? 'cued' : 'rebuilt')}${(r.acts || []).slice(0, 2).map((a) => row('→', `<span class="xk">act</span>${esc(a)}`, '')).join('')}</div>${movesNote}`;
+        xSet(card, html, xchips([['model', 'Muse Spark'], ['code', 'code · onepager.py · numbers']]), xrec(['rebuilt', secs(r.t_ms), r.person_key, moves.length ? 'next_move' : null]));
+        return { show: true, moment: r.t_ms };
+      } },
+    { id: 'buzz', col: 2, title: 'The buzz', cap: 'The buzz: what the owner saw; everything above is why.',
+      draw(card, st, t) {
+        const r = st.x.rebuilt[st.x.rebuilt.length - 1];
+        // the app's own banner, as RebuiltNotice.swift words it: "<first name> · your deck, rebuilt" / "<Shape>. Ready."
+        const first = r ? firstName(r.name || '') : '';
+        const what = r ? r.shape || (r.acts || [])[0] || '' : '';
+        const headline = first ? `${first} · your deck, rebuilt` : 'Your deck, rebuilt';
+        const subline = what ? `${what.charAt(0).toUpperCase()}${what.slice(1)}. Ready.` : 'Ready.';
+        const notif = `<div class="xnotif${r ? '' : ' ghost'}"><span class="app">Hallwise · on the badge${r ? ' · now' : ''}</span><span class="h">${esc(headline)}</span><span class="s">${esc(subline)}</span></div>`;
+        if (!r) {
+          if (!st.ended) return { show: false };
+          xSet(card, `${notif}<p class="xnote">no rebuilt event this evening: the banner above is the app's own fallback wording, with nothing filled in</p>`,
+            xchips([['code', 'code · RebuiltNotice.swift'], ['none', 'none logged']]), xrec(['RebuiltNotice.swift', 'headline · subline', 'rebuilt · none']));
+          return { show: true, dim: true };
+        }
+        xSet(card, `${notif}<p class="xnote">${(r.slides || []).length ? `${(r.slides || []).length} slides → 1 page · ` : ''}${esc(r.format || 'html')}${r.cued ? ' · cued' : ''} · one system haptic, the banner, nothing else</p>`,
+          xchips([['code', 'code · RebuiltNotice.swift'], ['code', 'code · onepager.py']]), xrec(['rebuilt', secs(r.t_ms), r.person_key, 'RebuiltNotice.swift']));
+        return { show: true, moment: r.t_ms };
+      } },
+  ];
+
+  function renderXray(st, t) {
+    // everything below is a function of (t, the fold, the sidecar, the frame); while none of them change, so does nothing here
+    const sig = `${t}|${S.rev}|${P.xrayState}|${els.xray.clientWidth}x${window.innerHeight}|${xFocus}|${xFit}|${player.playing ? 1 : 0}|${els.app._barH}`;
+    if (sig === xLast) return;
+    xLast = sig;
+    const results = [];
+    XBEATS.forEach((b, i) => {
+      const card = xCard(b, i);
+      let r;
+      try { r = b.draw(card, st, t) || { show: false }; } catch (err) { r = { show: false }; if (!card._warned) { card._warned = true; console.warn(`xray ${b.id}:`, err); } }
+      const show = !!r.show;
+      const lit = show && !r.dim && (r.lit != null ? r.lit : r.moment != null && t >= r.moment && t - r.moment < XRAY_LIT);
+      const focus = xFocus === i + 1 && show;
+      const cls = `xcard${show ? '' : ' off'}${lit ? ' lit' : show ? ' done' : ''}${r.dim ? ' dim' : ''}${focus ? ' focus' : ''}`;
+      if (card.el.className !== cls) card.el.className = cls;
+      results.push({ b, r, lit, show, focus });
+    });
+    // the caption belongs to the beat whose moment is latest; on a tie the earlier beat (the sound) keeps it
+    let best = null;
+    for (const x of results) if (x.show && !x.r.dim && x.r.moment != null && x.r.moment <= t && (!best || x.r.moment > best.r.moment)) best = x;
+    const focused = results.find((x) => x.focus);
+    const pick = focused || best;
+    const n = results.filter((x) => x.show && !x.r.dim).length;
+    const caption = pick
+      ? `<span class="n">${String(XBEATS.indexOf(pick.b) + 1).padStart(2, '0')} / ${XBEATS.length}</span>${esc(capFit(pick.r.cap || pick.b.cap))}`
+      : '<span class="n">X-ray</span>What the badge did while they talked.';
+    if (els['x-caption']._html !== caption) { els['x-caption']._html = caption; els['x-caption'].innerHTML = caption; }
+    const stamp = xrec([P.id, `${mmss(t)}.${Math.floor((t % 1000) / 100)}`, player.playing ? 'live' : 'frozen', P.meta.event || '']);
+    if (els['x-stamp']._html !== stamp) { els['x-stamp']._html = stamp; els['x-stamp'].innerHTML = stamp; }
+    const legend = xchips([['model', 'a Meta model'], ['code', 'Hallwise code'], PENDING_CHIP]);
+    if (els['x-legend']._html !== legend) { els['x-legend']._html = legend; els['x-legend'].innerHTML = legend; }
+    const tape = results.map((x) => `<span class="tick${x.show && !x.r.dim ? ' on' : ''}${x.lit ? ' now' : ''}"></span>`).join('') +
+      `<span class="xreceipt">${xrec([`${n} of ${XBEATS.length} up`, 'every value from events.jsonl, the xray sidecar or the saved report'])}</span>`;
+    if (els['x-tape']._html !== tape) { els['x-tape']._html = tape; els['x-tape'].innerHTML = tape; }
+    xLayout(focused ? focused.b : null);
+  }
+
+  /** Fit the X-ray to the frame: on a wide screen the columns are scaled down until every card is in view (a
+   *  headless still then shows the beat that just lit, whatever the column heights); with &focus=NN one card is
+   *  held large in the centre instead, as big as the frame allows up to 2×, for a phone or a film still. */
+  let xScale = 1, xCompact = false;  // the fit's state: it tightens at once and loosens only with clear room, so nothing jitters
+  function xLayoutReset() { xScale = 1; xCompact = false; xLast = ''; }
+  window.addEventListener('resize', xLayoutReset);
+  function xLayout(focusBeat) {
+    const inner = els.xray.querySelector('.xray-in');
+    const barH = els.app._barH || 0;
+    const avail = window.innerHeight - barH;
+    els.app.classList.toggle('is-focus', !!focusBeat);
+    for (const c of xCards.values()) if (c.el.classList.contains('focus') && (!focusBeat || c !== xCards.get(focusBeat.id))) c.el.classList.remove('focus');
+    if (focusBeat) {
+      // the card keeps its column's width (a fixed box would otherwise size itself to its widest chip), then scales
+      // to the room between the caption and the bar, up to 2×, and sits in the middle of that room
+      const card = xCards.get(focusBeat.id);
+      inner.style.transform = ''; inner.style.marginBottom = '';
+      els.app.classList.remove('is-compact');
+      const w = card.el.parentNode.clientWidth || card.el.offsetWidth;
+      card.el.style.width = `${w}px`;
+      const h = card.el.offsetHeight;
+      const top = els['x-caption'].getBoundingClientRect().bottom + 12;
+      const room = Math.max(120, avail - top - 14);
+      const s = Math.max(0.5, Math.min(2, (window.innerWidth - 32) / w, room / h));
+      card.el.style.setProperty('--fs', s.toFixed(3));
+      card.el.style.setProperty('--fy', `${Math.round(top + room / 2)}px`);
+      return;
+    }
+    for (const c of xCards.values()) if (c.el.style.width) c.el.style.width = '';
+    const wide = window.innerWidth >= 920;
+    const want = xFit === 'on' || (xFit === 'auto' && wide);
+    if (!want) { inner.style.transform = ''; inner.style.marginBottom = ''; els.app.classList.remove('is-compact'); return; }
+    inner.style.transform = ''; inner.style.marginBottom = '';
+    els.app.classList.toggle('is-compact', xCompact);
+    let need = inner.scrollHeight;
+    if (!xCompact && need > avail * 1.12) { xCompact = true; els.app.classList.add('is-compact'); need = inner.scrollHeight; }  // notes go before type shrinks
+    const fit = need <= avail ? 1 : Math.max(0.6, avail / need);
+    if (fit < xScale - 0.005 || fit > xScale + 0.08) xScale = fit;
+    if (xScale >= 1) return;
+    inner.style.transform = `scale(${xScale.toFixed(4)})`;
+    inner.style.marginBottom = `${-Math.round(need * (1 - xScale))}px`;
+  }
+
   // ---------------------------------------------------------------- render loop
   function stateAt(t) {
     if (t < S.t) S = freshState();
@@ -1867,9 +2713,10 @@
 
   function render(t) {
     const st = stateAt(t);
-    renderRadar(st, t);
+    if (!xrayOn) renderRadar(st, t);
     renderTransport(t);
     if (mode !== 'live') return;
+    if (xrayOn) { renderXray(st, t); return; }  // the panels under the overlay catch up when it closes
     renderCaptions(t);
     renderPeople(st, t);
     renderTranscript(st, t);
@@ -1919,6 +2766,7 @@
 
   function enterIntro() {
     player.pause(0);
+    if (xrayOn) setXray(false);
     mode = 'intro';
     els.app.classList.add('is-intro');
     els.app.classList.remove('is-live');
@@ -1986,12 +2834,16 @@
     endScrolled = false;
     flashTurn = null;
     S = freshState();
+    resetXray();
   }
 
   function start(rec) {
     if (player.playing) player.pause();
     resetDom();
     P = prepare(rec);
+    P.xray = null;            // the sidecar data/<id>.xray.json, fetched when the X-ray opens
+    P.xrayState = 'idle';     // idle | loading | ok | none
+    if (xrayOn) ensureSidecar();
     setupAudio(rec);
     fillIntro();
     buildTransport();
@@ -2015,8 +2867,9 @@
     }
     const rows = index.recordings || [];
     if (!rows.length) { els['evening-name'].textContent = 'No recording exported yet'; return; }
-    const fromHash = decodeURIComponent((location.hash || '').slice(1));
-    const pick = rows.find((r) => r.id === fromHash) || rows.find((r) => r.id === index.default) || rows[0];
+    const want = parseHash(location.hash);
+    if (new URLSearchParams(location.search).has('xray')) want.xray = true;
+    const pick = rows.find((r) => r.id === want.id) || rows.find((r) => r.id === index.default) || rows[0];
     if (rows.length > 1) {
       els.pick.hidden = false;
       els.pick.innerHTML = rows.map((r) => {
@@ -2035,18 +2888,22 @@
       });
     }
     window.addEventListener('hashchange', async () => {
-      const row = rows.find((r) => r.id === decodeURIComponent((location.hash || '').slice(1)));
-      if (!row || (P && row.id === P.id)) return;
+      const w = parseHash(location.hash);
+      const row = rows.find((r) => r.id === w.id);
+      if (!row) return;
+      if (P && row.id === P.id) { applyHashState(w); return; }
       try {
         const rec = await loadJSON(`data/${row.file}`);
         start(rec);
         enterIntro();
         if (!els.pick.hidden) els.pick.value = row.id;
+        applyHashState(w);
       } catch (err) { toast(`That evening could not load (${err.message}).`); }
     });
     try {
       const rec = await loadJSON(`data/${pick.file}`);
       start(rec);
+      applyHashState(want);
     } catch (err) {
       els['evening-name'].textContent = 'This evening could not load';
       els['evening-meta'].textContent = String(err.message || err);
@@ -2101,6 +2958,8 @@
   els.mute.addEventListener('click', () => setMuted(!player.muted));
   setMuted(lsGet('hallwise-replay-muted') === '1');
   els.brand.addEventListener('click', (e) => { e.preventDefault(); if (P) enterIntro(); });
+  els['xray-btn'].addEventListener('click', () => { if (P) setXray(!xrayOn); });
+  els['x-close'].addEventListener('click', () => setXray(false));
   document.querySelectorAll('.speed button').forEach((b) => b.addEventListener('click', () => {
     const r = Number(b.dataset.rate) || 1;
     player.setRate(r);
@@ -2142,6 +3001,10 @@
       if (!e.repeat) togglePlay();
     } else if ((e.key === 'm' || e.key === 'M') && player.audio) {
       setMuted(!player.muted);
+    } else if (e.key === 'x' || e.key === 'X') {
+      setXray(!xrayOn);
+    } else if (e.key === 'Escape' && xrayOn) {
+      setXray(false);
     } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       if (mode !== 'live') return;
       e.preventDefault();
@@ -2168,5 +3031,5 @@
   requestAnimationFrame(frame);
 
   // exposed for checking the replay from a console; not used by the page
-  window.__hallwiseReplay = { get P() { return P; }, get S() { return S; }, player, prepare, buildCaptions };
+  window.__hallwiseReplay = { get P() { return P; }, get S() { return S; }, player, prepare, buildCaptions, setXray, get xrayOn() { return xrayOn; } };
 })();

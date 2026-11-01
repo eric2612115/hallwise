@@ -200,6 +200,7 @@ button { cursor: pointer; }
 }
 .new-voice-label.on { opacity: 1; }
 
+.radar-wedges { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
 .blips { position: absolute; inset: 0; z-index: 3; }
 .blip {
   --c: var(--ink-soft);
@@ -226,6 +227,11 @@ button { cursor: pointer; }
   box-shadow: 0 1px 3px var(--shadow);
 }
 .blip.known .dot { box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--c); }
+/* a placed voice is its wedge; the dot shrinks to the label's anchor and never reads as an exact point */
+.blip.placed .dot, .blip.placed.named .dot { width: 8px; height: 8px; margin: -4px 0 0 -4px; border-width: 1.5px; opacity: 0.85; }
+.blip.placed.known .dot { box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 2.5px var(--c); }
+.blip.placed.talking .dot { transform: scale(1.2); }
+.blip .label .unsure { font-family: var(--mono); font-weight: 500; color: var(--ink-soft); }
 .blip.talking .dot { transform: scale(1.3); box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--c), 0 0 20px 4px color-mix(in srgb, var(--c) 70%, transparent); }
 .blip.voice.talking .dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 60%, transparent); }
 .blip .ripple {
@@ -914,7 +920,7 @@ button.ev:hover { background: color-mix(in srgb, var(--accent) 8%, transparent);
   .pick { max-width: 40vw; font-size: 0.75rem; padding: 5px 10px; }
   .brand { flex-shrink: 0; }
   .brand-name { font-size: 1.1rem; }
-  #theme-label { display: none; }
+  #theme-label, .xray-btn span { display: none; }
   .top-tools { flex-wrap: nowrap; }
   .play-big .disc { width: 48px; height: 48px; }
   .captions { min-height: 120px; }
@@ -930,4 +936,214 @@ button.ev:hover { background: color-mix(in srgb, var(--accent) 8%, transparent);
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   .blip.talking .ripple { animation: none; }
+}
+/* a composed frame for a headless capture (#<id>@<ms>&xray&still): nothing mid-transition */
+.is-still, .is-still *, .is-still *::before, .is-still *::after { animation: none !important; transition: none !important; }
+
+/* ---------- X-ray: the machinery behind the replay, as paper cards over the dimmed page.
+   Always the dark frame with paper cards, whatever the page theme: the tokens are pinned here (Theme.swift values).
+   Teal is kept / checked / the code; red is the strike; ochre dashed is PENDING or a verdict re-run offline. */
+#app.is-xray { --bar-h: 118px; }  /* a fallback: app.js writes the bar's measured height over it */
+.xray {
+  /* runs under the transport bar (z-index 20), so no strip of the page shows between the cards and the bar; the
+     scroll padding at the bottom is the bar's measured height */
+  position: fixed; left: 0; right: 0; top: 0; bottom: 0;
+  z-index: 15;
+  overflow-y: auto; overscroll-behavior: contain;
+  background: rgba(28, 26, 23, 0.975);
+  color: var(--dk-ink);
+  --paper: #EDE8DC; --paper-deep: #E2DBC9; --paper-raised: #F4F0E7;
+  --ink: #2A2622; --ink-strong: #1A1613; --ink-soft: #6E675E; --rule: #D3CBB9;
+  --accent: #2F7F72; --live: #C8402F;
+  --p0: #2F7F72; --p1: #C8702F; --p2: #7A4FA3; --p3: #B8862B; --p4: #3B63A8; --p5: #5F8A3C; --p6: #B8475F; --p7: #5B6B78;
+  --dk-ink: #E8E2D6; --dk-soft: #A39B8F; --dk-rule: #35312B; --dk-accent: #6FB9AB; --dk-live: #E2644F;
+  --pending: #E0B45A; --pending-ink: #8A6A1F;
+  --shadow: rgba(0, 0, 0, 0.45);
+  animation: xray-in 0.45s var(--ease);
+}
+@keyframes xray-in { from { opacity: 0; } to { opacity: 1; } }
+.xray::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none;
+  opacity: 0.16; mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 1.4 -0.35'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+.xray-in {
+  position: relative;
+  max-width: 1320px; margin: 0 auto;
+  padding: 16px max(16px, env(safe-area-inset-left, 0px)) calc(var(--bar-h) + 20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 14px;
+  transform-origin: top center;  /* app.js scales it down when the cards would not all fit the frame */
+}
+@media (min-width: 1600px) { .xray-in { max-width: 1600px; } }
+.xray-top { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; }
+.xray-stamp { display: flex; align-items: center; gap: 12px; min-width: 0; flex-wrap: wrap; }
+.xtag {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 4px 10px; border: 1.5px solid var(--dk-ink); border-radius: 6px; color: var(--dk-ink); white-space: nowrap;
+}
+.xray-legend { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.xray-legend .xchip { border-color: var(--dk-ink); color: var(--dk-ink); background: transparent; }
+.xray-legend .xchip.code { border-color: var(--dk-accent); color: var(--dk-accent); }
+.xray-legend .xchip.pending { border-color: var(--pending); color: var(--pending); }
+.xray-close { color: var(--dk-soft); border-color: var(--dk-rule); }
+.xray-close:hover { color: var(--dk-ink); border-color: var(--dk-soft); }
+.xray-caption {
+  margin: 0;
+  font-family: var(--serif); font-weight: 500;
+  font-size: clamp(1.45rem, 2.6vw, 2.75rem); line-height: 1.08; letter-spacing: -0.012em;
+  color: var(--dk-ink); text-wrap: balance;
+  font-variation-settings: "opsz" 72;
+}
+.xray-caption .n { font-family: var(--mono); font-weight: 500; font-size: 0.48em; letter-spacing: 0.1em; color: var(--dk-soft); margin-right: 0.6em; vertical-align: 0.4em; }
+/* one sentence of at most 60 characters: on a frame it never wraps (a guard, should a line still run long) */
+@media (min-width: 920px) { .xray-caption { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-wrap: initial; } }
+/* &focus=NN: one card held large in the centre, the rest a dim backdrop */
+.is-focus .xcard:not(.focus) { opacity: 0.22; }
+.is-focus .xcard.focus {
+  position: fixed; left: 50%; top: var(--fy, 50%); z-index: 30;
+  transform: translate(-50%, -50%) scale(var(--fs, 2));
+  transform-origin: center;
+  opacity: 1 !important; animation: none;
+  box-shadow: 0 0 0 2px var(--paper-raised), 0 0 0 4px var(--dk-accent), 0 30px 90px rgba(0, 0, 0, 0.6);
+}
+.is-focus .xray-caption, .is-focus .xray-top { position: relative; z-index: 31; }
+/* compact: when the cards would not fit the frame even scaled, the cards that already had their moment keep their
+   canvases and first rows and lose their notes, so the one that just lit stays legible */
+.is-compact .xcard.done .xnote, .is-compact .xcard.dim .xnote, .is-compact .xcard.done .xpair { display: none; }
+.is-compact .xcard.done .xrows .xr:nth-child(n+5) { display: none; }
+.is-compact .xcard.done .xledger > :nth-child(n+7) { display: none; }
+.xray-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.xcol { min-width: 0; }
+.xcol .xch {
+  font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dk-soft);
+  padding-bottom: 6px; border-bottom: 1.5px solid var(--dk-rule); margin-bottom: 10px;
+  display: flex; justify-content: space-between;
+}
+.xstack { display: flex; flex-direction: column; gap: 10px; }
+.xstack:not(:has(.xcard:not(.off)))::after {
+  content: "nothing yet"; display: block; padding: 10px 2px;
+  font-family: var(--serif); font-style: italic; color: var(--dk-soft); font-size: 0.9rem;
+}
+.xcard {
+  position: relative;
+  background: var(--paper-raised); color: var(--ink);
+  border: 1.5px solid var(--rule); border-radius: 16px;
+  padding: 12px 14px 10px;
+  box-shadow: 0 2px 0 rgba(42, 38, 34, 0.04), 0 18px 48px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.5s var(--ease), box-shadow 0.4s var(--ease);
+  animation: xcard-in 0.5s var(--ease);
+  min-width: 0;
+}
+@keyframes xcard-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.xcard.off { display: none; }
+.xcard.done { opacity: 0.8; }
+.xcard.lit { opacity: 1; box-shadow: 0 0 0 2px var(--paper-raised), 0 0 0 4px var(--dk-accent), 0 18px 48px rgba(0, 0, 0, 0.35); }
+.xcard.dim { opacity: 0.62; border-style: dashed; }
+.xtitle { margin: 0 0 8px; font-family: var(--serif); font-weight: 500; font-size: 1.08rem; line-height: 1.15; color: var(--ink-strong); display: flex; align-items: baseline; gap: 10px; }
+.xtitle .n { font-family: var(--mono); font-weight: 500; font-size: 0.66rem; letter-spacing: 0.08em; color: var(--ink-soft); }
+.xbody { font-size: 0.86rem; line-height: 1.3; min-width: 0; }
+.xcanv canvas { display: block; width: 100%; }
+.xmeta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+.xfoot { display: flex; justify-content: space-between; align-items: center; gap: 6px 10px; margin-top: 9px; flex-wrap: wrap; }
+.xchips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.xchip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 3px; border-radius: 999px;
+  font-size: 0.7rem; line-height: 1.2; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap;
+  border: 1.5px solid var(--ink); color: var(--ink); background: var(--paper-raised);
+}
+.xchip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.xchip.code { font-family: var(--mono); font-weight: 500; border-color: var(--accent); color: var(--accent); background: transparent; }
+.xchip.code::before { width: 9px; height: 9px; border-radius: 2px; background: transparent; border: 2px solid currentColor; }
+.xchip.pending, .xchip.none, .xchip.stamp {
+  font-family: var(--mono); font-weight: 500; border: 1.5px dashed var(--pending); color: var(--pending-ink);
+  background: transparent; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.6rem;
+}
+.xchip.pending::before, .xchip.none::before, .xchip.stamp::before { display: none; }
+.xchip.none { border-color: var(--ink-soft); color: var(--ink-soft); }
+.xchip.kept { border-color: var(--accent); color: var(--accent); background: transparent; }
+.xchip.kept::before { content: "✓"; width: auto; height: auto; background: none; border: 0; font-weight: 700; }
+.xchip.struck { border-color: var(--live); color: var(--live); background: transparent; }
+.xchip.struck::before { content: "✕"; width: auto; height: auto; background: none; border: 0; font-weight: 700; }
+.xchip.p { --c: var(--ink); border-color: var(--c); color: var(--c); background: transparent; font-variant-numeric: tabular-nums; }
+.xchip.p::before { background: var(--c); }
+.xreceipt { font-family: var(--mono); font-size: 0.66rem; line-height: 1.35; color: var(--ink-soft); letter-spacing: 0.005em; flex: 1 1 220px; min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.xreceipt .sep { opacity: 0.55; margin: 0 0.4em; }
+.xreceipt b { font-weight: 500; color: var(--ink); }
+.xray-top .xreceipt, .xray-tape .xreceipt { color: var(--dk-soft); text-align: left; }
+.xray-top .xreceipt b, .xray-tape .xreceipt b { color: var(--dk-ink); }
+.xray-tape { display: flex; align-items: center; gap: 5px; padding-top: 4px; }
+.xray-tape .tick { height: 6px; flex: 1; border-radius: 3px; background: var(--dk-rule); transition: background-color 0.4s; }
+.xray-tape .tick.on { background: var(--dk-ink); }
+.xray-tape .tick.now { background: var(--dk-accent); }
+.xray-tape .xreceipt { flex: 0 1 auto; margin-left: 8px; }
+
+/* rows, ledgers and marks inside the cards */
+.xrows { display: flex; flex-direction: column; gap: 5px; }
+.xr { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.xr .xmk { font-weight: 700; width: 16px; flex: none; text-align: center; font-family: var(--sans); }
+.xr .xmk.ok { color: var(--accent); }
+.xr .xmk.no { color: var(--live); }
+.xr .xmk.soft { color: var(--ink-soft); font-weight: 500; }
+.xr .tx { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.xr .tx i { font-family: var(--serif); }
+.xr .tx b { font-weight: 600; }
+.xr .src { font-family: var(--mono); font-size: 0.62rem; color: var(--ink-soft); white-space: nowrap; flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em; }
+.xk { font-family: var(--mono); font-size: 0.64rem; color: var(--ink-soft); margin-right: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+.xstrike { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--live); text-decoration-thickness: 2px; }
+.xkept { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 2px; }
+.xledger { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; align-items: baseline; }
+.xledger .v { min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.xledger .v i { font-family: var(--serif); }
+.xledger .v.soft { color: var(--ink-soft); }
+.xpills { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.xpills .xk { margin: 0 2px 0 4px; }
+.xpills .xk:first-child { margin-left: 0; }
+.xpill { font-size: 0.72rem; line-height: 1.3; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--rule); background: var(--paper); white-space: nowrap; }
+.xpill.badge { border-color: var(--ink); font-weight: 600; }
+.xpill.co { color: var(--ink-soft); }
+.xstat { font-family: var(--serif); font-size: 1.55rem; font-weight: 600; line-height: 1; color: var(--ink-strong); margin-right: 8px; }
+.xstat-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.xstrips { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 8px; align-items: center; margin-top: 6px; }
+.xstrip { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+.xstrip i { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); display: inline-block; }
+.xstrip i.on { background: var(--accent); }
+.xpair { display: grid; gap: 2px; margin-top: 8px; font-family: var(--serif); font-style: italic; font-size: 0.9rem; }
+.xpair .xk { font-style: normal; }
+.xpair .on { color: var(--accent); }
+.xnote { font-family: var(--mono); font-size: 0.64rem; line-height: 1.4; color: var(--ink-soft); letter-spacing: 0.02em; margin-top: 7px; overflow-wrap: anywhere; }
+.xnotif { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rule); background: var(--paper); }
+.xnotif .app { display: flex; align-items: center; gap: 6px; font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+.xnotif .app::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--accent); }
+.xnotif .h { font-family: var(--serif); font-size: 1.1rem; font-weight: 600; color: var(--ink-strong); }
+.xnotif .s { font-size: 0.86rem; }
+.xnotif.ghost { border-style: dashed; opacity: 0.7; }
+.xempty { font-family: var(--serif); font-style: italic; color: var(--ink-soft); }
+.xempty code { font-family: var(--mono); font-style: normal; font-size: 0.72rem; color: var(--ink); overflow-wrap: anywhere; }
+
+/* the two marker lanes the X-ray adds to the transport: an edge found, a reason to write */
+.lane.l-edge, .lane.l-hook { display: none; }
+.lane.l-edge { top: 36px; }
+.lane.l-hook { top: 48px; }
+.is-xray .lane.l-edge, .is-xray .lane.l-hook { display: block; }
+.is-xray .scrub { padding-top: 60px; }
+.l-edge .mk .g { border-radius: 1px; transform: rotate(45deg) scale(0.8); background: none; border: 1.5px solid var(--p1); }
+.l-edge .mk:hover .g { transform: rotate(45deg) scale(1.2); }
+.l-hook .mk .g { background: var(--p2); }
+.xray-btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+
+@media (max-width: 920px) {
+  .xray-cols { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .xcol .xch { margin-top: 4px; }
+}
+@media (max-width: 600px) {
+  #app.is-xray { --bar-h: 142px; }  /* the fallback before app.js measures the bar */
+  .xray-in { gap: 10px; padding-top: 12px; }
+  .xray-caption { font-size: 1.5rem; }
+  .xcard { padding: 10px 12px 9px; border-radius: 14px; }
+  .xr .src { max-width: 48%; }
+  .xray-top { gap: 8px; }
+  .xray-legend { display: none; }
+  .xchip.pending, .xchip.stamp { white-space: normal; text-align: left; }  /* a long stamp wraps rather than widens the card */
+  .xray-tape .xreceipt { display: none; }
+  .xray-stamp .xreceipt { flex-basis: 100%; }
 }

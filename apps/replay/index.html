@@ -19,6 +19,10 @@
     </a>
     <div class="top-tools">
       <select id="pick" class="pick" hidden aria-label="Choose an evening"></select>
+      <button id="xray-btn" class="ghost-btn xray-btn" type="button" aria-pressed="false" aria-label="X-ray: show the machinery behind the replay" title="X-ray: the machinery behind the replay (X)">
+        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span>X-ray</span>
+      </button>
       <button id="theme" class="ghost-btn" type="button" aria-label="Colour theme: automatic">
         <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg>
         <span id="theme-label">Auto</span>
@@ -39,6 +43,8 @@
             </defs>
             <g id="radar-static"></g>
           </svg>
+          <!-- each voice as a soft region in its person's colour: where the array put it, as wide as it was unsure -->
+          <canvas class="radar-wedges" id="radar-wedges" aria-hidden="true"></canvas>
           <div class="new-voice" id="new-voice"></div>
           <div class="new-voice-label" id="new-voice-label">a new voice</div>
           <div class="wearer" id="wearer">
@@ -184,6 +190,27 @@
     </footer>
   </main>
 
+  <!-- X-ray: the machinery behind the replay, drawn as paper cards over the dimmed page, in step with the clock.
+       Opened with the X-ray button, the X key, or a hash of the form #<recording id>@<ms>&xray. For a headless
+       capture add &still (no transitions), &focus=NN (one beat's card held large in the centre) or &fit / &nofit
+       (scale the columns so every card is in the frame; on by default from 920 px up). -->
+  <section class="xray" id="xray" hidden aria-label="X-ray: what the badge's code and each model did">
+    <div class="xray-in">
+      <div class="xray-top">
+        <div class="xray-stamp"><span class="xtag">X-ray</span><span class="xreceipt" id="x-stamp"></span></div>
+        <div class="xray-legend" id="x-legend"></div>
+        <button class="ghost-btn xray-close" id="x-close" type="button">Back to the replay</button>
+      </div>
+      <p class="xray-caption" id="x-caption"></p>
+      <div class="xray-cols" id="x-cols">
+        <div class="xcol"><div class="xch"><span>Sound</span><span class="arrow">→</span></div><div class="xstack"></div></div>
+        <div class="xcol"><div class="xch"><span>Words</span><span class="arrow">→</span></div><div class="xstack"></div></div>
+        <div class="xcol"><div class="xch"><span>Checks → action</span><span class="arrow"></span></div><div class="xstack"></div></div>
+      </div>
+      <div class="xray-tape" id="x-tape"></div>
+    </div>
+  </section>
+
   <div class="bar" id="bar">
     <div class="bar-in">
       <button class="pp" id="pp" type="button" aria-label="Play">
@@ -194,6 +221,8 @@
         <div class="lane l-person" id="lane-person"></div>
         <div class="lane l-promise" id="lane-promise"></div>
         <div class="lane l-translation" id="lane-translation"></div>
+        <div class="lane l-edge" id="lane-edge"></div>
+        <div class="lane l-hook" id="lane-hook"></div>
         <div class="track" id="track" role="slider" tabindex="0" aria-label="Position in the recording" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
           <div id="segs"></div>
           <div class="fill" id="fill"></div>
