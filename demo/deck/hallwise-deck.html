@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920">
+<title>Hallwise · 7-slide pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* The layout of the Vexi YC deck (white, one accent, kicker + bold title, ruled tables, big numbers) in Hallwise's
+     own colours: the doorway icon's amber glow on its night blue, and the app's serif for the wordmark.
+     The pictures are soft-3D illustrations made with Meta's Muse Image (assets/illus-*.png; takes in assets/takes/). */
+  :root {
+    --ink: #17161A; --soft: #5E5A55; --rule: #E4DED6; --wash: #F6F1EA;
+    --amber: #B5652F; --glow: #F4A75B; --night: #1B1B22;
+    --sans: 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    --serif: ui-serif, 'New York', 'Iowan Old Style', Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #e9e6e1; }
+  body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .slide { width: 1920px; height: 1080px; background: #fff; position: relative; overflow: hidden; padding: 104px 128px; page-break-after: always; break-after: page; }
+  .slide::after { content: attr(data-n); position: absolute; right: 64px; bottom: 44px; font-size: 18px; color: #A39D96; }
+  .kicker { font-size: 24px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--amber); }
+  h1 { font-size: 80px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.06; margin-top: 22px; }
+  .sub { font-size: 34px; line-height: 1.35; color: var(--soft); margin-top: 18px; }
+  .sub b { color: var(--ink); font-weight: 700; }
+  .src { position: absolute; left: 128px; right: 220px; bottom: 44px; font-size: 18px; line-height: 1.45; color: #A39D96; }
+  .credit { position: absolute; right: 110px; bottom: 44px; font-size: 16px; color: #A39D96; }
+  .art { display: block; mix-blend-mode: multiply; }   /* the illustrations' white studio backgrounds vanish into the slide */
+
+  /* 1 · title: the lockup on the left, the room on the right */
+  .s1 { display: grid; grid-template-columns: 700px 1fr; align-items: center; padding-right: 0; }
+  .s1 .lockup { display: flex; align-items: center; gap: 36px; }
+  .s1 .lockup img { width: 168px; height: 168px; border-radius: 38px; filter: drop-shadow(0 18px 24px rgba(27,27,34,0.28)); }  /* a box-shadow here prints as a grey block in the PDF */
+  .s1 .word { font-family: var(--serif); font-size: 150px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+  .s1 .tag { font-size: 46px; font-weight: 500; margin-top: 54px; line-height: 1.25; }
+  .s1 .line2 { font-size: 26px; color: var(--soft); margin-top: 18px; line-height: 1.4; }
+  .s1 .hero { position: absolute; right: 0; bottom: 0; width: 1150px; }
+  .s1 .hero img { width: 100%; -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
+  .s1 .credit { right: auto; left: 128px; }
+
+  /* tables */
+  .table { margin-top: 70px; border-top: 2px solid var(--rule); }
+  .tr { display: grid; grid-template-columns: 1fr 1fr; align-items: center; border-bottom: 2px solid var(--rule); padding: 30px 0; position: relative; }
+  .tr .l { font-size: 40px; font-weight: 700; color: var(--amber); }
+  .tr .r { font-size: 40px; font-weight: 700; }
+  .tr.first::before { content: ''; position: absolute; left: -26px; top: 26px; bottom: 26px; width: 6px; border-radius: 3px; background: var(--amber); }
+  .table.solutions .l { color: var(--ink); }
+  .table.solutions .r { color: var(--amber); text-align: right; }
+
+  /* 3 · the room: the picture on the left, what was said → what Hallwise heard on the right, as ruled rows */
+  .room { display: grid; grid-template-columns: 740px 1fr; gap: 72px; margin-top: 36px; align-items: center; }
+  .room .pic img { width: 100%; -webkit-mask-image: linear-gradient(#000 86%, transparent); mask-image: linear-gradient(#000 86%, transparent); }
+  .room .pic .lbl { margin-top: 2px; font-size: 20px; color: var(--soft); text-align: center; }
+  .room .pic .lbl b { color: var(--ink); }
+  .said { border-top: 2px solid var(--rule); }
+  .said .row { border-bottom: 2px solid var(--rule); padding: 18px 0; position: relative; }
+  .said .row.first::before { content: ''; position: absolute; left: -26px; top: 18px; bottom: 18px; width: 6px; border-radius: 3px; background: var(--amber); }
+  .said .spk { font-size: 17px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft); }
+  .said .q { font-size: 32px; font-weight: 700; margin-top: 5px; line-height: 1.22; }
+  .said .q small { font-size: 21px; font-weight: 400; color: var(--soft); margin-left: 12px; }
+  .said .h { display: grid; grid-template-columns: 38px 1fr; align-items: baseline; margin-top: 8px; font-size: 25px; line-height: 1.3; color: var(--soft); }
+  .said .h .a { font-size: 28px; color: var(--amber); font-weight: 800; }
+  .said .h b { color: var(--ink); font-weight: 700; }
+
+  /* 4 · how it works: the picture on the left, the three lanes on the right */
+  .how { display: grid; grid-template-columns: 820px 1fr; gap: 64px; margin-top: 44px; align-items: center; }
+  .how .pic img { width: 100%; }
+  .how .pic .cap { display: flex; justify-content: space-between; margin-top: 4px; padding: 0 20px; }
+  .how .pic .cap div { font-size: 24px; font-weight: 700; }
+  .how .pic .cap div small { display: block; font-size: 19px; font-weight: 500; color: var(--soft); margin-top: 4px; }
+  .how .pic .cap div:last-child { text-align: right; }
+  .lanes { display: grid; gap: 26px; }
+  .lanehead { font-size: 20px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); margin-bottom: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 12px; }
+  .chip { border-radius: 18px; padding: 16px 22px; font-size: 25px; font-weight: 700; background: var(--night); color: #fff; }
+  .chip small { display: block; font-size: 19px; font-weight: 500; color: #C9C2BA; margin-top: 3px; }
+  .chip.ours { background: var(--wash); color: var(--ink); }
+  .chip.ours small { color: var(--soft); }
+  .chip.out { background: #FCE7D6; color: var(--ink); }
+  .chip.out small { color: var(--soft); }
+
+  /* 5 · four in one: the table on the left, the deck becoming one page on the right */
+  .four { display: grid; grid-template-columns: 1fr 600px; gap: 72px; align-items: center; }
+  .four .table { margin-top: 60px; }
+  .four .tr { grid-template-columns: 1fr auto; gap: 40px; padding: 28px 0; }
+  .four .tr .l, .four .tr .r { font-size: 34px; }
+  .four .tr .r { white-space: nowrap; }
+  .four .pic img { width: 100%; }
+  .four .pic .lbl { margin-top: 10px; font-size: 20px; color: var(--soft); text-align: center; }
+  .four .pic .lbl b { color: var(--ink); }
+
+  /* 6 · why now */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 60px; margin-top: 110px; }
+  .stat .v { font-size: 170px; font-weight: 800; letter-spacing: -0.04em; line-height: 0.95; color: var(--amber); }
+  .stat p { font-size: 32px; line-height: 1.35; margin-top: 26px; }
+  .stat p small { display: block; font-size: 22px; color: var(--soft); margin-top: 10px; }
+
+  /* 7 · built, who, try */
+  .built { display: grid; grid-template-columns: repeat(4, 1fr); gap: 44px; margin-top: 60px; }
+  .built .v { font-size: 104px; font-weight: 800; letter-spacing: -0.035em; color: var(--amber); line-height: 1; }
+  .built .v small { font-size: 50px; }
+  .built p { font-size: 26px; line-height: 1.35; margin-top: 14px; color: var(--soft); }
+  .built p b { color: var(--ink); }
+  .who { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; margin-top: 70px; }
+  .who h3 { font-size: 44px; font-weight: 800; border-top: 3px solid var(--amber); padding-top: 22px; }
+  .who .role { font-size: 21px; font-weight: 700; letter-spacing: 0.14em; color: var(--amber); margin-top: 8px; }
+  .who ul { list-style: none; margin-top: 18px; display: grid; gap: 10px; }
+  .who li { font-size: 28px; line-height: 1.35; padding-left: 26px; position: relative; }
+  .who li::before { content: ''; position: absolute; left: 0; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: var(--amber); }
+
+  @page { size: 1920px 1080px; margin: 0; }
+  body.one .slide { display: none; }
+  body.one .slide.on { display: block; }
+  body.one .slide.s1.on { display: grid; }
+</style>
+</head>
+<body>
+
+<!-- 1 · Title -->
+<section class="slide s1" data-n="1">
+  <div>
+    <div class="lockup"><img src="assets/hallwise-icon.png" alt="Hallwise icon"><div class="word">Hallwise</div></div>
+    <div class="tag">A name badge that remembers the room</div>
+    <div class="line2">Built on Meta's models<br>Meta Global AI Developer Hackathon</div>
+  </div>
+  <div class="hero"><img class="art" src="assets/illus-title.png" alt="A networking mixer: people at cocktail tables with wine glasses, one wearing a phone on the chest, speech bubbles in different scripts above"></div>
+  <div class="credit">Illustrations: Muse Image</div>
+</section>
+
+<!-- 2 · The trade-offs so far -->
+<section class="slide" data-n="2">
+  <div class="kicker">AI note-takers today</div>
+  <h1>The trade-offs so far</h1>
+  <div class="table">
+    <div class="tr first"><div class="l">Names come from a calendar invite</div><div class="r">Fireflies, Granola, Circleback</div></div>
+    <div class="tr"><div class="l">You label every voice by hand</div><div class="r">Limitless, Fieldy</div></div>
+    <div class="tr"><div class="l">Strangers stay "Speaker 2"</div><div class="r">Plaud, Granola on iPhone</div></div>
+    <div class="tr"><div class="l">One language per recording</div><div class="r">Otter, Plaud</div></div>
+  </div>
+  <div class="src">From each vendor's own help pages, read 2025–2026; quotes and dates in demo/competitors/landscape.md.</div>
+</section>
+
+<!-- 3 · The insight -->
+<section class="slide" data-n="3">
+  <div class="kicker">Why the room</div>
+  <h1>The room already says who everyone is</h1>
+  <div class="sub">People <b>introduce themselves</b>, say what they'll <b>send</b>, and tell each other <b>what they want</b>, in their own language</div>
+  <div class="room">
+    <div class="pic">
+      <img class="art" src="assets/illus-room.png" alt="People at cocktail tables with wine glasses; one wears a phone on the chest; speech bubbles in different scripts float above">
+      <div class="lbl"><b>One phone on one chest</b> hears the whole table</div>
+    </div>
+    <div class="said">
+      <div class="row first">
+        <div class="spk">Margaux, to Eric</div>
+        <div class="q">"Margaux Lefèvre, Corvane Capital."</div>
+        <div class="h"><span class="a">→</span><span>A <b>person</b>, with no card: Chloé's colleague, met Oct 23</span></div>
+      </div>
+      <div class="row">
+        <div class="spk">Margaux, to Julien</div>
+        <div class="q">"Une page, avec des chiffres."<small>One page, with numbers.</small></div>
+        <div class="h"><span class="a">→</span><span>An <b>edge</b>: your deck, rebuilt as one page, numbers first</span></div>
+      </div>
+      <div class="row">
+        <div class="spk">Eric, to Leo</div>
+        <div class="q">"I'll send you our deck tonight."</div>
+        <div class="h"><span class="a">→</span><span>A <b>promise</b>, due tonight, drafted for you</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="credit">Illustrations: Muse Image</div>
+</section>
+
+<!-- 4 · How it works -->
+<section class="slide" data-n="4">
+  <div class="kicker">How it works</div>
+  <h1>Nothing to type</h1>
+  <div class="sub"><b>Meta's models</b> listen; <b>our code</b> checks every answer</div>
+  <div class="how">
+    <div class="pic">
+      <img class="art" src="assets/illus-how.png" alt="A phone worn on the chest as a badge; glowing threads rise from it into a phone showing notification cards">
+      <div class="cap">
+        <div>iPhone on the chest<small>4-channel spatial audio</small></div>
+        <div>What arrives on your phone<small>ready before you get home</small></div>
+      </div>
+    </div>
+    <div class="lanes">
+      <div><div class="lanehead">Our code</div><div class="chips">
+        <div class="chip ours">Your own voice<small>found from above the badge</small></div>
+        <div class="chip ours">Names you know<small>sent as hints</small></div></div></div>
+      <div><div class="lanehead">Meta models</div><div class="chips">
+        <div class="chip">Muse Voice Transcribe<small>every voice apart, live</small></div>
+        <div class="chip">Muse Spark<small>people, promises, drafts, search</small></div>
+        <div class="chip">Muse Spark Open · Baseten<small>what wasn't said to you</small></div>
+        <div class="chip">SAM 3.1<small>every face in one photo</small></div></div></div>
+      <div><div class="lanehead">Checked, then done</div><div class="chips">
+        <div class="chip ours">Quotes, links and numbers<small>must exist in the source</small></div>
+        <div class="chip out">Follow-ups · one page · introductions<small>ready before you get home</small></div></div></div>
+    </div>
+  </div>
+  <div class="credit">Illustrations: Muse Image</div>
+</section>
+
+<!-- 5 · Four in one -->
+<section class="slide" data-n="5">
+  <div class="kicker">Four solutions, all in one</div>
+  <h1>Every conversation becomes<br>what comes next</h1>
+  <div class="four">
+    <div class="table solutions">
+      <div class="tr first"><div class="l">Names from the introduction</div><div class="r">no invite, no labelling</div></div>
+      <div class="tr"><div class="l">What wasn't said to you, in any language</div><div class="r">the deck, rebuilt</div></div>
+      <div class="tr"><div class="l">Met before, across evenings</div><div class="r">in 0.8 s, with no model</div></div>
+      <div class="tr"><div class="l">Introductions worth making</div><div class="r">and where to meet next week</div></div>
+    </div>
+    <div class="pic">
+      <img class="art" src="assets/illus-onepage.png" alt="A fanned deck of slides sweeping into one page with big numbers">
+      <div class="lbl">Your deck, rebuilt as <b>one page, numbers first</b></div>
+    </div>
+  </div>
+  <div class="credit">Illustrations: Muse Image</div>
+</section>
+
+<!-- 6 · Why now -->
+<section class="slide" data-n="6">
+  <div class="kicker">Why now</div>
+  <h1>The big companies bought memory of your day</h1>
+  <div class="stats">
+    <div class="stat"><div class="v">2</div><p>wearables that remember your day, bought<small>Amazon bought Bee (Jul 2025); Meta bought Limitless (Dec 2025)</small></p></div>
+    <div class="stat"><div class="v">410</div><p>Limitless users asked for a personal CRM<small>still unbuilt when Meta bought it (feature board, Dec 8, 2025)</small></p></div>
+    <div class="stat"><div class="v">183</div><p>AI note-takers on Product Hunt<small>at a mixer, you are still talking to "Speaker 2" (Oct 2026)</small></p></div>
+  </div>
+</section>
+
+<!-- 7 · Built, who, try -->
+<section class="slide" data-n="7">
+  <div class="kicker">Built at the event</div>
+  <h1>One person, nine days</h1>
+  <div class="built">
+    <div><div class="v">0.8<small>s</small></div><p>introduction to <b>"met before"</b></p></div>
+    <div><div class="v">24<small>/25</small></div><p><b>names right</b> across 12 accents</p></div>
+    <div><div class="v">3–5<small>s</small></div><p>per <b>edge-finder</b> pass, Spark Open</p></div>
+    <div><div class="v">259</div><p><b>server tests</b></p></div>
+  </div>
+  <div class="who">
+    <div><h3>Eric Fang</h3><div class="role">BUILDER</div>
+      <ul><li><b>12 years</b> in TradFi, <b>7</b> as a quant</li><li>Founder of Vexi, an on-chain options protocol</li></ul></div>
+    <div><h3>Try it</h3><div class="role">OPEN SOURCE · AGPL-3.0</div>
+      <ul><li>github.com/eric2612115/hallwise</li><li>A replay page for judges with only a laptop</li></ul></div>
+  </div>
+  <div class="src">Measured in rehearsals, Oct 27–29: synthetic voices in a living room and a real iPhone 17 Pro. Zero users yet.</div>
+</section>
+
+<script>
+  // ?s=3 shows slide 3 alone, for screenshots; without it every slide prints as its own page.
+  const n = Number(new URLSearchParams(location.search).get('s'));
+  if (n) { document.body.classList.add('one'); document.querySelectorAll('.slide')[n - 1]?.classList.add('on'); }
+</script>
+</body>
+</html>

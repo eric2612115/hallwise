@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hallwise · one page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* The deck on one A4 page, numbers first. Same white YC layout and palette as hallwise-deck.html. */
+  :root {
+    --ink: #17161A; --soft: #5E5A55; --rule: #E4DED6; --wash: #F6F1EA;
+    --amber: #B5652F; --glow: #F4A75B; --night: #1B1B22;
+    --sans: 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    --serif: ui-serif, 'New York', 'Iowan Old Style', Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  @page { size: 1240px 1754px; margin: 0; }
+  html, body { background: #e9e6e1; }
+  body { font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .page { width: 1240px; height: 1754px; background: #fff; padding: 72px 84px 64px; position: relative; overflow: hidden; }
+
+  .head { display: flex; align-items: center; gap: 26px; }
+  .head img { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 14px 28px rgba(27,27,34,0.22); }
+  .word { font-family: var(--serif); font-size: 84px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+  .tag { font-size: 24px; color: var(--soft); margin-top: 8px; }
+  .meta { margin-left: auto; text-align: right; font-size: 14px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); line-height: 1.6; }
+
+  .kicker { font-size: 15px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--amber); }
+  h2 { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.18; margin-top: 10px; }
+  h2 b { color: var(--amber); }
+  .sec { margin-top: 44px; }
+
+  .numbers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; margin-top: 40px; padding-top: 28px; border-top: 2px solid var(--rule); }
+  .n .v { font-size: 86px; font-weight: 800; letter-spacing: -0.04em; line-height: 0.95; color: var(--amber); }
+  .n .v small { font-size: 40px; letter-spacing: -0.02em; }
+  .n p { font-size: 18px; line-height: 1.38; color: var(--soft); margin-top: 14px; }
+  .n p b { color: var(--ink); font-weight: 700; }
+  .note { font-size: 14px; color: #A39D96; margin-top: 22px; padding-top: 14px; border-top: 2px solid var(--rule); line-height: 1.45; }
+
+  .table { margin-top: 18px; border-top: 2px solid var(--rule); }
+  .tr { display: grid; grid-template-columns: 172px 1fr; align-items: baseline; border-bottom: 2px solid var(--rule); padding: 17px 0; position: relative; }
+  .tr .l { font-size: 15px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); }
+  .tr .r { font-size: 22px; font-weight: 600; line-height: 1.35; }
+  .tr .r span { font-weight: 400; color: var(--soft); }
+  .tr.first::before { content: ''; position: absolute; left: -22px; top: 16px; bottom: 16px; width: 5px; border-radius: 3px; background: var(--amber); }
+
+  .howgrid { display: grid; grid-template-columns: 380px 1fr; gap: 36px; margin-top: 14px; align-items: center; }
+  .art { display: block; width: 100%; mix-blend-mode: multiply; }
+  .pic .cap { font-size: 12px; color: #A39D96; text-align: center; margin-top: 2px; }
+  .lanes { display: grid; gap: 14px; }
+  .lane { display: grid; grid-template-columns: 132px 1fr; gap: 14px; align-items: start; }
+  .lane .lh { font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); padding-top: 9px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: 16px; font-weight: 600; padding: 7px 13px; border-radius: 10px; background: var(--night); color: #fff; }
+  .chip.ours { background: var(--wash); color: var(--ink); }
+  .chip.out { background: #FCE7D6; color: var(--ink); }
+  .why { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .why > div { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: baseline; }
+  .why .v { font-size: 64px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--amber); }
+  .why p { font-size: 18px; line-height: 1.38; }
+  .why p small { display: block; font-size: 14px; color: var(--soft); margin-top: 3px; }
+
+  .foot { position: absolute; left: 84px; right: 84px; bottom: 56px; display: flex; justify-content: space-between; align-items: baseline; border-top: 2px solid var(--rule); padding-top: 18px; font-size: 18px; }
+  .foot b { font-weight: 700; }
+  .foot .m { font-size: 15px; color: var(--soft); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="head">
+    <img src="assets/hallwise-icon.png" alt="Hallwise icon">
+    <div><div class="word">Hallwise</div><div class="tag">A name badge that remembers the room</div></div>
+    <div class="meta">Built on Meta's models<br>Meta Global AI Developer Hackathon<br>Oct 2026</div>
+  </div>
+
+  <div class="numbers">
+    <div class="n"><div class="v">0.8<small>s</small></div><p>from an introduction to <b>"met before"</b>, no model call</p></div>
+    <div class="n"><div class="v">24<small>/25</small></div><p><b>names right across 12 accents</b>; 13 / 25 without hints</p></div>
+    <div class="n"><div class="v">3–5<small>s</small></div><p>per <b>edge-finder</b> pass on Muse Spark Open; 26–37 s on Spark</p></div>
+    <div class="n"><div class="v">259</div><p><b>server tests</b>, written at the event</p></div>
+  </div>
+  <div class="note">Measured in rehearsals, Oct 27–29: synthetic voices in a living room and a real iPhone 17 Pro. Zero users yet.</div>
+
+  <div class="sec">
+    <div class="kicker">The problem</div>
+    <h2>Networking doesn't fail in the room. It fails the next morning: <b>names forgotten, promises unsent, asides never heard.</b></h2>
+  </div>
+
+  <div class="sec">
+    <div class="kicker">What it does · one evening</div>
+    <div class="table">
+      <div class="tr first"><div class="l">01 · Connected</div><div class="r">"Margaux may be Chloé's colleague." <span>The moment she says her name.</span></div></div>
+      <div class="tr"><div class="l">02 · Heard</div><div class="r">"Said to Julien, in French: one page, with numbers." <span>What wasn't said to you.</span></div></div>
+      <div class="tr"><div class="l">03 · Checked</div><div class="r">"No public page ties Julien to Corvane." <span>From what they said; no card.</span></div></div>
+      <div class="tr"><div class="l">04 · Done</div><div class="r">Your deck rebuilt as one page. Follow-ups written. <span>An introduction worth making, and where to meet them next week.</span></div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="kicker">How it works · nothing to type</div>
+    <div class="howgrid">
+      <div class="pic"><img class="art" src="assets/illus-how.png" alt="A phone worn on the chest as a badge; glowing threads rise from it into a phone showing notification cards"><div class="cap">Illustrations: Muse Image</div></div>
+      <div class="lanes">
+        <div class="lane"><div class="lh">Our code</div><div class="chips"><span class="chip ours">4-channel audio</span><span class="chip ours">your voice, from above</span><span class="chip ours">names as hints</span></div></div>
+        <div class="lane"><div class="lh">Meta models</div><div class="chips"><span class="chip">Muse Voice Transcribe</span><span class="chip">Muse Spark</span><span class="chip">Muse Spark Open · Baseten</span><span class="chip">Spark + web search</span><span class="chip">SAM 3.1</span></div></div>
+        <div class="lane"><div class="lh">Checked</div><div class="chips"><span class="chip ours">every answer checked</span><span class="chip out">follow-ups · one page · introductions</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="kicker">Why now</div>
+    <div class="why">
+      <div><div class="v">2</div><p>wearables that remember your day, bought<small>Amazon bought Bee (Jul 2025); Meta bought Limitless (Dec 2025)</small></p></div>
+      <div><div class="v">410</div><p>Limitless users asked for a personal CRM<small>still unbuilt when Meta bought it (Dec 8, 2025)</small></p></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><b>One person, nine days,</b> built at the event.</div>
+    <div class="m">github.com/eric2612115/hallwise · AGPL-3.0</div>
+  </div>
+</div>
+</body>
+</html>
