@@ -16,17 +16,18 @@ Built for the Meta Global AI Developer Hackathon (Indie Developer track, "Build 
 - **Meta Voice Transcribe** transcribes live and separates speakers, primed with names and words from your
   memory.
 - **Muse Spark** works out who is who from introductions, tracks promises (including "Thursday — no, Friday"),
-  flags words that look misheard, filters "thanks" and "excuse me", and drafts follow-ups in each person's
-  language.
-- **Muse Spark Open** is a second listener: it re-hears every name, and where the two Meta models disagree the
-  word is flagged for one-tap correction. Corrections become recognition hints for next time.
+  flags words that look misheard for one-tap correction (corrections become recognition hints for next time),
+  filters "thanks" and "excuse me", and drafts follow-ups in the language each person spoke with you.
+- **Muse Spark Open** is the edge finder: it reads the conversation as it grows for what people say not to you (an
+  aside to themselves, a word to a colleague, in any language) that shows what they want, and the follow-up acts on
+  it without ever quoting it.
 
 ## Repository
 
 ```
 apps/web/        web UI: live dashboard, recap, judge demo
 server/          FastAPI: audio ingest, event log, SQLite
-pipeline/        transcribe, positions, classify, extract, second listener, follow-ups
+pipeline/        transcribe, positions, classify, extract, edge finder, follow-ups
 ios/             badge capture app (Swift)
 rig/             living-room test bench: scenes, voices, players
 harness/         scoring against scene ground truth
