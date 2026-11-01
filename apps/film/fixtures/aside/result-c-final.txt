@@ -1,0 +1,27 @@
+aside turn: 20 slides! Avec des chiffres.
+people: [('Leo Wong', 'Brightpath', ['1:B'], ''), ('Margot Lefevre', 'Corvane Capital', ['1:D'], ''), ('Julien Caron', 'Corvane', ['1:E'], ''), ('Siddharth Raghunathan', 'Quill Mesh', ['1:G'], ''), ('Kenji Watanabe', 'Hoshizora Robotics', ['1:H'], '')]
+translations: {7: ('French', True, '20 slides! With numbers.')}
+edges:
+  margot-lefevre-corvane-capital [5, 6, 7] French said='20 slides! Avec des chiffres.' english='20 slides! With numbers.'
+    text: Said to Julien before meeting you, in English with French: 'with numbers'. She is frustrated by decks with no numbers.
+    act: Send one page with numbers first
+  julien-caron-corvane [5, 6] English said='Same. 20 slides and zero numbers. Zero.' english='Same. 20 slides and zero numbers. Zero.'
+    text: Said to Margot before meeting you. He shares frustration with numberless decks.
+    act: Bring numbers to demo
+-- leo-wong-brightpath | email | English | Hallwise deck tonight as promised
+   Great to meet you at the rehearsal, Leo. As promised, here is our deck tonight, with your wallet infrastructure work at Brightpath in mind. Thanks for holding me to it.
+Eric
+   quotes an edge: ''
+-- margot-lefevre-corvane-capital | email | English | Hallwise one-pager with numbers
+   Lovely to meet you at the rehearsal, Margot. Chloé told me you'd want to see this, so here is our one-pager tomorrow as promised, numbers first for your pre-seed look this quarter. Thanks for asking for it.
+Eric
+   quotes an edge: ''
+-- julien-caron-corvane | calendar | English | 
+   Great to meet you at the rehearsal, Julien. I'd love to come by your office Wednesday afternoon to show the demo, and I'll bring the numbers for your diligence look. Let me know if this time works.
+Eric
+   quotes an edge: ''
+-- kenji-watanabe-hoshizora-robotics | calendar | English | 
+   Good to run into you again, Kenji. How about coffee on Friday to catch up since the hardware meetup, and the introduction to Lena I still owe you. Let me know if this time works.
+Eric
+   quotes an edge: ''
+calls (name, prompt tokens, completion tokens): [('hallwise_record', 2965, 5040), ('hallwise_next_moves', 2793, 2235)]

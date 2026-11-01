@@ -1,0 +1,21 @@
+aside turn: 20 slides! Avec des chiffres.
+people (Spark, edge finder on): [('leo-wong-brightpath', ['1:B']), ('margot-lefevre-corvane-capital', ['1:D']), ('julien-caron-corvane', ['1:E']), ('siddharth-raghunathan-quill-mesh', ['1:G']), ('kenji-watanabe-hoshizora-robotics', ['1:H'])]
+    (dropped by the check) margot-lefevre-corvane-capital turns [5, 7] said='Honestly, the deck yesterday, I did not understand their model. At all. / 20 slides! Avec des chiffres.'
+  Muse Spark Open, call 1 (raw 2) [4.75 s, 1693 in / 1213 out]: 1 edge(s)
+    julien-caron-corvane turns [6] [English] said='Same. 20 slides and zero numbers. Zero.' english='Said to colleague, in English'
+      text: He agrees he dislikes 20-slide decks with zero numbers.
+      act: Same - ensure Wednesday demo and follow-up materials lead with numbers, not a long slide deck.
+  Muse Spark Open, call 2 (raw 2) [4.12 s, 1693 in / 1088 out]: 2 edge(s)
+    margot-lefevre-corvane-capital turns [5, 7] [fr] said='Honestly, the deck yesterday, I did not understand their model. At all.' english='20 slides! Avec des chiffres.'
+      text: Said to colleague in English: 'Honestly, the deck yesterday...' and in French: '20 slides! With numbers.' Frustrated by a 20-slide deck with no numbers and couldn't understand the model.
+      act: Send the requested one-pager tomorrow with numbers and a clear model explanation; keep it to one page.
+    julien-caron-corvane turns [6] [en] said='Same. 20 slides and zero numbers. Zero.' english='Same. 20 slides and zero numbers. Zero.'
+      text: Said to colleague: agreed last deck was 20 slides and zero numbers.
+      act: For the Wednesday demo, bring numbers and metrics front-and-center; avoid a long slide deck.
+  Muse Spark, its own edge rule [32.2 s, 2963 in / 6679 out]: 2 edge(s)
+    margot-lefevre-corvane-capital turns [5, 6, 7] [French] said='20 slides! Avec des chiffres.' english='20 slides! With numbers.'
+      text: Said to Julien in French before meeting the owner. Shows she is frustrated by decks with no numbers and wants numbers.
+      act: one page, numbers first
+    julien-caron-corvane turns [5, 6] [English] said='Same. 20 slides and zero numbers. Zero.' english='Same. 20 slides and zero numbers. Zero.'
+      text: Said to Margot before meeting the owner. Shows he dislikes long decks with no metrics.
+      act: keep it short, lead with numbers

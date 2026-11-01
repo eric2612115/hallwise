@@ -1,0 +1,109 @@
+{
+ "person_key": "margaux-lefevre-corvane-capital",
+ "promise_key": "deck-to-margaux-lefevre-corvane-capital",
+ "acts": [
+  "one page, numbers first"
+ ],
+ "slides": [
+  "Hallwise",
+  "Great conversation. Gone by morning.",
+  "What is missing",
+  "The insight",
+  "The evening",
+  "The next morning",
+  "Built with Meta",
+  "Why now",
+  "The field",
+  "What sets it apart, and what does not",
+  "The build, in numbers",
+  "Why us, and where it stands"
+ ],
+ "status": "ok",
+ "dropped": [],
+ "retried": false,
+ "usage": {
+  "prompt_tokens": 2693,
+  "completion_tokens": 885,
+  "total_tokens": 3578,
+  "reasoning_tokens": 408,
+  "calls": 1
+ },
+ "seconds": 3.77,
+ "page": {
+  "applies": true,
+  "shape": "one page, numbers first",
+  "title": "Hallwise",
+  "lede": "A name badge that remembers the room.",
+  "figures": [
+   {
+    "value": "24 of 25",
+    "label": "synthetic voices heard right with hints",
+    "source": ""
+   },
+   {
+    "value": "410",
+    "label": "Limitless users voted for a personal CRM",
+    "source": "Limitless feature board, 2025-12-08"
+   },
+   {
+    "value": "240",
+    "label": "server tests, all passing",
+    "source": ""
+   },
+   {
+    "value": "183",
+    "label": "AI note-takers in one category of one site",
+    "source": "Product Hunt, 2026-10-28"
+   },
+   {
+    "value": "4",
+    "label": "Meta models in one live pipeline",
+    "source": ""
+   },
+   {
+    "value": "5-8",
+    "label": "commercial products record a live room",
+    "source": ""
+   }
+  ],
+  "sections": [
+   {
+    "heading": "The evening",
+    "points": [
+     "Names from the introduction: no invite, no card, no name tag.",
+     "Promises as they are made, and as they change: \"Thursday, no, Friday\" keeps Friday.",
+     "Met before: their card rings with where you met and what you owe each other."
+    ]
+   },
+   {
+    "heading": "The next morning",
+    "points": [
+     "A follow-up for every promise, ready to send, in the language each person spoke with you.",
+     "A check on who each new person is, against public sources; only real sources are kept.",
+     "What is due today, and what is overdue."
+    ]
+   },
+   {
+    "heading": "Built with Meta",
+    "points": [
+     "Muse Voice Transcribe separates the voices, live, with known names and companies as hints.",
+     "Muse Spark does people, promises, translations, follow-ups, and the morning report.",
+     "SAM 3.1 finds the faces in one photo; Muse Spark says who is who."
+    ]
+   },
+   {
+    "heading": "What sets it apart",
+    "points": [
+     "No glasses, and no face for naming.",
+     "Promises and follow-ups per person, in their own language.",
+     "Memory across evenings."
+    ]
+   }
+  ],
+  "close": "0 users. A working prototype, rehearsed with synthetic guests."
+ },
+ "model": "muse-spark-1.3",
+ "inputs": "9f2af43ca78519600bd03b6572559de4c2b7c0368115bf4225aa1ccf05533af0",
+ "generated_at": 1793214590.778738,
+ "file": "onepagers/demo-margaux/margaux-lefevre-corvane-capital.html"
+}

@@ -1,0 +1,35 @@
+{
+ "translations": [
+  {
+   "aside": true,
+   "english": "20 slides! With numbers.",
+   "language": "French",
+   "turn": 7
+  }
+ ],
+ "edges": [
+  {
+   "act": "one page, numbers first",
+   "english": "20 slides! With numbers.",
+   "language": "French",
+   "person": "margot lefevre-corvane capital",
+   "said": "20 slides! Avec des chiffres.",
+   "text": "Said to Julien before meeting the owner, mocking a numbers-free deck. She wants numbers up front.",
+   "turns": [
+    7
+   ]
+  },
+  {
+   "act": "keep demo short, numeric",
+   "english": "Same. 20 slides and zero numbers. Zero.",
+   "language": "English",
+   "person": "julien caron-corvane capital",
+   "said": "Same. 20 slides and zero numbers. Zero.",
+   "text": "Said to Margot before meeting the owner, dismissing long decks with no figures. He values concise numeric proof.",
+   "turns": [
+    6
+   ]
+  }
+ ]
+}
+[(5, 'ambient'), (6, 'ambient'), (7, 'ambient'), (8, 'ambient')]

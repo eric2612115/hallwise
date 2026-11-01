@@ -1,0 +1,33 @@
+aside turn: 20 slides! Avec des chiffres.
+people (Spark, edge finder on): [('leo-wong-brightpath', ['1:B']), ('margot-lefevre-corvane-capital', ['1:D']), ('julien-caron-corvane-capital', ['1:E']), ('siddharth-raghunathan-quill-mesh', ['1:G']), ('kenji-watanabe-hoshizora-robotics', ['1:H'])]
+  Muse Spark Open, call 1 (raw 2) [4.82 s, 1713 in / 1312 out]: 2 edge(s)
+    margot-lefevre-corvane-capital turns [5, 7] [French] said='20 slides! Avec des chiffres.' english='20 slides! With numbers.'
+      text: Said to colleague, in French: "20 slides! With numbers." Yesterday's founder lost her with twenty slides and no numbers.
+      act: Send the one-page with numbers she requested and keep any deck concise and numbers-driven.
+    julien-caron-corvane-capital turns [6] [English] said='Same. 20 slides and zero numbers. Zero.' english=''
+      text: Said to colleague: same complaint as Margot about yesterday's deck.
+      act: Include clear metrics in the one-pager and demo for Wednesday; avoid a long text-heavy deck.
+  Muse Spark Open, call 2 (raw 2) [3.64 s, 1713 in / 932 out]: 2 edge(s)
+    margot-lefevre-corvane-capital turns [5, 7] [French] said='20 slides! Avec des chiffres.' english='20 slides! With numbers.'
+      text: Said to a colleague, in French, mixed with English: '20 slides! With numbers.' Earlier she said she did not understand a deck with no numbers.
+      act: Follow up with a one-page summary heavy on numbers; keep any deck short and quantify the model.
+    julien-caron-corvane-capital turns [6] [English] said='Same. 20 slides and zero numbers. Zero.' english='Same. 20 slides and zero numbers. Zero.'
+      text: Said to a colleague before meeting the owner: 'Same. 20 slides and zero numbers. Zero.'
+      act: Send concise materials with clear metrics; avoid a long slide deck without numbers and be ready for diligence questions on numbers.
+  Muse Spark Open, call 3 (raw 3) [3.91 s, 1713 in / 983 out]: 3 edge(s)
+    margot-lefevre-corvane-capital turns [5] [English] said='Honestly, the deck yesterday, I did not understand their model. At all.' english=''
+      text: Said to a colleague, in English, before meeting the owner: she did not understand yesterday's deck/model.
+      act: Keep Hallwise explanation very simple and model-focused; confirm understanding in follow-up.
+    julien-caron-corvane-capital turns [6] [English] said='Same. 20 slides and zero numbers. Zero.' english=''
+      text: Said to a colleague, in English, before meeting the owner: frustrated by 20 slides with zero numbers.
+      act: Send the one-pager with clear numbers tomorrow as promised and keep the demo focused on metrics on Wednesday.
+    margot-lefevre-corvane-capital turns [7] [French] said='20 slides! Avec des chiffres.' english=''
+      text: Said to a colleague, in French: '20 slides! With numbers.' - agrees founders lose her with long decks lacking numbers and wants numbers.
+      act: Make the one-pager one page with numbers and highlight numbers early in Wednesday office demo.
+  Muse Spark, its own edge rule [25.7 s, 2980 in / 5383 out]: 2 edge(s)
+    margot-lefevre-corvane-capital turns [5, 6, 7] [French] said='20 slides! Avec des chiffres.' english='20 slides! With numbers.'
+      text: Exclaimed to a colleague in French before meeting the owner: '20 slides! With numbers.' Shows frustration with number-free decks and demand for numbers.
+      act: one page, numbers first
+    julien-caron-corvane-capital turns [5, 6] [English] said='Same. 20 slides and zero numbers. Zero.' english='Same. 20 slides and zero numbers. Zero.'
+      text: Said to a colleague before meeting the owner. Shows he dismisses long decks with no numbers.
+      act: bring numbers, live demo

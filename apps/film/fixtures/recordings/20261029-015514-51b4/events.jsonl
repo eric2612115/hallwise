@@ -1,0 +1,443 @@
+{"type": "recording_start", "t_ms": 0, "recording": "20261029-015514-51b4", "device": "simulator", "event": "Living-room rehearsal", "venue": "Taipei", "layout": "mono", "sample_rate": 48000, "channels": 1}
+{"type": "device_pose", "t_ms": 0, "yaw": 0.0, "pitch": 0.0, "roll": 0.0}
+{"type": "speech_start", "t_ms": 1020, "turn": 0}
+{"type": "partial", "t_ms": 2400, "turn": 0, "text": "Networking"}
+{"type": "partial", "t_ms": 2640, "turn": 0, "text": "Networking events"}
+{"type": "partial", "t_ms": 3120, "turn": 0, "text": "Networking events never"}
+{"type": "partial", "t_ms": 3680, "turn": 0, "text": "Networking events never sound"}
+{"type": "partial", "t_ms": 3840, "turn": 0, "text": "Networking events never sound like this."}
+{"type": "partial", "t_ms": 5760, "turn": 0, "text": "Networking events never sound like this. They"}
+{"type": "partial", "t_ms": 6000, "turn": 0, "text": "Networking events never sound like this. They sound"}
+{"type": "partial", "t_ms": 6320, "turn": 0, "text": "Networking events never sound like this. They sound like this."}
+{"type": "partial", "t_ms": 8560, "turn": 0, "text": "Networking events never sound like this. They sound like this."}
+{"type": "speaker", "t_ms": 8560, "turn": 0, "label": "A", "session": 1}
+{"type": "turn", "t_ms": 8060, "turn": 0, "text": "Networking events never sound like this. They sound like this.", "speaker": "A", "session": 1, "start_ms": 1020, "end_ms": 8060}
+{"type": "speech_start", "t_ms": 11100, "turn": 1}
+{"type": "partial", "t_ms": 12160, "turn": 1, "text": "Eric,"}
+{"type": "turn_kind", "t_ms": 8060, "turn": 0, "kind": "stage"}
+{"type": "partial", "t_ms": 12560, "turn": 1, "text": "Eric, hey,"}
+{"type": "partial", "t_ms": 13040, "turn": 1, "text": "Eric, hey, hey,"}
+{"type": "partial", "t_ms": 13360, "turn": 1, "text": "Eric, hey, hey, you"}
+{"type": "partial", "t_ms": 13840, "turn": 1, "text": "Eric, hey, hey, you made it."}
+{"type": "partial", "t_ms": 15200, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay."}
+{"type": "partial", "t_ms": 15840, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For"}
+{"type": "partial", "t_ms": 16080, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your"}
+{"type": "partial", "t_ms": 16160, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge,"}
+{"type": "partial", "t_ms": 16240, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah?"}
+{"type": "partial", "t_ms": 17600, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo"}
+{"type": "partial", "t_ms": 18080, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo Wong,"}
+{"type": "partial", "t_ms": 18800, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo Wong, Brightpath."}
+{"type": "partial", "t_ms": 19600, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo Wong, Brightpath. We do"}
+{"type": "partial", "t_ms": 20800, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo Wong, Brightpath. We do wallet"}
+{"type": "partial", "t_ms": 21440, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo Wong, Brightpath. We do wallet infrastructure."}
+{"type": "partial", "t_ms": 22240, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo Wong, Brightpath. We do wallet infrastructure. for"}
+{"type": "partial", "t_ms": 22560, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo Wong, Brightpath. We do wallet infrastructure. for apps."}
+{"type": "partial", "t_ms": 23600, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo Wong, Brightpath. We do wallet infrastructure. for apps."}
+{"type": "speaker", "t_ms": 23600, "turn": 1, "label": "B", "session": 1}
+{"type": "turn", "t_ms": 23100, "turn": 1, "text": "Eric, hey, hey, you made it. Okay, okay. For your badge, yeah? Leo Wong, Brightpath. We do wallet infrastructure. for apps.", "speaker": "B", "session": 1, "start_ms": 11100, "end_ms": 23100}
+{"type": "speech_start", "t_ms": 23180, "turn": 2}
+{"type": "partial", "t_ms": 24080, "turn": 2, "text": "Leo,"}
+{"type": "partial", "t_ms": 24480, "turn": 2, "text": "Leo, good"}
+{"type": "partial", "t_ms": 24800, "turn": 2, "text": "Leo, good to"}
+{"type": "partial", "t_ms": 24880, "turn": 2, "text": "Leo, good to see"}
+{"type": "partial", "t_ms": 25040, "turn": 2, "text": "Leo, good to see you."}
+{"type": "partial", "t_ms": 25920, "turn": 2, "text": "Leo, good to see you. I'm"}
+{"type": "partial", "t_ms": 26240, "turn": 2, "text": "Leo, good to see you. I'm Eric from"}
+{"type": "partial", "t_ms": 26800, "turn": 2, "text": "Leo, good to see you. I'm Eric from Hallwise."}
+{"type": "partial", "t_ms": 27200, "turn": 2, "text": "Leo, good to see you. I'm Eric from Hallwise. This"}
+{"type": "partial", "t_ms": 27600, "turn": 2, "text": "Leo, good to see you. I'm Eric from Hallwise. This badge,"}
+{"type": "partial", "t_ms": 28240, "turn": 2, "text": "Leo, good to see you. I'm Eric from Hallwise. This badge, I'll"}
+{"type": "partial", "t_ms": 28640, "turn": 2, "text": "Leo, good to see you. I'm Eric from Hallwise. This badge, I'll send you"}
+{"type": "partial", "t_ms": 28960, "turn": 2, "text": "Leo, good to see you. I'm Eric from Hallwise. This badge, I'll send you our deck"}
+{"type": "partial", "t_ms": 29280, "turn": 2, "text": "Leo, good to see you. I'm Eric from Hallwise. This badge, I'll send you our deck tonight."}
+{"type": "partial", "t_ms": 30480, "turn": 2, "text": "Leo, good to see you. I'm Eric from Hallwise. This badge, I'll send you our deck tonight."}
+{"type": "speaker", "t_ms": 30480, "turn": 2, "label": "A", "session": 1}
+{"type": "turn", "t_ms": 29980, "turn": 2, "text": "Leo, good to see you. I'm Eric from Hallwise. This badge, I'll send you our deck tonight.", "speaker": "A", "session": 1, "start_ms": 23180, "end_ms": 29980}
+{"type": "speech_start", "t_ms": 30220, "turn": 3}
+{"type": "turn_kind", "t_ms": 23100, "turn": 1, "kind": "conversation"}
+{"type": "person", "t_ms": 23100, "company": "Brightpath", "evidence_turns": [1], "introduced_by": "", "key": "leo-wong-brightpath", "name": "Leo Wong", "preferred_language": "", "role": "", "speakers": ["1:B"], "new": true}
+{"type": "partial", "t_ms": 31120, "turn": 3, "text": "Tonight?"}
+{"type": "partial", "t_ms": 32400, "turn": 3, "text": "Tonight? Okay,"}
+{"type": "partial", "t_ms": 33200, "turn": 3, "text": "Tonight? Okay, okay."}
+{"type": "partial", "t_ms": 33760, "turn": 3, "text": "Tonight? Okay, okay. I'm"}
+{"type": "partial", "t_ms": 34320, "turn": 3, "text": "Tonight? Okay, okay. I'm holding"}
+{"type": "partial", "t_ms": 34480, "turn": 3, "text": "Tonight? Okay, okay. I'm holding you"}
+{"type": "partial", "t_ms": 34640, "turn": 3, "text": "Tonight? Okay, okay. I'm holding you to that,"}
+{"type": "partial", "t_ms": 35120, "turn": 3, "text": "Tonight? Okay, okay. I'm holding you to that, huh?"}
+{"type": "partial", "t_ms": 36000, "turn": 3, "text": "Tonight? Okay, okay. I'm holding you to that, huh?"}
+{"type": "speaker", "t_ms": 36000, "turn": 3, "label": "B", "session": 1}
+{"type": "turn", "t_ms": 35500, "turn": 3, "text": "Tonight? Okay, okay. I'm holding you to that, huh?", "speaker": "B", "session": 1, "start_ms": 30220, "end_ms": 35500}
+{"type": "speech_start", "t_ms": 35660, "turn": 4}
+{"type": "partial", "t_ms": 36640, "turn": 4, "text": "Eric,"}
+{"type": "partial", "t_ms": 36880, "turn": 4, "text": "Eric, come."}
+{"type": "partial", "t_ms": 37440, "turn": 4, "text": "Eric, come. You"}
+{"type": "partial", "t_ms": 37760, "turn": 4, "text": "Eric, come. You should"}
+{"type": "partial", "t_ms": 38000, "turn": 4, "text": "Eric, come. You should meet"}
+{"type": "partial", "t_ms": 38160, "turn": 4, "text": "Eric, come. You should meet Margot"}
+{"type": "owner", "t_ms": 29980, "speakers": ["1:A"]}
+{"type": "turn_kind", "t_ms": 29980, "turn": 0, "kind": "incidental"}
+{"type": "turn_kind", "t_ms": 29980, "turn": 2, "kind": "conversation"}
+{"type": "promise", "t_ms": 29980, "due": "tonight", "evidence_turns": [2], "key": "deck-to-leo-wong-brightpath", "owed_by": "owner", "owed_to": "leo-wong-brightpath", "replaces": "", "what": "send you our deck", "new": true}
+{"type": "partial", "t_ms": 38400, "turn": 4, "text": "Eric, come. You should meet Margot and"}
+{"type": "partial", "t_ms": 39120, "turn": 4, "text": "Eric, come. You should meet Margot and Julianne."}
+{"type": "partial", "t_ms": 41120, "turn": 4, "text": "Eric, come. You should meet Margot and Julianne."}
+{"type": "speaker", "t_ms": 41120, "turn": 4, "label": "C", "session": 1}
+{"type": "turn", "t_ms": 40620, "turn": 4, "text": "Eric, come. You should meet Margot and Julianne.", "speaker": "C", "session": 1, "start_ms": 35660, "end_ms": 40620}
+{"type": "second_run", "t_ms": 41920, "model": "muse-spark-open", "call": 1, "final": false, "upto_turn": 2, "seconds": 3.28, "usage": {"prompt_tokens": 783, "completion_tokens": 528, "reasoning_tokens": 444, "total_tokens": 1311}, "people": 1, "promises": 1, "suspect_words": [], "agreed": 2, "disagreed": 0, "totals": {"calls": 1, "prompt_tokens": 783, "completion_tokens": 528, "reasoning_tokens": 444, "seconds": 3.28}}
+{"type": "confirmed", "t_ms": 41920, "kind": "person", "key": "leo-wong-brightpath", "by": ["muse-spark-1.3", "muse-spark-open"]}
+{"type": "confirmed", "t_ms": 41920, "kind": "promise", "key": "deck-to-leo-wong-brightpath", "by": ["muse-spark-1.3", "muse-spark-open"]}
+{"type": "speech_start", "t_ms": 44620, "turn": 5}
+{"type": "partial", "t_ms": 45600, "turn": 5, "text": "Honestly"}
+{"type": "partial", "t_ms": 46480, "turn": 5, "text": "Honestly the"}
+{"type": "partial", "t_ms": 46800, "turn": 5, "text": "Honestly the deck"}
+{"type": "partial", "t_ms": 47040, "turn": 5, "text": "Honestly the deck yesterday"}
+{"type": "partial", "t_ms": 47600, "turn": 5, "text": "Honestly the deck yesterday I"}
+{"type": "partial", "t_ms": 47840, "turn": 5, "text": "Honestly the deck yesterday I did"}
+{"type": "partial", "t_ms": 48000, "turn": 5, "text": "Honestly the deck yesterday I did not"}
+{"type": "partial", "t_ms": 48640, "turn": 5, "text": "Honestly the deck yesterday I did not understand"}
+{"type": "partial", "t_ms": 49200, "turn": 5, "text": "Honestly the deck yesterday I did not understand their"}
+{"type": "turn_kind", "t_ms": 35500, "turn": 0, "kind": "stage"}
+{"type": "turn_kind", "t_ms": 35500, "turn": 3, "kind": "conversation"}
+{"type": "promise", "t_ms": 35500, "due": "tonight", "evidence_turns": [2, 3], "key": "deck-to-leo-wong-brightpath", "owed_by": "owner", "owed_to": "leo-wong-brightpath", "replaces": "", "what": "our deck", "new": false}
+{"type": "partial", "t_ms": 49600, "turn": 5, "text": "Honestly the deck yesterday I did not understand their model"}
+{"type": "partial", "t_ms": 49680, "turn": 5, "text": "Honestly the deck yesterday I did not understand their model at"}
+{"type": "partial", "t_ms": 50080, "turn": 5, "text": "Honestly the deck yesterday I did not understand their model at all."}
+{"type": "partial", "t_ms": 50880, "turn": 5, "text": "Honestly the deck yesterday I did not understand their model at all."}
+{"type": "speaker", "t_ms": 50880, "turn": 5, "label": "D", "session": 1}
+{"type": "turn", "t_ms": 50380, "turn": 5, "text": "Honestly the deck yesterday I did not understand their model at all.", "speaker": "D", "session": 1, "start_ms": 44620, "end_ms": 50380}
+{"type": "speech_start", "t_ms": 50540, "turn": 6}
+{"type": "partial", "t_ms": 51280, "turn": 6, "text": "Same."}
+{"type": "partial", "t_ms": 52400, "turn": 6, "text": "Same. 20"}
+{"type": "partial", "t_ms": 52640, "turn": 6, "text": "Same. 20 slides"}
+{"type": "partial", "t_ms": 52880, "turn": 6, "text": "Same. 20 slides and"}
+{"type": "partial", "t_ms": 54240, "turn": 6, "text": "Same. 20 slides and zero"}
+{"type": "partial", "t_ms": 54800, "turn": 6, "text": "Same. 20 slides and zero numbers."}
+{"type": "partial", "t_ms": 55600, "turn": 6, "text": "Same. 20 slides and zero numbers. Zero."}
+{"type": "partial", "t_ms": 56000, "turn": 6, "text": "Same. 20 slides and zero numbers. Zero."}
+{"type": "speaker", "t_ms": 56000, "turn": 6, "label": "E", "session": 1}
+{"type": "turn", "t_ms": 55500, "turn": 6, "text": "Same. 20 slides and zero numbers. Zero.", "speaker": "E", "session": 1, "start_ms": 50540, "end_ms": 55500}
+{"type": "speech_start", "t_ms": 55660, "turn": 7}
+{"type": "partial", "t_ms": 56480, "turn": 7, "text": "20"}
+{"type": "partial", "t_ms": 57120, "turn": 7, "text": "20 slides?"}
+{"type": "turn_kind", "t_ms": 40620, "turn": 0, "kind": "incidental"}
+{"type": "turn_kind", "t_ms": 40620, "turn": 4, "kind": "conversation"}
+{"type": "person", "t_ms": 40620, "company": "Brightpath", "evidence_turns": [1], "introduced_by": "", "key": "leo-wong-brightpath", "name": "Leo Wong", "preferred_language": "", "role": "wallet infrastructure for apps", "speakers": ["1:B"], "new": false}
+{"type": "promise", "t_ms": 40620, "due": "tonight", "evidence_turns": [2], "key": "deck-to-leo-wong-brightpath", "owed_by": "owner", "owed_to": "leo-wong-brightpath", "replaces": "", "what": "send you our deck", "new": false}
+{"type": "partial", "t_ms": 63520, "turn": 7, "text": "20 slides?"}
+{"type": "speaker", "t_ms": 63520, "turn": 7, "label": "D", "session": 1}
+{"type": "turn", "t_ms": 63020, "turn": 7, "text": "20 slides?", "speaker": "D", "session": 1, "start_ms": 55660, "end_ms": 63020}
+{"type": "speech_start", "t_ms": 63180, "turn": 8}
+{"type": "partial", "t_ms": 64080, "turn": 8, "text": "Exactly."}
+{"type": "partial", "t_ms": 66240, "turn": 8, "text": "Exactly. Margot,"}
+{"type": "partial", "t_ms": 67040, "turn": 8, "text": "Exactly. Margot, Julianne,"}
+{"type": "partial", "t_ms": 67520, "turn": 8, "text": "Exactly. Margot, Julianne, this"}
+{"type": "partial", "t_ms": 67600, "turn": 8, "text": "Exactly. Margot, Julianne, this is"}
+{"type": "partial", "t_ms": 68080, "turn": 8, "text": "Exactly. Margot, Julianne, this is Eric."}
+{"type": "partial", "t_ms": 68640, "turn": 8, "text": "Exactly. Margot, Julianne, this is Eric. He makes"}
+{"type": "partial", "t_ms": 68720, "turn": 8, "text": "Exactly. Margot, Julianne, this is Eric. He makes the"}
+{"type": "partial", "t_ms": 68960, "turn": 8, "text": "Exactly. Margot, Julianne, this is Eric. He makes the badge."}
+{"type": "partial", "t_ms": 70560, "turn": 8, "text": "Exactly. Margot, Julianne, this is Eric. He makes the badge."}
+{"type": "speaker", "t_ms": 70560, "turn": 8, "label": "C", "session": 1}
+{"type": "turn", "t_ms": 70060, "turn": 8, "text": "Exactly. Margot, Julianne, this is Eric. He makes the badge.", "speaker": "C", "session": 1, "start_ms": 63180, "end_ms": 70060}
+{"type": "speech_start", "t_ms": 70220, "turn": 9}
+{"type": "partial", "t_ms": 70720, "turn": 9, "text": "Hi."}
+{"type": "partial", "t_ms": 71440, "turn": 9, "text": "Hi. Eric"}
+{"type": "partial", "t_ms": 71680, "turn": 9, "text": "Hi. Eric from"}
+{"type": "partial", "t_ms": 72160, "turn": 9, "text": "Hi. Eric from Hallwise."}
+{"type": "turn_kind", "t_ms": 55500, "turn": 5, "kind": "ambient"}
+{"type": "turn_kind", "t_ms": 55500, "turn": 6, "kind": "ambient"}
+{"type": "person", "t_ms": 55500, "company": "Brightpath", "evidence_turns": [1, 2, 3], "introduced_by": "", "key": "leo-wong-brightpath", "name": "Leo Wong", "preferred_language": "", "role": "", "speakers": ["1:B"], "new": false}
+{"type": "promise", "t_ms": 55500, "due": "tonight", "evidence_turns": [2, 3], "key": "deck-to-leo-wong-brightpath", "owed_by": "owner", "owed_to": "leo-wong-brightpath", "replaces": "", "what": "send our deck", "new": false}
+{"type": "room_topics", "t_ms": 55500, "topics": ["confusing pitch decks", "decks with no numbers"]}
+{"type": "partial", "t_ms": 72640, "turn": 9, "text": "Hi. Eric from Hallwise. May I"}
+{"type": "partial", "t_ms": 73200, "turn": 9, "text": "Hi. Eric from Hallwise. May I join you?"}
+{"type": "partial", "t_ms": 74320, "turn": 9, "text": "Hi. Eric from Hallwise. May I join you?"}
+{"type": "speaker", "t_ms": 74320, "turn": 9, "label": "A", "session": 1}
+{"type": "turn", "t_ms": 73820, "turn": 9, "text": "Hi. Eric from Hallwise. May I join you?", "speaker": "A", "session": 1, "start_ms": 70220, "end_ms": 73820}
+{"type": "speech_start", "t_ms": 73980, "turn": 10}
+{"type": "partial", "t_ms": 74480, "turn": 10, "text": "Oh,"}
+{"type": "partial", "t_ms": 74560, "turn": 10, "text": "Oh, of"}
+{"type": "second_run", "t_ms": 74880, "model": "muse-spark-open", "call": 2, "final": false, "upto_turn": 6, "seconds": 2.31, "usage": {"prompt_tokens": 915, "completion_tokens": 466, "reasoning_tokens": 383, "total_tokens": 1381}, "people": 1, "promises": 1, "suspect_words": [], "agreed": 2, "disagreed": 0, "totals": {"calls": 2, "prompt_tokens": 1698, "completion_tokens": 994, "reasoning_tokens": 827, "seconds": 5.59}}
+{"type": "partial", "t_ms": 75360, "turn": 10, "text": "Oh, of course."}
+{"type": "partial", "t_ms": 77040, "turn": 10, "text": "Oh, of course. Margot."}
+{"type": "partial", "t_ms": 77840, "turn": 10, "text": "Oh, of course. Margot. Margot"}
+{"type": "partial", "t_ms": 78160, "turn": 10, "text": "Oh, of course. Margot. Margot Lefebvre,"}
+{"type": "partial", "t_ms": 78960, "turn": 10, "text": "Oh, of course. Margot. Margot Lefebvre, Corvane"}
+{"type": "partial", "t_ms": 79280, "turn": 10, "text": "Oh, of course. Margot. Margot Lefebvre, Corvane Capital."}
+{"type": "partial", "t_ms": 81120, "turn": 10, "text": "Oh, of course. Margot. Margot Lefebvre, Corvane Capital."}
+{"type": "speaker", "t_ms": 81120, "turn": 10, "label": "D", "session": 1}
+{"type": "turn", "t_ms": 80620, "turn": 10, "text": "Oh, of course. Margot. Margot Lefebvre, Corvane Capital.", "speaker": "D", "session": 1, "start_ms": 73980, "end_ms": 80620}
+{"type": "speech_start", "t_ms": 80700, "turn": 11}
+{"type": "partial", "t_ms": 81280, "turn": 11, "text": "And"}
+{"type": "partial", "t_ms": 81520, "turn": 11, "text": "And I am"}
+{"type": "partial", "t_ms": 82240, "turn": 11, "text": "And I am Julien,"}
+{"type": "partial", "t_ms": 83120, "turn": 11, "text": "And I am Julien, Julien Caron,"}
+{"type": "partial", "t_ms": 84240, "turn": 11, "text": "And I am Julien, Julien Caron, also"}
+{"type": "partial", "t_ms": 84560, "turn": 11, "text": "And I am Julien, Julien Caron, also Corvane."}
+{"type": "partial", "t_ms": 85440, "turn": 11, "text": "And I am Julien, Julien Caron, also Corvane. I"}
+{"type": "partial", "t_ms": 85600, "turn": 11, "text": "And I am Julien, Julien Caron, also Corvane. I do"}
+{"type": "partial", "t_ms": 85920, "turn": 11, "text": "And I am Julien, Julien Caron, also Corvane. I do the"}
+{"type": "partial", "t_ms": 86720, "turn": 11, "text": "And I am Julien, Julien Caron, also Corvane. I do the the"}
+{"type": "partial", "t_ms": 87360, "turn": 11, "text": "And I am Julien, Julien Caron, also Corvane. I do the the diligence"}
+{"type": "turn_kind", "t_ms": 70060, "turn": 0, "kind": "stage"}
+{"type": "turn_kind", "t_ms": 70060, "turn": 7, "kind": "ambient"}
+{"type": "turn_kind", "t_ms": 70060, "turn": 8, "kind": "conversation"}
+{"type": "person", "t_ms": 70060, "company": "Brightpath", "evidence_turns": [1], "introduced_by": "", "key": "leo-wong-brightpath", "name": "Leo Wong", "preferred_language": "", "role": "", "speakers": ["1:B"], "new": false}
+{"type": "promise", "t_ms": 70060, "due": "tonight", "evidence_turns": [2, 3], "key": "deck-to-leo-wong-brightpath", "owed_by": "owner", "owed_to": "leo-wong-brightpath", "replaces": "", "what": "send you our deck", "new": false}
+{"type": "room_topics", "t_ms": 70060, "topics": ["hard-to-understand pitch decks", "slides with zero numbers"]}
+{"type": "partial", "t_ms": 88800, "turn": 11, "text": "And I am Julien, Julien Caron, also Corvane. I do the the diligence"}
+{"type": "speaker", "t_ms": 88800, "turn": 11, "label": "E", "session": 1}
+{"type": "turn", "t_ms": 88300, "turn": 11, "text": "And I am Julien, Julien Caron, also Corvane. I do the the diligence", "speaker": "E", "session": 1, "start_ms": 80700, "end_ms": 88300}
+{"type": "speech_start", "t_ms": 88700, "turn": 12}
+{"type": "partial", "t_ms": 89200, "turn": 12, "text": "Margot,"}
+{"type": "partial", "t_ms": 89520, "turn": 12, "text": "Margot, are"}
+{"type": "partial", "t_ms": 89680, "turn": 12, "text": "Margot, are you"}
+{"type": "partial", "t_ms": 90320, "turn": 12, "text": "Margot, are you investing"}
+{"type": "partial", "t_ms": 90640, "turn": 12, "text": "Margot, are you investing this quarter?"}
+{"type": "partial", "t_ms": 93120, "turn": 12, "text": "Margot, are you investing this quarter?"}
+{"type": "speaker", "t_ms": 93120, "turn": 12, "label": "A", "session": 1}
+{"type": "turn", "t_ms": 92620, "turn": 12, "text": "Margot, are you investing this quarter?", "speaker": "A", "session": 1, "start_ms": 88700, "end_ms": 92620}
+{"type": "speech_start", "t_ms": 93020, "turn": 13}
+{"type": "partial", "t_ms": 93680, "turn": 13, "text": "Yes,"}
+{"type": "partial", "t_ms": 94560, "turn": 13, "text": "Yes, this"}
+{"type": "partial", "t_ms": 95040, "turn": 13, "text": "Yes, this quarter."}
+{"type": "partial", "t_ms": 96880, "turn": 13, "text": "Yes, this quarter. Send me"}
+{"type": "partial", "t_ms": 97040, "turn": 13, "text": "Yes, this quarter. Send me your"}
+{"type": "partial", "t_ms": 97440, "turn": 13, "text": "Yes, this quarter. Send me your one"}
+{"type": "partial", "t_ms": 98080, "turn": 13, "text": "Yes, this quarter. Send me your one pager,"}
+{"type": "partial", "t_ms": 98560, "turn": 13, "text": "Yes, this quarter. Send me your one pager, one"}
+{"type": "partial", "t_ms": 98800, "turn": 13, "text": "Yes, this quarter. Send me your one pager, one page,"}
+{"type": "partial", "t_ms": 99520, "turn": 13, "text": "Yes, this quarter. Send me your one pager, one page, with"}
+{"type": "partial", "t_ms": 99840, "turn": 13, "text": "Yes, this quarter. Send me your one pager, one page, with numbers."}
+{"type": "partial", "t_ms": 101440, "turn": 13, "text": "Yes, this quarter. Send me your one pager, one page, with numbers. Please."}
+{"type": "partial", "t_ms": 102800, "turn": 13, "text": "Yes, this quarter. Send me your one pager, one page, with numbers. Please."}
+{"type": "speaker", "t_ms": 102800, "turn": 13, "label": "D", "session": 1}
+{"type": "turn", "t_ms": 102300, "turn": 13, "text": "Yes, this quarter. Send me your one pager, one page, with numbers. Please.", "speaker": "D", "session": 1, "start_ms": 93020, "end_ms": 102300}
+{"type": "speech_start", "t_ms": 102700, "turn": 14}
+{"type": "partial", "t_ms": 103200, "turn": 14, "text": "One"}
+{"type": "partial", "t_ms": 103520, "turn": 14, "text": "One page"}
+{"type": "partial", "t_ms": 103920, "turn": 14, "text": "One page with"}
+{"type": "partial", "t_ms": 104160, "turn": 14, "text": "One page with numbers,"}
+{"type": "partial", "t_ms": 105200, "turn": 14, "text": "One page with numbers, tomorrow."}
+{"type": "partial", "t_ms": 106240, "turn": 14, "text": "One page with numbers, tomorrow."}
+{"type": "speaker", "t_ms": 106240, "turn": 14, "label": "A", "session": 1}
+{"type": "turn", "t_ms": 105740, "turn": 14, "text": "One page with numbers, tomorrow.", "speaker": "A", "session": 1, "start_ms": 102700, "end_ms": 105740}
+{"type": "speech_start", "t_ms": 106060, "turn": 15}
+{"type": "partial", "t_ms": 106880, "turn": 15, "text": "And"}
+{"type": "partial", "t_ms": 107920, "turn": 15, "text": "And come"}
+{"type": "partial", "t_ms": 108160, "turn": 15, "text": "And come by our"}
+{"type": "partial", "t_ms": 108640, "turn": 15, "text": "And come by our office,"}
+{"type": "turn_kind", "t_ms": 80620, "turn": 0, "kind": "incidental"}
+{"type": "turn_kind", "t_ms": 80620, "turn": 9, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 80620, "turn": 10, "kind": "conversation"}
+{"type": "person", "t_ms": 80620, "company": "Brightpath", "evidence_turns": [1, 2, 3], "introduced_by": "", "key": "leo-wong-brightpath", "name": "Leo Wong", "preferred_language": "", "role": "", "speakers": ["1:B"], "new": false}
+{"type": "person", "t_ms": 80620, "company": "Corvane Capital", "evidence_turns": [4, 8, 10], "introduced_by": "", "key": "margot-lefebvre-corvane-capital", "name": "Margot Lefebvre", "preferred_language": "", "role": "", "speakers": ["1:D"], "new": true}
+{"type": "hook", "t_ms": 80620, "person_key": "margot-lefebvre-corvane-capital", "kind": "mutual_connection", "title": "Chloé's colleague · Oct 23", "tag": "Chloé's colleague · Oct 23", "reason": "Chloé Martin at the Blockchain Week side event on Oct 23: “Chloé Martin, Corvane Capital. Bonsoir. My colleague Margaux is in Paris this week, but she'd want to see this.”", "promise_key": "", "evidence": [{"recording": "20261027-032704-badd", "event": "Blockchain Week side event", "turn": 8, "quote": "Chloé Martin, Corvane Capital. Bonsoir. My colleague Margaux is in Paris this week, but she'd want to see this."}]}
+{"type": "promise", "t_ms": 80620, "due": "tonight", "evidence_turns": [2, 3], "key": "deck-to-leo-wong-brightpath", "owed_by": "owner", "owed_to": "leo-wong-brightpath", "replaces": "", "what": "send our deck", "new": false}
+{"type": "edge", "t_ms": 80620, "act": "Keep deck short, numbers first", "english": "Honestly the deck yesterday I did not understand their model at all.", "language": "English", "person": "margot-lefebvre-corvane-capital", "said": "Honestly the deck yesterday I did not understand their model at all.", "text": "Said to another attendee before meeting you, while discussing yesterday's decks. She dislikes confusing models with no numbers.", "turns": [5, 6], "new": true}
+{"type": "room_topics", "t_ms": 80620, "topics": ["confusing pitch decks", "decks with no numbers"]}
+{"type": "partial", "t_ms": 108960, "turn": 15, "text": "And come by our office, show us"}
+{"type": "partial", "t_ms": 109520, "turn": 15, "text": "And come by our office, show us the"}
+{"type": "partial", "t_ms": 109760, "turn": 15, "text": "And come by our office, show us the demo."}
+{"type": "partial", "t_ms": 110400, "turn": 15, "text": "And come by our office, show us the demo. Wednesday"}
+{"type": "partial", "t_ms": 110960, "turn": 15, "text": "And come by our office, show us the demo. Wednesday afternoon,"}
+{"type": "partial", "t_ms": 112320, "turn": 15, "text": "And come by our office, show us the demo. Wednesday afternoon,"}
+{"type": "speaker", "t_ms": 112320, "turn": 15, "label": "E", "session": 1}
+{"type": "turn", "t_ms": 111820, "turn": 15, "text": "And come by our office, show us the demo. Wednesday afternoon,", "speaker": "E", "session": 1, "start_ms": 106060, "end_ms": 111820}
+{"type": "speech_start", "t_ms": 111980, "turn": 16}
+{"type": "partial", "t_ms": 112880, "turn": 16, "text": "Wednesday works."}
+{"type": "partial", "t_ms": 116960, "turn": 16, "text": "Wednesday works."}
+{"type": "speaker", "t_ms": 116960, "turn": 16, "label": "A", "session": 1}
+{"type": "turn", "t_ms": 116460, "turn": 16, "text": "Wednesday works.", "speaker": "A", "session": 1, "start_ms": 111980, "end_ms": 116460}
+{"type": "speech_start", "t_ms": 116860, "turn": 17}
+{"type": "partial", "t_ms": 117520, "turn": 17, "text": "Hi."}
+{"type": "partial", "t_ms": 118000, "turn": 17, "text": "Hi. Something"}
+{"type": "partial", "t_ms": 118240, "turn": 17, "text": "Hi. Something to"}
+{"type": "partial", "t_ms": 118640, "turn": 17, "text": "Hi. Something to drink?"}
+{"type": "partial", "t_ms": 119520, "turn": 17, "text": "Hi. Something to drink?"}
+{"type": "speaker", "t_ms": 119520, "turn": 17, "label": "F", "session": 1}
+{"type": "turn", "t_ms": 119020, "turn": 17, "text": "Hi. Something to drink?", "speaker": "F", "session": 1, "start_ms": 116860, "end_ms": 119020}
+{"type": "speech_start", "t_ms": 119100, "turn": 18}
+{"type": "partial", "t_ms": 119920, "turn": 18, "text": "I'm"}
+{"type": "partial", "t_ms": 120240, "turn": 18, "text": "I'm good."}
+{"type": "partial", "t_ms": 120800, "turn": 18, "text": "I'm good. Thanks."}
+{"type": "partial", "t_ms": 124640, "turn": 18, "text": "I'm good. Thanks."}
+{"type": "speaker", "t_ms": 124640, "turn": 18, "label": "A", "session": 1}
+{"type": "turn", "t_ms": 124140, "turn": 18, "text": "I'm good. Thanks.", "speaker": "A", "session": 1, "start_ms": 119100, "end_ms": 124140}
+{"type": "speech_start", "t_ms": 124300, "turn": 19}
+{"type": "partial", "t_ms": 124960, "turn": 19, "text": "Eric,"}
+{"type": "partial", "t_ms": 125360, "turn": 19, "text": "Eric, hey!"}
+{"type": "partial", "t_ms": 127280, "turn": 19, "text": "Eric, hey! Siddharth,"}
+{"type": "turn_kind", "t_ms": 105740, "turn": 11, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 105740, "turn": 12, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 105740, "turn": 13, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 105740, "turn": 14, "kind": "conversation"}
+{"type": "person", "t_ms": 105740, "company": "Brightpath", "evidence_turns": [1], "introduced_by": "", "key": "leo-wong-brightpath", "name": "Leo Wong", "preferred_language": "", "role": "", "speakers": ["1:B"], "new": false}
+{"type": "person", "t_ms": 105740, "company": "Corvane Capital", "evidence_turns": [10], "introduced_by": "", "key": "margot-lefebvre-corvane-capital", "name": "Margot Lefebvre", "preferred_language": "", "role": "", "speakers": ["1:D"], "new": false}
+{"type": "person", "t_ms": 105740, "company": "Corvane Capital", "evidence_turns": [11], "introduced_by": "", "key": "julien-caron-corvane-capital", "name": "Julien Caron", "preferred_language": "", "role": "", "speakers": ["1:E"], "new": true}
+{"type": "promise", "t_ms": 105740, "due": "tomorrow", "evidence_turns": [13, 14], "key": "one-pager-to-margot-lefebvre-corvane-capital", "owed_by": "owner", "owed_to": "margot-lefebvre-corvane-capital", "replaces": "", "what": "one page with numbers", "new": true}
+{"type": "suspect_word", "t_ms": 105740, "heard": "Julianne", "likely": "Julien", "reason": "same person addressed as Julianne but self-introduced as Julien", "turn": 4, "new": true}
+{"type": "suspect_word", "t_ms": 105740, "heard": "Julianne", "likely": "Julien", "reason": "same person addressed as Julianne but self-introduced as Julien", "turn": 8, "new": true}
+{"type": "suspect_word", "t_ms": 105740, "heard": "Julien", "likely": "Julianne", "reason": "same person self-introduced as Julien but addressed as Julianne", "turn": 11, "new": true}
+{"type": "edge", "t_ms": 105740, "act": "one page, numbers first", "english": "Honestly the deck yesterday I did not understand their model at all.", "language": "English", "person": "margot-lefebvre-corvane-capital", "said": "Honestly the deck yesterday I did not understand their model at all.", "text": "Said to Julien before meeting you. Shows she dislikes unclear models without numbers.", "turns": [5, 6], "new": false}
+{"type": "edge", "t_ms": 105740, "act": "one page, numbers first", "english": "Same. 20 slides and zero numbers. Zero.", "language": "English", "person": "julien-caron-corvane-capital", "said": "Same. 20 slides and zero numbers. Zero.", "text": "Said to Margot before meeting you. Shows he dislikes long decks with no numbers.", "turns": [5, 6], "new": true}
+{"type": "partial", "t_ms": 127840, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth"}
+{"type": "partial", "t_ms": 128640, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan,"}
+{"type": "partial", "t_ms": 129200, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill"}
+{"type": "partial", "t_ms": 129680, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh."}
+{"type": "second_run", "t_ms": 130080, "model": "muse-spark-open", "call": 3, "final": false, "upto_turn": 14, "seconds": 2.21, "usage": {"prompt_tokens": 1182, "completion_tokens": 533, "reasoning_tokens": 355, "total_tokens": 1715}, "people": 3, "promises": 2, "suspect_words": [], "agreed": 5, "disagreed": 0, "totals": {"calls": 3, "prompt_tokens": 2880, "completion_tokens": 1527, "reasoning_tokens": 1182, "seconds": 7.8}}
+{"type": "confirmed", "t_ms": 130080, "kind": "person", "key": "margot-lefebvre-corvane-capital", "by": ["muse-spark-1.3", "muse-spark-open"]}
+{"type": "confirmed", "t_ms": 130080, "kind": "person", "key": "julien-caron-corvane-capital", "by": ["muse-spark-1.3", "muse-spark-open"]}
+{"type": "confirmed", "t_ms": 130080, "kind": "promise", "key": "one-pager-to-margot-lefebvre-corvane-capital", "by": ["muse-spark-1.3", "muse-spark-open"]}
+{"type": "partial", "t_ms": 129840, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We"}
+{"type": "partial", "t_ms": 130080, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met"}
+{"type": "partial", "t_ms": 130480, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met at"}
+{"type": "partial", "t_ms": 130640, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met at Blockchain"}
+{"type": "partial", "t_ms": 131120, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met at Blockchain Week."}
+{"type": "partial", "t_ms": 131440, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met at Blockchain Week. You"}
+{"type": "partial", "t_ms": 131600, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met at Blockchain Week. You know"}
+{"type": "partial", "t_ms": 131840, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met at Blockchain Week. You know Kenji,"}
+{"type": "partial", "t_ms": 131920, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met at Blockchain Week. You know Kenji, no?"}
+{"type": "partial", "t_ms": 133760, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met at Blockchain Week. You know Kenji, no?"}
+{"type": "speaker", "t_ms": 133760, "turn": 19, "label": "B", "session": 1}
+{"type": "turn", "t_ms": 133260, "turn": 19, "text": "Eric, hey! Siddharth, Siddharth Raghunathan, Quill Mesh. We met at Blockchain Week. You know Kenji, no?", "speaker": "B", "session": 1, "start_ms": 124300, "end_ms": 133260}
+{"type": "speech_start", "t_ms": 133500, "turn": 20}
+{"type": "partial", "t_ms": 134480, "turn": 20, "text": "Eric,"}
+{"type": "partial", "t_ms": 135440, "turn": 20, "text": "Eric, we"}
+{"type": "partial", "t_ms": 135760, "turn": 20, "text": "Eric, we keep"}
+{"type": "partial", "t_ms": 136000, "turn": 20, "text": "Eric, we keep running into each"}
+{"type": "partial", "t_ms": 136320, "turn": 20, "text": "Eric, we keep running into each other."}
+{"type": "partial", "t_ms": 137760, "turn": 20, "text": "Eric, we keep running into each other."}
+{"type": "speaker", "t_ms": 137760, "turn": 20, "label": "G", "session": 1}
+{"type": "turn", "t_ms": 137260, "turn": 20, "text": "Eric, we keep running into each other.", "speaker": "G", "session": 1, "start_ms": 133500, "end_ms": 137260}
+{"type": "speech_start", "t_ms": 137420, "turn": 21}
+{"type": "partial", "t_ms": 138080, "turn": 21, "text": "Hey,"}
+{"type": "partial", "t_ms": 138800, "turn": 21, "text": "Hey, it's"}
+{"type": "partial", "t_ms": 139920, "turn": 21, "text": "Hey, it's sorry,"}
+{"type": "partial", "t_ms": 140160, "turn": 21, "text": "Hey, it's sorry, it's"}
+{"type": "partial", "t_ms": 140880, "turn": 21, "text": "Hey, it's sorry, it's been a"}
+{"type": "partial", "t_ms": 141040, "turn": 21, "text": "Hey, it's sorry, it's been a long"}
+{"type": "partial", "t_ms": 141200, "turn": 21, "text": "Hey, it's sorry, it's been a long week."}
+{"type": "partial", "t_ms": 143360, "turn": 21, "text": "Hey, it's sorry, it's been a long week."}
+{"type": "speaker", "t_ms": 143360, "turn": 21, "label": "A", "session": 1}
+{"type": "turn", "t_ms": 142860, "turn": 21, "text": "Hey, it's sorry, it's been a long week.", "speaker": "A", "session": 1, "start_ms": 137420, "end_ms": 142860}
+{"type": "speech_start", "t_ms": 143020, "turn": 22}
+{"type": "partial", "t_ms": 144160, "turn": 22, "text": "Kenji,"}
+{"type": "partial", "t_ms": 145040, "turn": 22, "text": "Kenji, Kenji"}
+{"type": "partial", "t_ms": 145360, "turn": 22, "text": "Kenji, Kenji Watanabe,"}
+{"type": "partial", "t_ms": 146240, "turn": 22, "text": "Kenji, Kenji Watanabe, Hoshizora"}
+{"type": "partial", "t_ms": 146880, "turn": 22, "text": "Kenji, Kenji Watanabe, Hoshizora Robotics,"}
+{"type": "partial", "t_ms": 147440, "turn": 22, "text": "Kenji, Kenji Watanabe, Hoshizora Robotics, the"}
+{"type": "partial", "t_ms": 147600, "turn": 22, "text": "Kenji, Kenji Watanabe, Hoshizora Robotics, the hardware"}
+{"type": "partial", "t_ms": 148000, "turn": 22, "text": "Kenji, Kenji Watanabe, Hoshizora Robotics, the hardware meetup?"}
+{"type": "turn_kind", "t_ms": 124140, "turn": 0, "kind": "stage"}
+{"type": "turn_kind", "t_ms": 124140, "turn": 15, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 124140, "turn": 16, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 124140, "turn": 17, "kind": "incidental"}
+{"type": "turn_kind", "t_ms": 124140, "turn": 18, "kind": "incidental"}
+{"type": "person", "t_ms": 124140, "company": "Corvane Capital", "evidence_turns": [5, 7, 10, 13], "introduced_by": "", "key": "margot-lefebvre-corvane-capital", "name": "Margot Lefebvre", "preferred_language": "", "role": "", "speakers": ["1:D"], "new": false}
+{"type": "person", "t_ms": 124140, "company": "Corvane Capital", "evidence_turns": [6, 11, 15], "introduced_by": "", "key": "julien-caron-corvane-capital", "name": "Julien Caron", "preferred_language": "", "role": "", "speakers": ["1:E"], "new": false}
+{"type": "promise", "t_ms": 124140, "due": "tomorrow", "evidence_turns": [13, 14], "key": "one-pager-to-margot-lefebvre-corvane-capital", "owed_by": "owner", "owed_to": "margot-lefebvre-corvane-capital", "replaces": "", "what": "one pager with numbers", "new": false}
+{"type": "promise", "t_ms": 124140, "due": "Wednesday afternoon", "evidence_turns": [15, 16], "key": "demo-to-julien-caron-corvane-capital", "owed_by": "owner", "owed_to": "julien-caron-corvane-capital", "replaces": "", "what": "come by office, show demo", "new": true}
+{"type": "suspect_word", "t_ms": 124140, "heard": "Julianne", "likely": "Julien", "reason": "same person addressed in turn 4 and self-introduced as Julien in turn 11", "turn": 4, "new": false}
+{"type": "suspect_word", "t_ms": 124140, "heard": "Julianne", "likely": "Julien", "reason": "same person addressed in turn 8 and self-introduced as Julien in turn 11", "turn": 8, "new": false}
+{"type": "suspect_word", "t_ms": 124140, "heard": "Julien", "likely": "Julianne", "reason": "self-introduction spelling differs from Julianne used when addressed", "turn": 11, "new": false}
+{"type": "edge", "t_ms": 124140, "act": "one page, numbers first", "english": "Honestly the deck yesterday I did not understand their model at all.", "language": "English", "person": "margot-lefebvre-corvane-capital", "said": "Honestly the deck yesterday I did not understand their model at all.", "text": "Said to Julien before meeting you. She dislikes unclear models and wants numbers.", "turns": [5], "new": true}
+{"type": "edge", "t_ms": 124140, "act": "one page, numbers first", "english": "Same. 20 slides and zero numbers. Zero.", "language": "English", "person": "julien-caron-corvane-capital", "said": "Same. 20 slides and zero numbers. Zero.", "text": "Said to Margot before meeting you. He is impatient with long decks with no numbers.", "turns": [6], "new": true}
+{"type": "edge_removed", "t_ms": 124140, "person": "margot-lefebvre-corvane-capital", "turns": [5, 6]}
+{"type": "edge_removed", "t_ms": 124140, "person": "julien-caron-corvane-capital", "turns": [5, 6]}
+{"type": "room_topics", "t_ms": 124140, "topics": ["confusing pitch decks", "slides with zero numbers"]}
+{"type": "partial", "t_ms": 149120, "turn": 22, "text": "Kenji, Kenji Watanabe, Hoshizora Robotics, the hardware meetup?"}
+{"type": "speaker", "t_ms": 149120, "turn": 22, "label": "G", "session": 1}
+{"type": "turn", "t_ms": 148620, "turn": 22, "text": "Kenji, Kenji Watanabe, Hoshizora Robotics, the hardware meetup?", "speaker": "G", "session": 1, "start_ms": 143020, "end_ms": 148620}
+{"type": "person_history", "t_ms": 149440, "key": "kenji-watanabe-hoshizora-robotics", "index_key": "kenji-watanabe-hoshizora-robotics", "name": "Kenji Watanabe", "company": "Hoshizora Robotics", "encounters": [{"recording": "20261027-032636-0a72", "event": "Hardware meetup", "venue": "Taipei, Nangang", "started": 1792668600.0, "introduced_by": ""}, {"recording": "20261027-030551-c42b", "event": "ETH Taipei afterparty", "venue": "Taipei, Xinyi", "started": 1792499400.0, "introduced_by": ""}], "promises": [{"recording": "20261027-030551-c42b", "event": "ETH Taipei afterparty", "started": 1792499400.0, "what": "message you", "due": "", "direction": "owner_owes"}], "speaker": "1:G", "turn": 22, "provisional": true, "matched": "full name"}
+{"type": "hook", "t_ms": 149440, "person_key": "kenji-watanabe-hoshizora-robotics", "kind": "introduction", "title": "you owe Lena an intro · Oct 20", "tag": "you owe Lena an intro · Oct 20", "reason": "At the ETH Taipei afterparty on Oct 20 you promised Lena Novak: “introduce you to Kenji”, due Monday.", "promise_key": "introduce-to-lena-novak-brightline-grid", "evidence": [{"recording": "20261027-030551-c42b", "event": "ETH Taipei afterparty", "turn": 7, "quote": "I'll introduce you two on Monday."}], "provisional": true}
+{"type": "hook", "t_ms": 149440, "person_key": "kenji-watanabe-hoshizora-robotics", "kind": "mutual_connection", "title": "Lena mentioned Kenji · Oct 24", "tag": "Lena mentioned Kenji · Oct 24", "reason": "Lena Novak at the Founder dinner on Oct 24: “Eric! Lena. Lena Novak, Brightline Grid. Did Kenji ever write back?”", "promise_key": "", "evidence": [{"recording": "20261027-032735-1e3d", "event": "Founder dinner", "turn": 1, "quote": "Eric! Lena. Lena Novak, Brightline Grid. Did Kenji ever write back?"}], "provisional": true}
+{"type": "speech_start", "t_ms": 148940, "turn": 23}
+{"type": "partial", "t_ms": 149680, "turn": 23, "text": "it"}
+{"type": "partial", "t_ms": 150160, "turn": 23, "text": "it remembered"}
+{"type": "partial", "t_ms": 150400, "turn": 23, "text": "it remembered him"}
+{"type": "partial", "t_ms": 150720, "turn": 23, "text": "it remembered him before I"}
+{"type": "partial", "t_ms": 150960, "turn": 23, "text": "it remembered him before I did."}
+{"type": "partial", "t_ms": 153200, "turn": 23, "text": "it remembered him before I did. Kenji,"}
+{"type": "partial", "t_ms": 153520, "turn": 23, "text": "it remembered him before I did. Kenji, of"}
+{"type": "partial", "t_ms": 153760, "turn": 23, "text": "it remembered him before I did. Kenji, of course,"}
+{"type": "partial", "t_ms": 154080, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the"}
+{"type": "partial", "t_ms": 154880, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the hardware meetup."}
+{"type": "partial", "t_ms": 155680, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the hardware meetup. We"}
+{"type": "partial", "t_ms": 155840, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the hardware meetup. We still owe"}
+{"type": "partial", "t_ms": 156080, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the hardware meetup. We still owe each other"}
+{"type": "partial", "t_ms": 156160, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the hardware meetup. We still owe each other a"}
+{"type": "partial", "t_ms": 156640, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the hardware meetup. We still owe each other a coffee."}
+{"type": "partial", "t_ms": 157360, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the hardware meetup. We still owe each other a coffee. Thursday?"}
+{"type": "partial", "t_ms": 158400, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the hardware meetup. We still owe each other a coffee. Thursday?"}
+{"type": "speaker", "t_ms": 158400, "turn": 23, "label": "A", "session": 1}
+{"type": "turn", "t_ms": 157900, "turn": 23, "text": "it remembered him before I did. Kenji, of course, the hardware meetup. We still owe each other a coffee. Thursday?", "speaker": "A", "session": 1, "start_ms": 148940, "end_ms": 157900}
+{"type": "speech_start", "t_ms": 158140, "turn": 24}
+{"type": "partial", "t_ms": 159120, "turn": 24, "text": "Thursday"}
+{"type": "partial", "t_ms": 159520, "turn": 24, "text": "Thursday is"}
+{"type": "partial", "t_ms": 163280, "turn": 24, "text": "Thursday is Friday."}
+{"type": "partial", "t_ms": 164240, "turn": 24, "text": "Thursday is Friday. Friday"}
+{"type": "partial", "t_ms": 164320, "turn": 24, "text": "Thursday is Friday. Friday is"}
+{"type": "partial", "t_ms": 164800, "turn": 24, "text": "Thursday is Friday. Friday is better."}
+{"type": "partial", "t_ms": 168400, "turn": 24, "text": "Thursday is Friday. Friday is better."}
+{"type": "speaker", "t_ms": 168400, "turn": 24, "label": "G", "session": 1}
+{"type": "turn", "t_ms": 167900, "turn": 24, "text": "Thursday is Friday. Friday is better.", "speaker": "G", "session": 1, "start_ms": 158140, "end_ms": 167900}
+{"type": "turn_kind", "t_ms": 142860, "turn": 0, "kind": "incidental"}
+{"type": "turn_kind", "t_ms": 142860, "turn": 19, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 142860, "turn": 20, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 142860, "turn": 21, "kind": "conversation"}
+{"type": "person", "t_ms": 142860, "company": "Corvane Capital", "evidence_turns": [5, 8, 10], "introduced_by": "", "key": "margot-lefebvre-corvane-capital", "name": "Margot Lefebvre", "preferred_language": "", "role": "", "speakers": ["1:D"], "new": false}
+{"type": "person", "t_ms": 142860, "company": "Corvane", "evidence_turns": [6, 8, 11], "introduced_by": "", "key": "julien-caron-corvane", "name": "Julien Caron", "preferred_language": "", "role": "", "speakers": ["1:E"], "new": true}
+{"type": "person", "t_ms": 142860, "company": "Quill Mesh", "evidence_turns": [19], "introduced_by": "", "key": "siddharth-raghunathan-quill-mesh", "name": "Siddharth Raghunathan", "preferred_language": "", "role": "", "speakers": ["1:B"], "new": true}
+{"type": "person_history", "t_ms": 142860, "key": "siddharth-raghunathan-quill-mesh", "index_key": "siddharth-raghunathan-quill-mesh", "name": "Siddharth Raghunathan", "company": "Quill Mesh", "encounters": [{"recording": "20261027-032704-badd", "event": "Blockchain Week side event", "venue": "Taipei, Xinyi", "started": 1792756800.0, "introduced_by": ""}, {"recording": "20261027-030551-c42b", "event": "ETH Taipei afterparty", "venue": "Taipei, Xinyi", "started": 1792499400.0, "introduced_by": ""}], "promises": [{"recording": "20261027-030551-c42b", "event": "ETH Taipei afterparty", "started": 1792499400.0, "what": "pilot numbers", "due": "this week", "direction": "they_owe"}]}
+{"type": "person_removed", "t_ms": 142860, "key": "julien-caron-corvane-capital"}
+{"type": "promise", "t_ms": 142860, "due": "tonight", "evidence_turns": [2, 3], "key": "deck-to-leo-wong-brightpath", "owed_by": "owner", "owed_to": "leo-wong-brightpath", "replaces": "", "what": "send badge deck", "new": false}
+{"type": "promise", "t_ms": 142860, "due": "tomorrow", "evidence_turns": [13, 14], "key": "one-pager-to-margot-lefebvre-corvane-capital", "owed_by": "owner", "owed_to": "margot-lefebvre-corvane-capital", "replaces": "", "what": "one pager, one page, with numbers", "new": false}
+{"type": "promise", "t_ms": 142860, "due": "Wednesday afternoon", "evidence_turns": [15, 16], "key": "demo-to-julien-caron-corvane", "owed_by": "owner", "owed_to": "julien-caron-corvane", "replaces": "", "what": "come by office, show demo", "new": true}
+{"type": "promise_removed", "t_ms": 142860, "key": "demo-to-julien-caron-corvane-capital"}
+{"type": "mention", "t_ms": 142860, "by": "siddharth-raghunathan-quill-mesh", "name": "Kenji", "turn": 19, "new": true}
+{"type": "suspect_word", "t_ms": 142860, "heard": "Julianne", "likely": "Julien", "reason": "same person appears as Julianne and Julien", "turn": 4, "new": false}
+{"type": "suspect_word", "t_ms": 142860, "heard": "Julien", "likely": "Julianne", "reason": "same person appears as Julien and Julianne", "turn": 11, "new": false}
+{"type": "suspect_word_removed", "t_ms": 142860, "heard": "Julianne", "turn": 8}
+{"type": "edge", "t_ms": 142860, "act": "one page, numbers first", "english": "Honestly the deck yesterday I did not understand their model at all.", "language": "English", "person": "margot-lefebvre-corvane-capital", "said": "Honestly the deck yesterday I did not understand their model at all.", "text": "Said to Julien before meeting the owner. She dislikes confusing models and wants clarity.", "turns": [5, 6, 7], "new": true}
+{"type": "edge", "t_ms": 142860, "act": "one page, numbers first", "english": "Same. 20 slides and zero numbers. Zero.", "language": "English", "person": "julien-caron-corvane", "said": "Same. 20 slides and zero numbers. Zero.", "text": "Said to Margot before meeting the owner. He dislikes long decks with no numbers.", "turns": [5, 6, 7], "new": true}
+{"type": "edge_removed", "t_ms": 142860, "person": "margot-lefebvre-corvane-capital", "turns": [5]}
+{"type": "edge_removed", "t_ms": 142860, "person": "julien-caron-corvane-capital", "turns": [6]}
+{"type": "room_topics", "t_ms": 142860, "topics": ["confusing pitch decks", "slide decks with zero numbers"]}
+{"type": "partial", "t_ms": 176880, "turn": 24, "text": ""}
+{"type": "turn_kind", "t_ms": 167900, "turn": 22, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 167900, "turn": 23, "kind": "conversation"}
+{"type": "turn_kind", "t_ms": 167900, "turn": 24, "kind": "conversation"}
+{"type": "person", "t_ms": 167900, "company": "Brightpath", "evidence_turns": [1, 3], "introduced_by": "", "key": "leo-wong-brightpath", "name": "Leo Wong", "preferred_language": "", "role": "", "speakers": ["1:B"], "new": false}
+{"type": "person", "t_ms": 167900, "company": "Corvane Capital", "evidence_turns": [5, 7, 10, 13], "introduced_by": "", "key": "margot-lefebvre-corvane-capital", "name": "Margot Lefebvre", "preferred_language": "", "role": "", "speakers": ["1:D"], "new": false}
+{"type": "person", "t_ms": 167900, "company": "Corvane Capital", "evidence_turns": [6, 11, 15], "introduced_by": "", "key": "julien-caron-corvane-capital", "name": "Julien Caron", "preferred_language": "", "role": "diligence", "speakers": ["1:E"], "new": true}
+{"type": "person", "t_ms": 167900, "company": "Hoshizora Robotics", "evidence_turns": [20, 22, 24], "introduced_by": "", "key": "kenji-watanabe-hoshizora-robotics", "name": "Kenji Watanabe", "preferred_language": "", "role": "", "speakers": ["1:G"], "new": true}
+{"type": "hook", "t_ms": 167900, "person_key": "kenji-watanabe-hoshizora-robotics", "kind": "introduction", "title": "you owe Lena an intro · Oct 20", "tag": "you owe Lena an intro · Oct 20", "reason": "At the ETH Taipei afterparty on Oct 20 you promised Lena Novak: “introduce you to Kenji”, due Monday.", "promise_key": "introduce-to-lena-novak-brightline-grid", "evidence": [{"recording": "20261027-030551-c42b", "event": "ETH Taipei afterparty", "turn": 7, "quote": "I'll introduce you two on Monday."}]}
+{"type": "hook", "t_ms": 167900, "person_key": "kenji-watanabe-hoshizora-robotics", "kind": "mutual_connection", "title": "Lena mentioned Kenji · Oct 24", "tag": "Lena mentioned Kenji · Oct 24", "reason": "Lena Novak at the Founder dinner on Oct 24: “Eric! Lena. Lena Novak, Brightline Grid. Did Kenji ever write back?”", "promise_key": "", "evidence": [{"recording": "20261027-032735-1e3d", "event": "Founder dinner", "turn": 1, "quote": "Eric! Lena. Lena Novak, Brightline Grid. Did Kenji ever write back?"}]}
+{"type": "person_history", "t_ms": 167900, "key": "kenji-watanabe-hoshizora-robotics", "index_key": "kenji-watanabe-hoshizora-robotics", "name": "Kenji Watanabe", "company": "Hoshizora Robotics", "encounters": [{"recording": "20261027-032636-0a72", "event": "Hardware meetup", "venue": "Taipei, Nangang", "started": 1792668600.0, "introduced_by": ""}, {"recording": "20261027-030551-c42b", "event": "ETH Taipei afterparty", "venue": "Taipei, Xinyi", "started": 1792499400.0, "introduced_by": ""}], "promises": [{"recording": "20261027-030551-c42b", "event": "ETH Taipei afterparty", "started": 1792499400.0, "what": "message you", "due": "", "direction": "owner_owes"}]}
+{"type": "person_removed", "t_ms": 167900, "key": "julien-caron-corvane"}
+{"type": "promise", "t_ms": 167900, "due": "tonight", "evidence_turns": [2, 3], "key": "deck-to-leo-wong-brightpath", "owed_by": "owner", "owed_to": "leo-wong-brightpath", "replaces": "", "what": "our deck", "new": false}
+{"type": "promise", "t_ms": 167900, "due": "Wednesday afternoon", "evidence_turns": [15, 16], "key": "demo-to-julien-caron-corvane-capital", "owed_by": "owner", "owed_to": "julien-caron-corvane-capital", "replaces": "", "what": "come by office, show demo", "new": true}
+{"type": "promise", "t_ms": 167900, "due": "Friday", "evidence_turns": [23, 24], "key": "coffee-to-kenji-watanabe-hoshizora-robotics", "owed_by": "owner", "owed_to": "kenji-watanabe-hoshizora-robotics", "replaces": "Thursday", "what": "coffee", "new": true}
+{"type": "promise_removed", "t_ms": 167900, "key": "demo-to-julien-caron-corvane"}
+{"type": "suspect_word", "t_ms": 167900, "heard": "Julianne", "likely": "Julien", "reason": "same person addressed as Julianne and self-introduced as Julien", "turn": 4, "new": false}
+{"type": "suspect_word", "t_ms": 167900, "heard": "Julien", "likely": "Julianne", "reason": "same person self-introduced as Julien but addressed as Julianne", "turn": 11, "new": false}
+{"type": "edge", "t_ms": 167900, "act": "one page, numbers first", "english": "Honestly the deck yesterday I did not understand their model at all.", "language": "English", "person": "margot-lefebvre-corvane-capital", "said": "Honestly the deck yesterday I did not understand their model at all.", "text": "Said to Julien before meeting the owner, in English. She could not understand yesterday's model and wants clarity.", "turns": [5, 6], "new": true}
+{"type": "edge", "t_ms": 167900, "act": "bring numbers, keep it short", "english": "Same. 20 slides and zero numbers. Zero.", "language": "English", "person": "julien-caron-corvane-capital", "said": "Same. 20 slides and zero numbers. Zero.", "text": "Said to Margot before meeting the owner, in English. He is frustrated by long decks with no numbers.", "turns": [5, 6], "new": true}
+{"type": "edge_removed", "t_ms": 167900, "person": "margot-lefebvre-corvane-capital", "turns": [5, 6, 7]}
+{"type": "edge_removed", "t_ms": 167900, "person": "julien-caron-corvane", "turns": [5, 6, 7]}
+{"type": "room_topics", "t_ms": 167900, "topics": ["confusing pitch decks", "decks with no numbers"]}
+{"type": "second_run", "t_ms": 176851, "model": "muse-spark-open", "call": 4, "final": false, "upto_turn": 24, "seconds": 3.74, "usage": {"prompt_tokens": 1517, "completion_tokens": 1042, "reasoning_tokens": 734, "total_tokens": 2559}, "people": 5, "promises": 4, "suspect_words": [], "agreed": 9, "disagreed": 0, "totals": {"calls": 4, "prompt_tokens": 4397, "completion_tokens": 2569, "reasoning_tokens": 1916, "seconds": 11.54}}
+{"type": "confirmed", "t_ms": 176851, "kind": "person", "key": "siddharth-raghunathan-quill-mesh", "by": ["muse-spark-1.3", "muse-spark-open"]}
+{"type": "confirmed", "t_ms": 176851, "kind": "person", "key": "kenji-watanabe-hoshizora-robotics", "by": ["muse-spark-1.3", "muse-spark-open"]}
+{"type": "confirmed", "t_ms": 176851, "kind": "promise", "key": "demo-to-julien-caron-corvane-capital", "by": ["muse-spark-1.3", "muse-spark-open"]}
+{"type": "confirmed", "t_ms": 176851, "kind": "promise", "key": "coffee-to-kenji-watanabe-hoshizora-robotics", "by": ["muse-spark-1.3", "muse-spark-open"]}
+{"type": "next_move", "t_ms": 176851, "attach": "deck", "body": "Good to meet you tonight, Leo. As promised, here is our deck, with your wallet infrastructure work at Brightpath in mind. Sending tonight as agreed.\nEric", "body_english": "", "duration_minutes": 30, "kind": "email", "language": "English", "nudge": "Deck for Leo due tonight", "person_key": "leo-wong-brightpath", "promise_key": "deck-to-leo-wong-brightpath", "remind_at": "2026-10-28T20:00:00+08:00", "subject": "Hallwise deck - as promised", "when": "", "why": "sends tonight's promised deck to wallet infrastructure contact"}
+{"type": "next_move", "t_ms": 176851, "attach": "one_pager", "body": "Great to meet you tonight, Margot. Chloé told me you'd want to see this, so here is our one-pager with the numbers first for this quarter. Sending tomorrow as agreed.\nEric", "body_english": "", "duration_minutes": 30, "kind": "email", "language": "English", "nudge": "One-pager for Margot due tomorrow", "person_key": "margot-lefebvre-corvane-capital", "promise_key": "one-pager-to-margot-lefebvre-corvane-capital", "remind_at": "2026-10-29T10:00:00+08:00", "subject": "Hallwise one-pager with numbers", "when": "", "why": "sends one page with numbers first, keeping it clear"}
+{"type": "next_move", "t_ms": 176851, "attach": "", "body": "Great to meet you tonight, Julien. Can I come by Wednesday afternoon to show the demo, with numbers ready to keep it short? Does 16:00 work on your side?\nEric", "body_english": "", "duration_minutes": 30, "kind": "calendar", "language": "English", "nudge": "Demo for Julien Wednesday", "person_key": "julien-caron-corvane-capital", "promise_key": "demo-to-julien-caron-corvane-capital", "remind_at": "2026-11-03T09:00:00+08:00", "subject": "", "when": "2026-11-04T16:00:00+08:00", "why": "Wednesday afternoon slot avoids busy 14:00-15:30 window"}
+{"type": "next_move", "t_ms": 176851, "attach": "", "body": "Good to run into you again, Kenji, since the hardware meetup. Can we finally grab that coffee on Friday instead of Thursday, and the introduction to Lena I still owe you? Does Friday afternoon work on your side?\nEric", "body_english": "", "duration_minutes": 30, "kind": "calendar", "language": "English", "nudge": "Coffee with Kenji Friday", "person_key": "kenji-watanabe-hoshizora-robotics", "promise_key": "coffee-to-kenji-watanabe-hoshizora-robotics", "remind_at": "2026-10-29T09:00:00+08:00", "subject": "", "when": "2026-10-30T15:00:00+08:00", "why": "Friday afternoon slot keeps owner free and honors Thursday-to-Friday switch"}
+{"type": "second_run", "t_ms": 176851, "model": "muse-spark-open", "call": 5, "final": true, "upto_turn": 24, "seconds": 5.3, "usage": {"prompt_tokens": 1517, "completion_tokens": 1437, "reasoning_tokens": 1124, "total_tokens": 2954}, "people": 5, "promises": 4, "suspect_words": [], "agreed": 8, "disagreed": 1, "totals": {"calls": 5, "prompt_tokens": 5914, "completion_tokens": 4006, "reasoning_tokens": 3040, "seconds": 16.84}}
+{"type": "confirmed_removed", "t_ms": 176851, "kind": "person", "key": "julien-caron-corvane-capital"}
+{"type": "disagreement", "t_ms": 176851, "id": "person:julien-caron-corvane-capital:company", "kind": "person", "field": "company", "key": "julien-caron-corvane-capital", "speaker": "1:E", "turn": 6, "a": {"by": "muse-spark-1.3", "text": "Corvane Capital"}, "b": {"by": "muse-spark-open", "text": "Corvane"}}
+{"type": "recording_end", "t_ms": 176851}

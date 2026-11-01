@@ -1,0 +1,7 @@
+node_modules/
+out/
+# footage and decoded audio are derived or private; regenerate with tools/
+public/footage/
+public/audio/
+# the derived data is small and reproducible, but the repo-wide "data/" rule would hide it; keep it visible
+!public/data/
