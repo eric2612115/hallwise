@@ -38,6 +38,7 @@ struct MorningReport {
         let draftEnglish: String
         let check: Check?
         let earlier: Bool
+        let edges: [LiveModel.Edge]      // what they said not to the owner; the draft acts on it, never quotes it
     }
 
     struct Finding: Identifiable {
@@ -112,7 +113,8 @@ struct MorningReport {
                 draftLanguage: f["language"] as? String ?? "", draftBody: f["body"] as? String ?? "",
                 draftEnglish: f["body_english"] as? String ?? "",
                 check: c.map { Check(status: $0["status"] as? String ?? "", note: $0["note"] as? String ?? "", sources: $0["sources"] as? [String] ?? []) },
-                earlier: r["earlier"] as? Bool ?? false
+                earlier: r["earlier"] as? Bool ?? false,
+                edges: (r["edges"] as? [[String: Any]] ?? []).map { LiveModel.Edge(["person": person.key].merging($0) { a, _ in a }) }
             )
         }
         introductions = (d["introductions"] as? [[String: Any]] ?? []).map(LiveModel.Hook.init)
@@ -416,6 +418,10 @@ struct MorningReportView: View {
                     }
                     if let p = row.promise {
                         Text(p.what + (p.due.isEmpty ? "" : " · \(p.due)")).font(.system(size: 14)).foregroundStyle(Theme.ink)
+                    }
+                    ForEach(row.edges) { e in
+                        Label(e.text, systemImage: "lightbulb").font(.system(size: 13)).foregroundStyle(Theme.inkSoft)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     if let c = row.check, c.status == "no_public_record" || c.status == "partial" {
                         Label(c.note, systemImage: "exclamationmark.magnifyingglass")

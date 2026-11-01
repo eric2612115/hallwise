@@ -370,6 +370,21 @@ struct PersonDetail: View {
                     }
                     .listRowBackground(Theme.paperDeep)
                 }
+                let edges = live.edges[person.id] ?? []
+                if !edges.isEmpty {
+                    Section(header: PaperHeader(text: "What they want")) {
+                        ForEach(edges) { e in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(e.text).font(.system(size: 16)).foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
+                                if !e.act.isEmpty {
+                                    Label(e.act, systemImage: "lightbulb").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.accent)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                    .listRowBackground(Theme.paperDeep)
+                }
                 if let h = live.history[person.id], !h.encounters.isEmpty {
                     Section(header: PaperHeader(text: "Before tonight")) {
                         ForEach(h.encounters) { e in

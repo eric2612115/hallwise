@@ -165,6 +165,21 @@ final class LiveModel: ObservableObject {
         }
     }
 
+    /// What someone said not to the owner (an aside, a word to a colleague), translated, and what it shows they want:
+    /// "Said to herself, in French: 'with numbers'." The drafts act on it and never quote it. From `edge` events.
+    struct Edge: Identifiable, Equatable {
+        let id: String       // person key and the turns it rests on
+        let text: String
+        let act: String      // what a follow-up should do about it
+
+        init(_ d: [String: Any]) {
+            id = (d["person"] as? String ?? "") + "|" + (d["turns"] as? [Int] ?? []).map(String.init).joined(separator: ",")
+            text = d["text"] as? String ?? ""
+            act = d["act"] as? String ?? ""
+        }
+    }
+
+    @Published var edges: [String: [Edge]] = [:]        // by person key
     @Published var liveHooks: [String: [Hook]] = [:]    // by person key, from `hook` events
     @Published var reportHooks: [String: [Hook]] = [:]  // by person key, from the morning report
     var indexKeys: [String: String] = [:]               // person key -> people-index key, from person_history
@@ -406,7 +421,7 @@ final class LiveModel: ObservableObject {
         ownerSpeakers = []; lines = []; turnKind = [:]; turnStart = [:]; turnEnd = [:]
         suspects = []; moves = [:]; topics = []; translations = [:]; history = [:]; speakerFirstMs = [:]; photos = [:]
         personFixes = [:]
-        liveHooks = [:]; reportHooks = [:]; indexKeys = [:]; confirmed = []; disagreements = []
+        liveHooks = [:]; reportHooks = [:]; indexKeys = [:]; confirmed = []; disagreements = []; edges = [:]
         tMs = 0; lastSpeaker = nil; donePromises = []; dismissedNotices = []; calendarAdded = []
     }
 
@@ -609,6 +624,10 @@ final class LiveModel: ObservableObject {
             guard let key = e["person_key"] as? String, !key.isEmpty else { return }
             let hook = Hook(e)
             liveHooks[key] = (liveHooks[key] ?? []).filter { $0.title != hook.title } + [hook]
+        case "edge", "edge_removed":
+            guard let key = e["person"] as? String, !key.isEmpty else { return }
+            let edge = Edge(e)
+            edges[key] = (edges[key] ?? []).filter { $0.id != edge.id } + (e["type"] as? String == "edge" && !edge.text.isEmpty ? [edge] : [])
         case "next_move":
             guard let m = Move(e) else { return }
             let key = m.promiseKey

@@ -1,0 +1,170 @@
+{
+ "note": "The demo's connector result, fixed so nothing runs live at the shoot: made beforehand by server/hallwise/connector.py with the real models (Muse Spark for the introductions; Muse Spark over demo/rig/fictional-web.json for the look-ahead) from the four rehearsed evenings, with Ben's one added line at the founder dinner, and the v5 living-room rehearsal, where Kenji's call is an edge. Picked from three runs with the final prompts; all fourteen runs on this week since the checks settled proposed the same pair and the same event. Every person, company and page in it is invented.",
+ "recording": "20261029-025256-5826",
+ "event": "Living-room rehearsal",
+ "venue": "Taipei",
+ "day": "2026-10-28",
+ "generated_at": 1793216054.1404731,
+ "status": "ok",
+ "introductions": [
+  {
+   "title": "Small arm pilot for frame line",
+   "collaboration": "a pilot of Hoshizora's arm on Stride's Taoyuan frame line",
+   "why": "Ben is looking for a small arm to pilot in Taoyuan while Kenji builds compact arms with field robots in use.",
+   "ask_first": "ben-walker-stride-mobility",
+   "same_evening": false,
+   "people": [
+    {
+     "key": "kenji-watanabe-hoshizora-robotics",
+     "record_key": "kenji-watanabe-hoshizora-robotics",
+     "name": "Kenji Watanabe",
+     "company": "Hoshizora Robotics",
+     "role": "",
+     "met": [
+      "ETH Taipei afterparty (Oct 20)",
+      "Hardware meetup (Oct 22)",
+      "tonight"
+     ],
+     "tonight": true,
+     "wants": "Builds compact robot arms and grippers for small factories",
+     "quote": "あ、エリックさんが来た。前に話した名札の人。うん、うちのロボットの現場ログに使えるかもしれない。",
+     "aside": true,
+     "evidence": [
+      {
+       "id": "E38",
+       "recording": "20261029-025256-5826",
+       "event": "Living-room rehearsal",
+       "day": "Oct 29",
+       "turn": 19,
+       "tonight": true,
+       "quote": "あ、エリックさんが来た。前に話した名札の人。うん、うちのロボットの現場ログに使えるかもしれない。",
+       "english": "Oh, Eric has come. The badge person we talked about before. Yeah, it might be usable for our robot's field logs.",
+       "language": "Japanese",
+       "aside": true,
+       "edge": {
+        "text": "Said to himself, in Japanese, before meeting the owner: \"Ah, Eric's here. The badge person from before. Yes, could be usable for our robot's field logs.\" Wants to evaluate the badge for Hoshizora's robot field logs.",
+        "act": "In follow-up, frame the badge specifically around field-log use case and offer a pilot/demo for that."
+       }
+      }
+     ],
+     "public": [
+      {
+       "id": "R3",
+       "kind": "company",
+       "text": "Hoshizora Robotics designs and builds compact robot arms and grippers for small factories, in Tokyo.",
+       "source": "https://hoshizora-robotics.example/"
+      }
+     ]
+    },
+    {
+     "key": "ben-walker-stride-mobility",
+     "record_key": "",
+     "name": "Ben Walker",
+     "company": "Stride Mobility",
+     "role": "",
+     "met": [
+      "Founder dinner (Oct 24)"
+     ],
+     "tonight": false,
+     "wants": "Needs a small robot arm to pilot on his Taoyuan frame line",
+     "quote": "Before I forget, Eric: our frame line in Taoyuan is still all by hand. I'm looking for a small robot arm to pilot there.",
+     "aside": false,
+     "evidence": [
+      {
+       "id": "E29",
+       "recording": "20261027-032735-1e3d",
+       "event": "Founder dinner",
+       "day": "Oct 24",
+       "turn": 12,
+       "tonight": false,
+       "quote": "Before I forget, Eric: our frame line in Taoyuan is still all by hand. I'm looking for a small robot arm to pilot there.",
+       "english": "",
+       "language": "",
+       "aside": false
+      }
+     ],
+     "public": []
+    }
+   ],
+   "rank": 1
+  }
+ ],
+ "lookahead": {
+  "enabled": true,
+  "corpus": true,
+  "from": "2026-10-28",
+  "to": "2026-11-11",
+  "events": [
+   {
+    "title": "Nangang Hardware Meetup #19: The first robot on a small line",
+    "date": "2026-11-05",
+    "weekday": "Thu",
+    "time": "19:00",
+    "place": "Nangang, Taipei",
+    "url": "https://nangang-hardware.example/meetups/2026-11-05-first-robot",
+    "site": "nangang-hardware.example",
+    "page_title": "Nangang Hardware Meetup #19: The first robot on a small line (Thursday, November 5, 2026)",
+    "who": "Ben Walker",
+    "who_key": "ben-walker-stride-mobility",
+    "role": "speaks",
+    "why": "Hear Ben explain what his Taoyuan frame line needs in a robot arm and bring Kenji to show Hoshizora's arm for the pilot.",
+    "quote": "Before I forget, Eric: our frame line in Taoyuan is still all by hand. I'm looking for a small robot arm to pilot there.",
+    "for": [
+     {
+      "key": "ben-walker-stride-mobility",
+      "name": "Ben Walker",
+      "company": "Stride Mobility"
+     }
+    ],
+    "bring": [
+     {
+      "key": "kenji-watanabe-hoshizora-robotics",
+      "name": "Kenji Watanabe",
+      "company": "Hoshizora Robotics"
+     }
+    ],
+    "evidence": [
+     {
+      "id": "E29",
+      "recording": "20261027-032735-1e3d",
+      "event": "Founder dinner",
+      "day": "Oct 24",
+      "turn": 12,
+      "tonight": false,
+      "quote": "Before I forget, Eric: our frame line in Taoyuan is still all by hand. I'm looking for a small robot arm to pilot there.",
+      "english": "",
+      "language": "",
+      "aside": false
+     }
+    ]
+   }
+  ]
+ },
+ "dropped": {
+  "introductions": [],
+  "events": []
+ },
+ "notes": [],
+ "usage": {
+  "introductions": {
+   "calls": 1,
+   "prompt_tokens": 4145,
+   "completion_tokens": 4034,
+   "reasoning_tokens": 3663,
+   "seconds": 16.76
+  },
+  "lookahead": {
+   "calls": 1,
+   "input_tokens": 5023,
+   "output_tokens": 1282,
+   "total_tokens": 6305,
+   "searches": 0,
+   "results": 17,
+   "seconds": 4.96
+  },
+  "tokens": 14484,
+  "usd": 0.0341
+ },
+ "seconds": 21.76,
+ "model": "muse-spark-1.3"
+}
