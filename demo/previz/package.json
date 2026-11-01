@@ -1,0 +1,16 @@
+{
+  "name": "hallwise-previz",
+  "private": true,
+  "version": "0.1.0",
+  "description": "2.5D previz animatic of the Hallwise demo shoot, driven by shotlist.json.",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Previz out/previz.mp4 --codec h264 --concurrency 4"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.535",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "remotion": "4.0.535"
+  }
+}

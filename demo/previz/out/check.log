@@ -1,0 +1,37 @@
+== container
+codec_name=h264
+codec_type=video
+width=1920
+height=1080
+r_frame_rate=30/1
+codec_name=aac
+codec_type=audio
+sample_rate=48000
+channels=2
+r_frame_rate=0/0
+duration=180.011000
+== frames every 5 s
+      36
+== audio level per beat (mean dBFS; silence beats should be the quietest)
+   1    0.0-   6.5 cold     mean   -26.0 dB  max   -7.8 dB  After every mixer
+   2    6.5-  12.5 cold     mean   -28.2 dB  max   -8.0 dB  Out of the room
+   3   12.5-  35.8 hot      mean   -29.6 dB  max   -9.0 dB  The door: Leo
+   4   35.8-  39.1 hot      mean   -21.6 dB  max   -7.3 dB  To the sofa
+   5   39.1-  55.1 hot      mean   -30.2 dB  max   -8.6 dB  The French complaint
+   6   55.1-  58.1 SILENCE  mean   -26.1 dB  max   -7.8 dB  Silence. The whisper.
+   7   58.1-  62.0 hot      mean   -22.7 dB  max   -7.8 dB  Introduced
+   8   62.0-  75.7 hot      mean   -28.3 dB  max   -9.4 dB  Names, and the Chloé link
+   9   75.7- 101.7 hot      mean   -29.3 dB  max   -8.9 dB  Do you know Chloé? The call.
+  10  101.7- 106.0 hot      mean   -29.2 dB  max  -10.5 dB  Past the waiter: the buzz
+  11  106.0- 108.0 hot      mean   -29.7 dB  max   -7.6 dB  ...It does.
+  12  108.0- 116.0 SILENCE  mean   -91.0 dB  max  -76.3 dB  X-ray
+  13  116.0- 124.6 hot      mean   -28.2 dB  max   -5.1 dB  Kenji's call
+  14  124.6- 125.8 SILENCE  mean   -25.4 dB  max   -7.8 dB  ...Or Japanese.
+  15  125.8- 138.9 hot      mean   -28.6 dB  max   -7.3 dB  The table: Siddharth and Kenji
+  16  138.9- 143.1 hot      mean   -29.7 dB  max  -10.3 dB  The fumble
+  17  143.1- 149.5 hot      mean   -28.7 dB  max   -4.5 dB  Kenji
+  18  149.5- 161.7 hot      mean   -30.2 dB  max   -8.1 dB  Coffee: Thursday, no, Friday
+  19  161.7- 164.5 cold     mean   -42.6 dB  max  -25.3 dB  Stop
+  20  164.5- 169.5 cold     mean   -46.0 dB  max  -31.5 dB  The invite, on his sofa
+  21  169.5- 178.0 cold     mean   -36.8 dB  max  -11.1 dB  The connector
+  22  178.0- 180.0 cold     mean   -91.0 dB  max  -91.0 dB  End card

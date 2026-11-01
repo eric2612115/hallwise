@@ -1,0 +1,3119 @@
+{
+ "title": "Hallwise demo shoot · previz shot list",
+ "date": "2026-10-29",
+ "follows": [
+  "demo/DIRECTION.md (wins)",
+  "demo/SCRIPT.md: Cast, Room, Sound, Before the take",
+  "demo/rig/v4/CUES.md, LINES.md",
+  "scratchpad/script-draft-v1.md (hook #1, floor plan)"
+ ],
+ "fps": 30,
+ "duration": 180.0,
+ "durationInFrames": 5400,
+ "parts": [
+  {
+   "id": "setup",
+   "label": "Setup"
+  },
+  {
+   "id": "development",
+   "label": "Development"
+  },
+  {
+   "id": "turn",
+   "label": "Turn"
+  },
+  {
+   "id": "after-the-turn",
+   "label": "After the turn"
+  },
+  {
+   "id": "resolution",
+   "label": "Resolution"
+  }
+ ],
+ "plan": {
+  "units": "metres; x east, y south; z up",
+  "bounds": {
+   "x0": 0,
+   "y0": 0,
+   "x1": 11,
+   "y1": 8
+  },
+  "rooms": [
+   {
+    "id": "friend",
+    "label": "FRIEND'S ROOM",
+    "x0": 0,
+    "y0": 0,
+    "x1": 4,
+    "y1": 4,
+    "door": {
+     "wall": "east",
+     "from": 2.9,
+     "to": 3.7,
+     "label": "friend's door (A)"
+    }
+   },
+   {
+    "id": "eric",
+    "label": "ERIC'S ROOM",
+    "x0": 0,
+    "y0": 4,
+    "x1": 4,
+    "y1": 8,
+    "door": {
+     "wall": "east",
+     "from": 6.0,
+     "to": 6.8,
+     "label": "Eric's door"
+    }
+   },
+   {
+    "id": "living",
+    "label": "LIVING ROOM",
+    "x0": 4,
+    "y0": 0,
+    "x1": 11,
+    "y1": 8,
+    "door": null
+   }
+  ],
+  "objects": [
+   {
+    "id": "bed",
+    "label": "Bed",
+    "x0": 0.5,
+    "y0": 0.5,
+    "x1": 2.5,
+    "y1": 2.0,
+    "h": 0.5
+   },
+   {
+    "id": "ericSofa",
+    "label": "Eric's sofa",
+    "x0": 0.6,
+    "y0": 5.0,
+    "x1": 2.6,
+    "y1": 5.9,
+    "h": 0.45
+   },
+   {
+    "id": "sofa1",
+    "label": "Sofa 1 (B)",
+    "x0": 5.6,
+    "y0": 0.9,
+    "x1": 9.0,
+    "y1": 1.8,
+    "h": 0.45
+   },
+   {
+    "id": "table",
+    "label": "Dining table (C)",
+    "x0": 6.0,
+    "y0": 4.3,
+    "x1": 8.6,
+    "y1": 5.3,
+    "h": 0.75
+   },
+   {
+    "id": "sofa2",
+    "label": "Sofa 2 (D)",
+    "x0": 10.1,
+    "y0": 1.6,
+    "x1": 10.9,
+    "y1": 4.4,
+    "h": 0.45
+   }
+  ],
+  "devices": [
+   {
+    "id": "TV",
+    "label": "TV · hall bed (Mac-0, HDMI)",
+    "kind": "tv",
+    "x": 7.1,
+    "y": 0.12,
+    "z": 1.25,
+    "w": 3.0,
+    "plays": "the hall bed, looped, from [click 1] to Stop"
+   },
+   {
+    "id": "Mac-0",
+    "label": "Mac-0 · server · follow view",
+    "kind": "laptop",
+    "x": 9.4,
+    "y": 0.5,
+    "z": 0.5,
+    "plays": "nothing audible; runs the server, the dashboard and the rig controller"
+   },
+   {
+    "id": "Phone-L",
+    "label": "Phone-L · Leo",
+    "kind": "phone",
+    "x": 5.3,
+    "y": 3.8,
+    "z": 1.2,
+    "plays": "Leo Wong (Bright Path), chest height just outside the friend's door"
+   },
+   {
+    "id": "Mac-1",
+    "label": "Mac-1 · Margaux",
+    "kind": "laptop",
+    "x": 6.4,
+    "y": 1.3,
+    "z": 0.5,
+    "plays": "Margaux Lefèvre (Corvane Capital), sofa 1 near cushion"
+   },
+   {
+    "id": "Mac-2",
+    "label": "Mac-2 · Julien",
+    "kind": "laptop",
+    "x": 8.2,
+    "y": 1.3,
+    "z": 0.5,
+    "plays": "Julien Caron (Corvane Capital), sofa 1 far cushion"
+   },
+   {
+    "id": "Mac-3",
+    "label": "Mac-3 · waiter → Siddharth",
+    "kind": "laptop",
+    "x": 8.8,
+    "y": 4.8,
+    "z": 0.8,
+    "plays": "the waiter, then Siddharth Raghunathan (Quill Mesh), table east end"
+   },
+   {
+    "id": "iPhone-K",
+    "label": "iPhone-K · Kenji",
+    "kind": "phone",
+    "x": 10.5,
+    "y": 4.55,
+    "z": 1.2,
+    "plays": "Kenji Watanabe (Hoshizora Robotics), sofa 2 south armrest, head height"
+   }
+  ],
+  "marks": [
+   {
+    "n": 1,
+    "id": "bed",
+    "label": "bed",
+    "x": 1.5,
+    "y": 1.25,
+    "pose": "lie",
+    "face": 0
+   },
+   {
+    "n": 2,
+    "id": "bedEdge",
+    "label": "bed's edge",
+    "x": 1.5,
+    "y": 2.35,
+    "pose": "sit",
+    "face": 90
+   },
+   {
+    "n": 3,
+    "id": "doorInside",
+    "label": "inside the door",
+    "x": 3.4,
+    "y": 3.3,
+    "pose": "stand",
+    "face": 0
+   },
+   {
+    "n": 4,
+    "id": "A",
+    "label": "the door (A)",
+    "x": 4.7,
+    "y": 3.1,
+    "pose": "stand",
+    "face": 45
+   },
+   {
+    "n": 5,
+    "id": "B",
+    "label": "sofa 1, west end (B)",
+    "x": 5.0,
+    "y": 1.5,
+    "pose": "stand",
+    "face": 0
+   },
+   {
+    "n": 6,
+    "id": "C",
+    "label": "table, west end (C)",
+    "x": 5.5,
+    "y": 4.8,
+    "pose": "stand",
+    "face": 0
+   },
+   {
+    "n": 7,
+    "id": "ericDoor",
+    "label": "his door",
+    "x": 4.3,
+    "y": 6.4,
+    "pose": "stand",
+    "face": 180
+   },
+   {
+    "n": 8,
+    "id": "ericSofa",
+    "label": "his sofa",
+    "x": 1.6,
+    "y": 5.45,
+    "pose": "lie",
+    "face": 0
+   }
+  ],
+  "friendSpots": [
+   {
+    "id": "knock",
+    "label": "outside the friend's door",
+    "x": 4.5,
+    "y": 3.7,
+    "face": 180
+   },
+   {
+    "id": "byDoor",
+    "label": "beside the door, north of Eric",
+    "x": 4.6,
+    "y": 2.3,
+    "face": 135
+   },
+   {
+    "id": "sofaRight",
+    "label": "to Eric's right at the sofa, a step back",
+    "x": 5.3,
+    "y": 2.6,
+    "face": 315
+   }
+  ],
+  "cameraSpots": [
+   {
+    "id": "K1",
+    "label": "K1 · top-down over the bed",
+    "x": 2.9,
+    "y": 1.25,
+    "look": {
+     "x": 1.5,
+     "y": 1.25
+    },
+    "topDown": true
+   },
+   {
+    "id": "K2",
+    "label": "K2 · eye level, at the bed's edge",
+    "x": 1.5,
+    "y": 3.6,
+    "look": {
+     "x": 1.5,
+     "y": 2.35
+    }
+   },
+   {
+    "id": "K2b",
+    "label": "K2 · over his shoulder at the door",
+    "x": 2.6,
+    "y": 3.0,
+    "look": {
+     "x": 4.4,
+     "y": 3.3
+    }
+   },
+   {
+    "id": "K3",
+    "label": "K3 · 2 m south-east of the door (A)",
+    "x": 6.3,
+    "y": 3.7,
+    "look": {
+     "x": 4.7,
+     "y": 3.1
+    }
+   },
+   {
+    "id": "K4",
+    "label": "K4 · a step south of sofa 1's east end",
+    "x": 9.3,
+    "y": 2.5,
+    "look": {
+     "x": 5.0,
+     "y": 1.5
+    }
+   },
+   {
+    "id": "K5",
+    "label": "K5 · beside Mac-3, the table's east end",
+    "x": 9.4,
+    "y": 4.2,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    }
+   },
+   {
+    "id": "K6",
+    "label": "K6 · inside Eric's room, facing his door",
+    "x": 3.0,
+    "y": 6.4,
+    "look": {
+     "x": 4.3,
+     "y": 6.4
+    }
+   },
+   {
+    "id": "K7",
+    "label": "K7 · top-down over Eric's sofa (K1's framing)",
+    "x": 1.6,
+    "y": 6.6,
+    "look": {
+     "x": 1.6,
+     "y": 5.45
+    },
+    "topDown": true
+   }
+  ]
+ },
+ "beats": [
+  {
+   "id": 1,
+   "key": "bed",
+   "name": "After every mixer",
+   "part": "setup",
+   "temp": "cold",
+   "duration": 6.5,
+   "eric": {
+    "mark": "1 · bed",
+    "markId": "bed",
+    "face": "E",
+    "pose": "lie",
+    "action": "On his back on the friend's bed, dressed for the party, the empty badge mount on his lanyard; both hands hold the phone over his face. He types into the blank reply, the grip slackens, the phone drops on the pillow beside his cheek."
+   },
+   "friend": {
+    "spot": "outside the friend's door",
+    "spotId": "knock",
+    "face": "W",
+    "action": "Off camera, outside the friend's door; knocks at +4.9 s."
+   },
+   "camera": {
+    "spot": "K1 · top-down over the bed",
+    "spotId": "K1",
+    "framing": "Locked top-down over the bed (gimbal held overhead, or on an arm). Pillow to waist, the phone at centre; its glow the only light.",
+    "lookAt": "Eric's face and the phone"
+   },
+   "lines": [
+    {
+     "at": 1.6,
+     "end": 3.26,
+     "who": "Eric",
+     "device": "live",
+     "text": "Great to meet you at... at...",
+     "lang": "en",
+     "audio": "say/eric-bed-1.wav",
+     "note": "muttered while typing",
+     "t": 1.6,
+     "tEnd": 3.26
+    },
+    {
+     "at": 3.6,
+     "end": 4.39,
+     "who": "Eric",
+     "device": "live",
+     "text": "...Yeah.",
+     "lang": "en",
+     "audio": "say/eric-bed-2.wav",
+     "note": "muffled, the phone on his face",
+     "t": 3.6,
+     "tEnd": 4.39
+    },
+    {
+     "at": 4.9,
+     "end": 6.38,
+     "who": "Friend",
+     "device": "live",
+     "text": "Eric! People are here.",
+     "lang": "en",
+     "audio": "say/friend-knock.wav",
+     "note": "through the door",
+     "t": 4.9,
+     "tEnd": 6.38
+    }
+   ],
+   "plays": [],
+   "bed": false,
+   "post": [
+    "Insert (the 17 Pro's screen): the blank reply 'Hi ___, great to meet you at ___! As promised, here's the ___'; he types K and deletes it",
+    "Card: After every mixer.",
+    "Sound: keyboard taps, the thud, then the party faint through the door"
+   ],
+   "proves": "The failure is after the room: who, where, what you promised.",
+   "start": 0.0,
+   "end": 6.5
+  },
+  {
+   "id": 2,
+   "key": "out",
+   "name": "Out of the room",
+   "part": "setup",
+   "temp": "cold",
+   "hot_at": 4.8,
+   "duration": 6.0,
+   "extra_kf": [
+    {
+     "at": 0.3,
+     "mark": "bed",
+     "move": false
+    },
+    {
+     "at": 1.3,
+     "mark": "bedEdge",
+     "move": true
+    }
+   ],
+   "eric": {
+    "mark": "2 → 3 · bed's edge → inside the door",
+    "markId": "bedEdge",
+    "toMarkId": "doorInside",
+    "t0": 2.2,
+    "t1": 4.6,
+    "face": "E",
+    "pose": "stand",
+    "action": "Sits up on the bed's edge, opens Hallwise and taps Start, clips the phone on his chest (screen out), walks to the door and opens it. The presenter in the same hand gives [click 1]; the hall bed hits. He holds at the threshold while the operator slips past (the edit cuts the wait)."
+   },
+   "friend": {
+    "spot": "outside the friend's door → beside the door, north of Eric",
+    "spotId": "knock",
+    "toSpotId": "byDoor",
+    "t0": 0.0,
+    "t1": 2.0,
+    "face": "SW",
+    "action": "Steps back from the door to his spot beside it."
+   },
+   "camera": {
+    "spot": "K2 → K2b: K2 · over his shoulder at the door",
+    "spotId": "K2",
+    "toSpotId": "K2b",
+    "t0": 2.2,
+    "t1": 4.6,
+    "framing": "Eye level on Eric at the bed's edge, then over his shoulder as the door opens on the living room: the TV, the two Macs on the sofa, the table.",
+    "lookAt": "Eric, then the open door"
+   },
+   "lines": [
+    {
+     "at": 0.5,
+     "end": 3.83,
+     "who": "Eric",
+     "device": "live",
+     "text": "So tonight, I wear this. I don't type a thing.",
+     "lang": "en",
+     "audio": "say/eric-wear.wav",
+     "note": "to camera, clipping the phone on",
+     "t": 7.0,
+     "tEnd": 10.33
+    }
+   ],
+   "plays": [
+    {
+     "device": "TV",
+     "file": "tv-hall-bed.wav",
+     "at": 4.8,
+     "length": 0.0,
+     "end": 4.8,
+     "source": "rig/tv-hall-bed.wav",
+     "note": "[click 1]: the TV unmutes as the door opens; the hall bed loops until Stop",
+     "t": 11.3,
+     "tEnd": 11.3
+    }
+   ],
+   "events": [
+    {
+     "at": 4.8,
+     "kind": "click",
+     "label": "[click 1] · TV hall bed on",
+     "device": "TV",
+     "t": 11.3
+    }
+   ],
+   "bed": false,
+   "post": [
+    "Insert, 1 s: the side button, the lock screen, the name card 'Eric · Hallwise'",
+    "Title over the open door: Hallwise · a name badge that remembers the room",
+    "Sound: the room hits as the door swings"
+   ],
+   "proves": "One phone, worn, nothing typed. Cold to hot in one cut.",
+   "start": 6.5,
+   "end": 12.5
+  },
+  {
+   "id": 3,
+   "key": "door",
+   "name": "The door: Leo",
+   "part": "development",
+   "temp": "hot",
+   "duration": 23.3,
+   "eric": {
+    "mark": "4 · the door (A)",
+    "markId": "A",
+    "face": "SE",
+    "pose": "stand",
+    "action": "Just outside the friend's door, facing south-east toward Phone-L at chest height (Leo's portrait on its screen); the TV behind his left shoulder. Presenter in hand."
+   },
+   "friend": {
+    "spot": "beside the door, north of Eric",
+    "spotId": "byDoor",
+    "face": "SW",
+    "action": "Beside the door, a step north of Eric, out of Phone-L's line; says nothing yet."
+   },
+   "camera": {
+    "spot": "K3 · 2 m south-east of the door (A)",
+    "spotId": "K3",
+    "framing": "Medium on Eric, Phone-L in the foreground.",
+    "lookAt": "Eric and Phone-L"
+   },
+   "lines": [
+    {
+     "at": 0.15,
+     "end": 10.92,
+     "who": "Leo",
+     "device": "Phone-L",
+     "text": "Eric! Hey, hey, you made it! Okay, okay. For your badge, yeah? Leo Wong. Bright Path. We do, uh... wallet infrastructure. For apps.",
+     "lang": "en",
+     "t": 12.65,
+     "tEnd": 23.42
+    },
+    {
+     "at": 11.67,
+     "end": 17.81,
+     "who": "Eric",
+     "device": "live",
+     "text": "Leo! Good to see you. I'm Eric, from Hallwise. This badge. I'll send you our deck tonight.",
+     "lang": "en",
+     "audio": "eric-03.wav",
+     "t": 24.17,
+     "tEnd": 30.31
+    },
+    {
+     "at": 18.31,
+     "end": 22.92,
+     "who": "Leo",
+     "device": "Phone-L",
+     "text": "Tonight? Okay, okay. I'm holding you to that, ah.",
+     "lang": "en",
+     "t": 30.81,
+     "tEnd": 35.42
+    }
+   ],
+   "plays": [
+    {
+     "device": "Phone-L",
+     "file": "phoneL-leo-01.wav",
+     "at": 0.0,
+     "length": 11.27,
+     "end": 11.27,
+     "source": "rehearsal-v5/cues/leo-01@alan",
+     "note": "[click 2]",
+     "t": 12.5,
+     "tEnd": 23.77
+    },
+    {
+     "device": "Phone-L",
+     "file": "phoneL-leo-02.wav",
+     "at": 18.16,
+     "length": 5.11,
+     "end": 23.27,
+     "source": "rehearsal-v5/cues/leo-02@alan",
+     "note": "[click 3]",
+     "t": 30.66,
+     "tEnd": 35.77
+    }
+   ],
+   "events": [
+    {
+     "at": 0.0,
+     "kind": "click",
+     "label": "[click 2]",
+     "device": "Phone-L",
+     "t": 12.5
+    },
+    {
+     "at": 18.16,
+     "kind": "click",
+     "label": "[click 3]",
+     "device": "Phone-L",
+     "t": 30.66
+    }
+   ],
+   "bed": true,
+   "post": [
+    "Disclosure card, first 5 s: AI guests: voices by ElevenLabs, faces by Muse Image, their web pages invented. My friend and I are real.",
+    "Panel: a grey dot → Leo Wong · Bright Path; promise: deck · tonight",
+    "Caption: Muse Voice Transcribe · Muse Spark · a name and company from his own introduction"
+   ],
+   "proves": "A person from what he said; a promise with a deadline (the deck he will owe).",
+   "start": 12.5,
+   "end": 35.8
+  },
+  {
+   "id": 4,
+   "key": "walk-sofa",
+   "name": "To the sofa",
+   "part": "development",
+   "temp": "hot",
+   "duration": 3.3,
+   "eric": {
+    "mark": "4 → 5 · the door (A) → sofa 1, west end (B)",
+    "markId": "A",
+    "toMarkId": "B",
+    "t0": 0.3,
+    "t1": 3.1,
+    "face": "E",
+    "pose": "stand",
+    "action": "Follows the friend north-east to the west end of sofa 1; turns to face east along it."
+   },
+   "friend": {
+    "spot": "beside the door, north of Eric → to Eric's right at the sofa, a step back",
+    "spotId": "byDoor",
+    "toSpotId": "sofaRight",
+    "t0": 0.0,
+    "t1": 3.0,
+    "face": "NE",
+    "action": "Leads, saying the line; stops to Eric's right, a step back from the Macs. The line ends before [click 4]."
+   },
+   "camera": {
+    "spot": "K3 → K4: K4 · a step south of sofa 1's east end",
+    "spotId": "K3",
+    "toSpotId": "K4",
+    "t0": 0.0,
+    "t1": 3.3,
+    "framing": "Walks backwards along sofa 1's south side, keeping Eric in a medium shot.",
+    "lookAt": "Eric"
+   },
+   "lines": [
+    {
+     "at": 0.0,
+     "end": 3.04,
+     "who": "Friend",
+     "device": "live",
+     "text": "Eric, come. You should meet Margaux and Julien.",
+     "lang": "en",
+     "audio": "say/friend-come.wav",
+     "t": 35.8,
+     "tEnd": 38.84
+    }
+   ],
+   "plays": [],
+   "bed": true,
+   "post": [
+    "The edit keeps only the tail of the friend's line under the cut to the sofa"
+   ],
+   "proves": "",
+   "start": 35.8,
+   "end": 39.1
+  },
+  {
+   "id": 5,
+   "key": "french",
+   "name": "The French complaint",
+   "part": "development",
+   "temp": "hot",
+   "duration": 16.0,
+   "eric": {
+    "mark": "5 · sofa 1, west end (B)",
+    "markId": "B",
+    "face": "E",
+    "pose": "stand",
+    "action": "West end of sofa 1, facing east along it: Mac-1 is the near cushion, the TV on his left. Not yet introduced: polite, glancing round; at the French, a lost half-smile toward the lens. He says nothing."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "To Eric's right, a step back from the Macs."
+   },
+   "camera": {
+    "spot": "K4 · a step south of sofa 1's east end",
+    "spotId": "K4",
+    "framing": "Medium on Eric, both Macs' faces in the foreground; a slow push in during the French.",
+    "lookAt": "Eric, Mac-1 and Mac-2"
+   },
+   "lines": [
+    {
+     "at": 0.22,
+     "end": 5.08,
+     "who": "Margaux",
+     "device": "Mac-1",
+     "text": "Franchement, le pitch d'hier... j'ai rien compris à leur modèle.",
+     "lang": "fr",
+     "english": "Honestly, yesterday's pitch... I understood nothing of their model.",
+     "t": 39.32,
+     "tEnd": 44.18
+    },
+    {
+     "at": 5.45,
+     "end": 8.39,
+     "who": "Julien",
+     "device": "Mac-2",
+     "text": "Vingt slides. Et pas un seul chiffre.",
+     "lang": "fr",
+     "english": "Twenty slides. And not a single number.",
+     "t": 44.55,
+     "tEnd": 47.49
+    },
+    {
+     "at": 8.39,
+     "end": 13.46,
+     "who": "Margaux",
+     "device": "Mac-1",
+     "text": "Vingt slides ! Moi, je veux une page. Une page, avec des chiffres. C'est tout.",
+     "lang": "fr",
+     "english": "Twenty slides! Me, I want one page. One page, with numbers. That's all.",
+     "t": 47.49,
+     "tEnd": 52.56
+    },
+    {
+     "at": 13.75,
+     "end": 15.43,
+     "who": "Julien",
+     "device": "Mac-2",
+     "text": "Mm. Exactement.",
+     "lang": "fr",
+     "english": "Mm. Exactly.",
+     "t": 52.85,
+     "tEnd": 54.53
+    }
+   ],
+   "plays": [
+    {
+     "device": "Mac-1",
+     "file": "mac1-margaux-01.wav",
+     "at": 0.0,
+     "length": 15.99,
+     "end": 15.99,
+     "source": "rehearsal-v5/cues/sofa-chat@fr1 (pair)",
+     "note": "[click 4], pair: one click starts both files",
+     "t": 39.1,
+     "tEnd": 55.09
+    },
+    {
+     "device": "Mac-2",
+     "file": "mac2-julien-01.wav",
+     "at": 0.0,
+     "length": 15.99,
+     "end": 15.99,
+     "source": "rehearsal-v5/cues/sofa-chat@fr1 (pair)",
+     "note": "[click 4], pair",
+     "t": 39.1,
+     "tEnd": 55.09
+    }
+   ],
+   "events": [
+    {
+     "at": 0.0,
+     "kind": "click",
+     "label": "[click 4] · pair",
+     "device": "Mac-1",
+     "t": 39.1
+    }
+   ],
+   "bed": true,
+   "post": [
+    "Panel: two grey dots light in turn; the lines carry nobody's name",
+    "Subtitles: the French, with the English under it, tagged translated",
+    "Caption: Muse Voice Transcribe · two voices, apart before anyone has a name"
+   ],
+   "proves": "It catches what he can't: a complaint in French, before anyone has a name.",
+   "start": 39.1,
+   "end": 55.1
+  },
+  {
+   "id": 6,
+   "key": "whisper",
+   "name": "Silence. The whisper.",
+   "part": "development",
+   "temp": "cold",
+   "silence": true,
+   "duration": 3.0,
+   "eric": {
+    "mark": "5 · sofa 1, west end (B)",
+    "markId": "B",
+    "face": "SE",
+    "pose": "stand",
+    "action": "Turns to the lens (K4, east-south-east of him), a whisper gesture. Delivered in the gap after the exchange ends and before the friend introduces him; the edit makes it a stop in the middle of the conversation."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Freezes like a statue, for the laugh."
+   },
+   "camera": {
+    "spot": "K4 · a step south of sofa 1's east end",
+    "spotId": "K4",
+    "framing": "Holds the push-in: Eric fills the frame, the frozen friend behind him.",
+    "lookAt": "Eric, to the lens"
+   },
+   "lines": [
+    {
+     "at": 0.3,
+     "end": 2.84,
+     "who": "Eric",
+     "device": "live",
+     "text": "I don't speak any French. At all.",
+     "lang": "en",
+     "audio": "say/eric-whisper.wav",
+     "note": "whispered, to camera",
+     "t": 55.4,
+     "tEnd": 57.94
+    }
+   ],
+   "plays": [],
+   "bed": true,
+   "post": [
+    "Hard cut to near silence: only the whisper stays (the badge's recording through the voice isolator, or a clean pickup). No rig change: the hall bed keeps playing in the room",
+    "The last French subtitle and its English stay on screen",
+    "Backup: shoot a pickup of the aside on the same mark right after the take"
+   ],
+   "proves": "The gag: he heard none of it. The badge did.",
+   "start": 55.1,
+   "end": 58.1
+  },
+  {
+   "id": 7,
+   "key": "introduced",
+   "name": "Introduced",
+   "part": "development",
+   "temp": "hot",
+   "duration": 3.9,
+   "eric": {
+    "mark": "5 · sofa 1, west end (B)",
+    "markId": "B",
+    "face": "E",
+    "pose": "stand",
+    "action": "Turns back to the sofa. His 'Hi. Eric, from Hallwise. May I join you?' is still said in the take; the film cuts it."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Unfreezes and introduces him, from Eric's right, a step back from the Macs (two voices from one spot would merge)."
+   },
+   "camera": {
+    "spot": "K4 · a step south of sofa 1's east end",
+    "spotId": "K4",
+    "framing": "Widens a touch to take in the friend.",
+    "lookAt": "Eric and the friend"
+   },
+   "lines": [
+    {
+     "at": 0.1,
+     "end": 3.58,
+     "who": "Friend",
+     "device": "live",
+     "text": "Margaux, Julien, this is Eric. He makes the badge.",
+     "lang": "en",
+     "audio": "say/friend-intro.wav",
+     "t": 58.2,
+     "tEnd": 61.68
+    }
+   ],
+   "plays": [],
+   "bed": true,
+   "post": [
+    "Sound: the party crashes back in on the cut",
+    "CUT from the film, kept in the take: ERIC 'Hi. Eric, from Hallwise. May I join you?' (3.1 s)"
+   ],
+   "proves": "",
+   "start": 58.1,
+   "end": 62.0
+  },
+  {
+   "id": 8,
+   "key": "names",
+   "name": "Names, and the Chloé link",
+   "part": "development",
+   "temp": "hot",
+   "duration": 13.7,
+   "eric": {
+    "mark": "5 · sofa 1, west end (B)",
+    "markId": "B",
+    "face": "E",
+    "pose": "stand",
+    "action": "Listens. About a second after Margaux says her name the badge buzzes on his chest (live); he glances down, holds while Julien speaks."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays."
+   },
+   "camera": {
+    "spot": "K4 · a step south of sofa 1's east end",
+    "spotId": "K4",
+    "framing": "Medium; a tilt down to the badge on the buzz and back up.",
+    "lookAt": "Eric, the badge on the buzz"
+   },
+   "lines": [
+    {
+     "at": 0.22,
+     "end": 5.24,
+     "who": "Margaux",
+     "device": "Mac-1",
+     "text": "Oh, of course! Margaux. Margaux Lefèvre, Corvane Capital.",
+     "lang": "en",
+     "t": 62.22,
+     "tEnd": 67.24
+    },
+    {
+     "at": 6.84,
+     "end": 13.12,
+     "who": "Julien",
+     "device": "Mac-2",
+     "text": "And I am Julien. Julien Caron, also Corvane. I do the, euh... the diligence.",
+     "lang": "en",
+     "t": 68.84,
+     "tEnd": 75.12
+    }
+   ],
+   "plays": [
+    {
+     "device": "Mac-1",
+     "file": "mac1-margaux-02.wav",
+     "at": 0.0,
+     "length": 13.66,
+     "end": 13.66,
+     "source": "rehearsal-v5/cues/sofa-intros@lison (pair)",
+     "note": "[click 5], pair",
+     "t": 62.0,
+     "tEnd": 75.66
+    },
+    {
+     "device": "Mac-2",
+     "file": "mac2-julien-02.wav",
+     "at": 0.0,
+     "length": 13.66,
+     "end": 13.66,
+     "source": "rehearsal-v5/cues/sofa-intros@lison (pair)",
+     "note": "[click 5], pair",
+     "t": 62.0,
+     "tEnd": 75.66
+    }
+   ],
+   "events": [
+    {
+     "at": 0.0,
+     "kind": "click",
+     "label": "[click 5] · pair",
+     "device": "Mac-1",
+     "t": 62.0
+    },
+    {
+     "at": 6.3,
+     "kind": "buzz",
+     "label": "LIVE · She may be Chloé's colleague · Blockchain Week, Oct 23",
+     "device": "badge",
+     "t": 68.3
+    }
+   ],
+   "bed": true,
+   "post": [
+    "Notification pop, from the live event log: She may be Chloé's colleague · Blockchain Week, Oct 23",
+    "Panel: the two grey dots become Margaux and Julien, the same two voices as before",
+    "Captions: Muse Spark · names from the introduction; Muse Spark · links Margaux to Chloé (Oct 23)"
+   ],
+   "proves": "Names from the introduction, joined to another evening, about a second after she says her name. Eric called this one very important.",
+   "start": 62.0,
+   "end": 75.7
+  },
+  {
+   "id": 9,
+   "key": "chloe",
+   "name": "Do you know Chloé? The call.",
+   "part": "development",
+   "temp": "hot",
+   "duration": 26.0,
+   "eric": {
+    "mark": "5 · sofa 1, west end (B)",
+    "markId": "B",
+    "face": "E",
+    "pose": "stand",
+    "action": "Asks straight away, to Margaux (Mac-1). Four exchanges, then a 1.5 s pause before 'Margaux, are you investing this quarter?' (cut from the film). In the take the exchange runs about 81.8 to 108.0 s."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays."
+   },
+   "camera": {
+    "spot": "K4 · a step south of sofa 1's east end",
+    "spotId": "K4",
+    "framing": "Medium on Eric and Mac-1; a touch closer on 'Small world'.",
+    "lookAt": "Eric and Mac-1"
+   },
+   "lines": [
+    {
+     "at": 0.0,
+     "end": 3.83,
+     "who": "Eric",
+     "device": "live",
+     "text": "Margaux... do you know Chloé? Chloé Martin?",
+     "lang": "en",
+     "audio": "standin-eric-chloe-1.wav",
+     "t": 75.7,
+     "tEnd": 79.53
+    },
+    {
+     "at": 4.34,
+     "end": 9.52,
+     "who": "Margaux",
+     "device": "Mac-1",
+     "text": "Chloé? Of course! She's my colleague. How do you two know each other?",
+     "lang": "en",
+     "t": 80.04,
+     "tEnd": 85.22
+    },
+    {
+     "at": 10.42,
+     "end": 15.45,
+     "who": "Eric",
+     "device": "live",
+     "text": "We met at Blockchain Week, last Friday. She said you'd want to see what I'm building.",
+     "lang": "en",
+     "audio": "standin-eric-chloe-2.wav",
+     "t": 86.12,
+     "tEnd": 91.15
+    },
+    {
+     "at": 15.92,
+     "end": 21.06,
+     "who": "Margaux",
+     "device": "Mac-1",
+     "text": "Small world. Then let's do a call next week, the three of us. With Chloé.",
+     "lang": "en",
+     "t": 91.62,
+     "tEnd": 96.76
+    },
+    {
+     "at": 21.96,
+     "end": 24.43,
+     "who": "Eric",
+     "device": "live",
+     "text": "Perfect. I'll send an invite.",
+     "lang": "en",
+     "audio": "standin-eric-chloe-3.wav",
+     "note": "then a 1.5 s pause",
+     "t": 97.66,
+     "tEnd": 100.13
+    }
+   ],
+   "plays": [
+    {
+     "device": "Mac-1",
+     "file": "mac1-margaux-02a.wav",
+     "at": 4.13,
+     "length": 5.99,
+     "end": 10.12,
+     "source": "rehearsal-v5/rig-v5 (CUES-additions, cue 5b)",
+     "note": "[click 5b]",
+     "t": 79.83,
+     "tEnd": 85.82
+    },
+    {
+     "device": "Mac-1",
+     "file": "mac1-margaux-02b.wav",
+     "at": 15.75,
+     "length": 5.91,
+     "end": 21.66,
+     "source": "rehearsal-v5/rig-v5 (CUES-additions, cue 5c)",
+     "note": "[click 5c]",
+     "t": 91.45,
+     "tEnd": 97.36
+    }
+   ],
+   "events": [
+    {
+     "at": 4.13,
+     "kind": "click",
+     "label": "[click 5b]",
+     "device": "Mac-1",
+     "t": 79.83
+    },
+    {
+     "at": 15.75,
+     "kind": "click",
+     "label": "[click 5c]",
+     "device": "Mac-1",
+     "t": 91.45
+    }
+   ],
+   "bed": true,
+   "post": [
+    "Panel: Margaux's row: Chloé's colleague · Corvane Capital; promise: a call next week, the three of us",
+    "Caption: Muse Spark · a promise with a person attached (Chloé Martin)",
+    "CUT from the film, kept in the take as a safety after the pause: ERIC 'Margaux, are you investing this quarter?' + Mac-1 mac1-margaux-03.wav (the English one-pager ask, 10.95 s) + ERIC 'One page, with numbers. Tomorrow.' (16.6 s)"
+   ],
+   "proves": "He acts on the link in the room, not the next morning: a call with Chloé, promised live. Paid off by the calendar invite on his sofa.",
+   "choices": [
+    "The English one-pager ask (margaux-03) is cut from the film to pay for this exchange; it stays in the take after the pause so the morning draft keeps the explicit ask. Alternative: keep it and cut Leo's second line plus Eric's greeting to Leo."
+   ],
+   "start": 75.7,
+   "end": 101.7
+  },
+  {
+   "id": 10,
+   "key": "waiter",
+   "name": "Past the waiter: the buzz",
+   "part": "turn",
+   "temp": "hot",
+   "duration": 4.3,
+   "eric": {
+    "mark": "5 → 6 · sofa 1, west end (B) → table, west end (C)",
+    "markId": "B",
+    "toMarkId": "C",
+    "t0": 0.2,
+    "t1": 4.0,
+    "face": "E",
+    "pose": "stand",
+    "action": "Walks south past the table's west end; the waiter's line comes from Mac-3. At +3.0 the phone buzzes on his chest; he unclips it and looks while he walks: his deck is already one page, numbers first."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays at the sofa."
+   },
+   "camera": {
+    "spot": "K4 → K5: K5 · beside Mac-3, the table's east end",
+    "spotId": "K4",
+    "toSpotId": "K5",
+    "t0": 0.0,
+    "t1": 4.3,
+    "framing": "Backs south to K5 beside Mac-3, holding Eric and the phone in his hand.",
+    "lookAt": "Eric and the phone"
+   },
+   "lines": [
+    {
+     "at": 0.45,
+     "end": 2.35,
+     "who": "Waiter",
+     "device": "Mac-3",
+     "text": "Hi! Something to drink?",
+     "lang": "en",
+     "t": 102.15,
+     "tEnd": 104.05
+    },
+    {
+     "at": 2.7,
+     "end": 4.09,
+     "who": "Eric",
+     "device": "live",
+     "text": "I'm good, thanks.",
+     "lang": "en",
+     "audio": "eric-08.wav",
+     "note": "walking",
+     "t": 104.4,
+     "tEnd": 105.79
+    }
+   ],
+   "plays": [
+    {
+     "device": "Mac-3",
+     "file": "mac3-01-waiter.wav",
+     "at": 0.3,
+     "length": 2.31,
+     "end": 2.61,
+     "source": "rig/v4",
+     "note": "Mac-3 waiter key; Mac-3 then stays silent at least 3 s",
+     "t": 102.0,
+     "tEnd": 104.31
+    }
+   ],
+   "events": [
+    {
+     "at": 3.0,
+     "kind": "buzz",
+     "label": "the one-pager, made beforehand from the rehearsal recording, shown on cue",
+     "device": "badge",
+     "t": 104.7
+    }
+   ],
+   "bed": true,
+   "post": [
+    "Deck morph while he walks: the real 7 slides (demo/deck/render/slide-1..7.png) pressed into the real one-pager (onepager.png)",
+    "Under it [CHOICE: placement]: Julien Caron · unverified: no public page ties him to Corvane · confirm before you send the deck",
+    "The waiter's line stays in the take so Siddharth's label stays clean; the film keeps it as texture"
+   ],
+   "proves": "The complaint he could not understand has already rebuilt his deck. The buzz lands about 50 s after the French ends.",
+   "choices": [
+    "Where the Julien-unverified flag appears: under the one-pager here (default), or in the connector card on his sofa."
+   ],
+   "start": 101.7,
+   "end": 106.0
+  },
+  {
+   "id": 11,
+   "key": "itdoes",
+   "name": "...It does.",
+   "part": "turn",
+   "temp": "hot",
+   "duration": 2.0,
+   "eric": {
+    "mark": "6 · table, west end (C)",
+    "markId": "C",
+    "face": "E",
+    "pose": "stand",
+    "action": "At the table's west end; looks up from the one-pager to the lens."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays."
+   },
+   "camera": {
+    "spot": "K5 · beside Mac-3, the table's east end",
+    "spotId": "K5",
+    "framing": "Close on Eric, the phone's screen in the bottom of frame.",
+    "lookAt": "Eric, to the lens"
+   },
+   "lines": [
+    {
+     "at": 0.3,
+     "end": 1.21,
+     "who": "Eric",
+     "device": "live",
+     "text": "...It does.",
+     "lang": "en",
+     "audio": "say/eric-itdoes.wav",
+     "note": "to camera",
+     "t": 106.3,
+     "tEnd": 107.21
+    }
+   ],
+   "plays": [],
+   "bed": true,
+   "post": [
+    "Insert: the one-pager holds on screen"
+   ],
+   "proves": "The turn: the film is about everything after the conversation.",
+   "start": 106.0,
+   "end": 108.0
+  },
+  {
+   "id": 12,
+   "key": "xray",
+   "name": "X-ray",
+   "part": "turn",
+   "temp": "cold",
+   "silence": true,
+   "xray": true,
+   "duration": 8.0,
+   "eric": {
+    "mark": "6 · table, west end (C)",
+    "markId": "C",
+    "face": "E",
+    "pose": "stand",
+    "action": "Frozen (post). Nothing happens on set; the take runs on."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Frozen (post)."
+   },
+   "camera": {
+    "spot": "K5 · beside Mac-3, the table's east end",
+    "spotId": "K5",
+    "framing": "Freeze-frame of the last shot.",
+    "lookAt": "the frozen frame"
+   },
+   "lines": [],
+   "plays": [],
+   "bed": true,
+   "xraySteps": [
+    "the four channels",
+    "the voices around him",
+    "Voice Transcribe hears French",
+    "the edge finder catches it",
+    "the check passes",
+    "Spark rebuilds the deck",
+    "the number check",
+    "the buzz"
+   ],
+   "post": [
+    "Freeze-frame added in post (apps/replay X-ray mode): the film rewinds into the French complaint going through the machinery, 1 s a step",
+    "Sound: the room drops out; a quiet machine pulse; then the room comes back"
+   ],
+   "proves": "How: the French went through the machinery.",
+   "start": 108.0,
+   "end": 116.0
+  },
+  {
+   "id": 13,
+   "key": "call",
+   "name": "Kenji's call",
+   "part": "after-the-turn",
+   "temp": "hot",
+   "duration": 8.6,
+   "eric": {
+    "mark": "6 · table, west end (C)",
+    "markId": "C",
+    "face": "E",
+    "pose": "stand",
+    "action": "At the table's west end, facing east toward Mac-3. A phone call in Japanese from sofa 2, behind his right shoulder; he half turns."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays."
+   },
+   "camera": {
+    "spot": "K5 · beside Mac-3, the table's east end",
+    "spotId": "K5",
+    "framing": "Medium on Eric; iPhone-K at the right edge of frame.",
+    "lookAt": "Eric and iPhone-K"
+   },
+   "lines": [
+    {
+     "at": 0.19,
+     "end": 7.87,
+     "who": "Kenji",
+     "device": "iPhone-K",
+     "text": "あ、エリックさんが来た。前に話した、名札の人。…うん、うちのロボットの現場ログに使えるかもしれない。",
+     "lang": "ja",
+     "english": "Oh, Eric's here. The one I told you about, the name-badge guy. ...Yeah, it might work for our robots' field logs.",
+     "t": 116.19,
+     "tEnd": 123.87
+    }
+   ],
+   "plays": [
+    {
+     "device": "iPhone-K",
+     "file": "iphoneK-kenji-00.wav",
+     "at": 0.0,
+     "length": 8.55,
+     "end": 8.55,
+     "source": "rehearsal-v5/cues/kenji-call@taro",
+     "note": "[click 7], new in v5: Kenji on the phone, before Siddharth",
+     "t": 116.0,
+     "tEnd": 124.55
+    }
+   ],
+   "events": [
+    {
+     "at": 0.0,
+     "kind": "click",
+     "label": "[click 7]",
+     "device": "iPhone-K",
+     "t": 116.0
+    }
+   ],
+   "bed": true,
+   "post": [
+    "Subtitles: the Japanese, with the English under it, tagged translated",
+    "Panel: a grey dot, no name yet; the topic kept: field logs for robots",
+    "Caption: Muse Voice Transcribe · a phone call, in Japanese"
+   ],
+   "proves": "The seed of the connector: his topic, in a language Eric doesn't speak.",
+   "start": 116.0,
+   "end": 124.6
+  },
+  {
+   "id": 14,
+   "key": "japanese",
+   "name": "...Or Japanese.",
+   "part": "after-the-turn",
+   "temp": "cold",
+   "silence": true,
+   "duration": 1.2,
+   "eric": {
+    "mark": "6 · table, west end (C)",
+    "markId": "C",
+    "face": "E",
+    "pose": "stand",
+    "action": "A glance at the lens (K5, east of him)."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays."
+   },
+   "camera": {
+    "spot": "K5 · beside Mac-3, the table's east end",
+    "spotId": "K5",
+    "framing": "Holds.",
+    "lookAt": "Eric, to the lens"
+   },
+   "lines": [
+    {
+     "at": 0.0,
+     "end": 1.22,
+     "who": "Eric",
+     "device": "live",
+     "text": "...Or Japanese.",
+     "lang": "en",
+     "audio": "say/eric-japanese.wav",
+     "note": "to camera",
+     "t": 124.6,
+     "tEnd": 125.82
+    }
+   ],
+   "plays": [],
+   "bed": true,
+   "post": [
+    "One-second callback: silence, the glance"
+   ],
+   "proves": "",
+   "start": 124.6,
+   "end": 125.8
+  },
+  {
+   "id": 15,
+   "key": "table",
+   "name": "The table: Siddharth and Kenji",
+   "part": "after-the-turn",
+   "temp": "hot",
+   "duration": 13.1,
+   "eric": {
+    "mark": "6 · table, west end (C)",
+    "markId": "C",
+    "face": "E",
+    "pose": "stand",
+    "action": "Facing east toward Mac-3; Kenji greets from the right."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays."
+   },
+   "camera": {
+    "spot": "K5 · beside Mac-3, the table's east end",
+    "spotId": "K5",
+    "framing": "Medium on Eric, Mac-3 in the foreground.",
+    "lookAt": "Eric and Mac-3"
+   },
+   "lines": [
+    {
+     "at": 0.18,
+     "end": 8.0,
+     "who": "Siddharth",
+     "device": "Mac-3",
+     "text": "Eric! Hey! Siddharth. Siddharth Raghunathan, Quill Mesh? We met at Blockchain Week. You know Kenji, no?",
+     "lang": "en",
+     "t": 125.98,
+     "tEnd": 133.8
+    },
+    {
+     "at": 9.6,
+     "end": 12.49,
+     "who": "Kenji",
+     "device": "iPhone-K",
+     "text": "Eric! We keep running into each other.",
+     "lang": "en",
+     "t": 135.4,
+     "tEnd": 138.29
+    }
+   ],
+   "plays": [
+    {
+     "device": "Mac-3",
+     "file": "mac3-02-siddharth.wav",
+     "at": 0.0,
+     "length": 13.1,
+     "end": 13.1,
+     "source": "rehearsal-v5/cues/table-intros@ruhaan (pair)",
+     "note": "[click 8], pair; at least 3 s after the waiter",
+     "t": 125.8,
+     "tEnd": 138.9
+    },
+    {
+     "device": "iPhone-K",
+     "file": "iphoneK-kenji-01.wav",
+     "at": 0.0,
+     "length": 13.1,
+     "end": 13.1,
+     "source": "rehearsal-v5/cues/table-intros@ruhaan (pair)",
+     "note": "[click 8], pair",
+     "t": 125.8,
+     "tEnd": 138.9
+    }
+   ],
+   "events": [
+    {
+     "at": 0.0,
+     "kind": "click",
+     "label": "[click 8] · pair",
+     "device": "Mac-3",
+     "t": 125.8
+    },
+    {
+     "at": 9.0,
+     "kind": "ring",
+     "label": "met before · Siddharth · Blockchain Week, Oct 23 · ETH Taipei afterparty, Oct 20",
+     "device": "badge",
+     "t": 134.8
+    }
+   ],
+   "bed": true,
+   "post": [
+    "Panel: Siddharth's dot ringed, met before, about a second after his introduction",
+    "Caption: Muse Spark · met before"
+   ],
+   "proves": "Memory across evenings, from the name he said.",
+   "start": 125.8,
+   "end": 138.9
+  },
+  {
+   "id": 16,
+   "key": "fumble",
+   "name": "The fumble",
+   "part": "after-the-turn",
+   "temp": "hot",
+   "duration": 4.2,
+   "eric": {
+    "mark": "6 · table, west end (C)",
+    "markId": "C",
+    "face": "E",
+    "pose": "stand",
+    "action": "Plainly can't place Kenji. Let it be awkward; everyone has been there."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays."
+   },
+   "camera": {
+    "spot": "K5 · beside Mac-3, the table's east end",
+    "spotId": "K5",
+    "framing": "Pushes in on his face.",
+    "lookAt": "Eric's frozen smile"
+   },
+   "lines": [
+    {
+     "at": 0.1,
+     "end": 4.0,
+     "who": "Eric",
+     "device": "live",
+     "text": "Hey! It's, uh... sorry, it's been a long week...",
+     "lang": "en",
+     "audio": "eric-09.wav",
+     "t": 139.0,
+     "tEnd": 142.9
+    }
+   ],
+   "plays": [],
+   "bed": true,
+   "post": [
+    "Hold the awkward smile"
+   ],
+   "proves": "He can't place him. The viewer will soon know what he has forgotten.",
+   "start": 138.9,
+   "end": 143.1
+  },
+  {
+   "id": 17,
+   "key": "kenji",
+   "name": "Kenji",
+   "part": "after-the-turn",
+   "temp": "hot",
+   "duration": 6.4,
+   "eric": {
+    "mark": "6 · table, west end (C)",
+    "markId": "C",
+    "face": "E",
+    "pose": "stand",
+    "action": "Listens; the badge faces out and he never looks at it."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays."
+   },
+   "camera": {
+    "spot": "K5 · beside Mac-3, the table's east end",
+    "spotId": "K5",
+    "framing": "Medium; iPhone-K in frame right.",
+    "lookAt": "Eric and iPhone-K"
+   },
+   "lines": [
+    {
+     "at": 0.23,
+     "end": 5.93,
+     "who": "Kenji",
+     "device": "iPhone-K",
+     "text": "Kenji. Kenji Watanabe, Hoshizora Robotics? The hardware meetup?",
+     "lang": "en",
+     "t": 143.33,
+     "tEnd": 149.03
+    }
+   ],
+   "plays": [
+    {
+     "device": "iPhone-K",
+     "file": "iphoneK-kenji-02.wav",
+     "at": 0.0,
+     "length": 6.31,
+     "end": 6.31,
+     "source": "rehearsal-v5/cues/kenji-02@taro",
+     "note": "[click 9]",
+     "t": 143.1,
+     "tEnd": 149.41
+    }
+   ],
+   "events": [
+    {
+     "at": 0.0,
+     "kind": "click",
+     "label": "[click 9]",
+     "device": "iPhone-K",
+     "t": 143.1
+    },
+    {
+     "at": 3.6,
+     "kind": "ring",
+     "label": "met before · Kenji · Hardware meetup, Oct 22 · ETH Taipei afterparty, Oct 20",
+     "device": "badge",
+     "t": 146.7
+    }
+   ],
+   "bed": true,
+   "post": [
+    "Panel: Kenji ringed, met before · Hardware meetup, Oct 22 · ETH Taipei afterparty, Oct 20",
+    "Caption: Muse Spark · met before, from the name he just said"
+   ],
+   "proves": "It remembered him before Eric did.",
+   "start": 143.1,
+   "end": 149.5
+  },
+  {
+   "id": 18,
+   "key": "coffee",
+   "name": "Coffee: Thursday, no, Friday",
+   "part": "after-the-turn",
+   "temp": "hot",
+   "duration": 12.2,
+   "eric": {
+    "mark": "6 · table, west end (C)",
+    "markId": "C",
+    "face": "E",
+    "pose": "stand",
+    "action": "Recovers; proposes Thursday."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Stays."
+   },
+   "camera": {
+    "spot": "K5 · beside Mac-3, the table's east end",
+    "spotId": "K5",
+    "framing": "Medium on Eric and iPhone-K.",
+    "lookAt": "Eric and iPhone-K"
+   },
+   "lines": [
+    {
+     "at": 0.0,
+     "end": 5.46,
+     "who": "Eric",
+     "device": "live",
+     "text": "Kenji! Of course, the hardware meetup. We still owe each other a coffee. Thursday?",
+     "lang": "en",
+     "audio": "eric-11.wav",
+     "t": 149.5,
+     "tEnd": 154.96
+    },
+    {
+     "at": 5.93,
+     "end": 11.61,
+     "who": "Kenji",
+     "device": "iPhone-K",
+     "text": "Thursday is... hmm. No... Friday. Friday is better.",
+     "lang": "en",
+     "t": 155.43,
+     "tEnd": 161.11
+    }
+   ],
+   "plays": [
+    {
+     "device": "iPhone-K",
+     "file": "iphoneK-kenji-03.wav",
+     "at": 5.7,
+     "length": 6.5,
+     "end": 12.2,
+     "source": "rehearsal-v5/cues/kenji-03@taro, cut at 6.5 s (the murmur removed)",
+     "note": "[click 10]; the file is cut at 6.5 s, the Japanese murmur removed",
+     "t": 155.2,
+     "tEnd": 161.7
+    }
+   ],
+   "events": [
+    {
+     "at": 5.7,
+     "kind": "click",
+     "label": "[click 10]",
+     "device": "iPhone-K",
+     "t": 155.2
+    },
+    {
+     "at": 11.6,
+     "kind": "ring",
+     "label": "coffee · Thursday → Friday",
+     "device": "badge",
+     "t": 161.1
+    }
+   ],
+   "bed": true,
+   "post": [
+    "Panel: coffee with Kenji · Thursday struck through → Friday",
+    "Caption: Muse Spark · promise corrected"
+   ],
+   "proves": "The promise corrects itself.",
+   "start": 149.5,
+   "end": 161.7
+  },
+  {
+   "id": 19,
+   "key": "stop",
+   "name": "Stop",
+   "part": "resolution",
+   "temp": "cold",
+   "duration": 2.8,
+   "eric": {
+    "mark": "6 → 7 · table, west end (C) → his door",
+    "markId": "C",
+    "toMarkId": "ericDoor",
+    "t0": 0.0,
+    "t1": 2.2,
+    "face": "W",
+    "pose": "stand",
+    "action": "Walks west along the table's south side to his own door; lifts the badge and taps Stop. The TV mutes on the same click. No line [CHOICE]."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Relaxes; stays out of the shot."
+   },
+   "camera": {
+    "spot": "K5 → K6: K6 · inside Eric's room, facing his door",
+    "spotId": "K5",
+    "toSpotId": "K6",
+    "t0": 0.0,
+    "t1": 2.2,
+    "framing": "Backs ahead of him along the table's south side, through Eric's door, turns to face it.",
+    "lookAt": "Eric at his door"
+   },
+   "lines": [],
+   "plays": [
+    {
+     "device": "TV",
+     "file": "tv-hall-bed.wav",
+     "at": 2.2,
+     "length": 0.0,
+     "end": 2.2,
+     "source": "rig/tv-hall-bed.wav",
+     "note": "[click 11]: Stop; the TV mutes",
+     "t": 163.9,
+     "tEnd": 163.9
+    }
+   ],
+   "events": [
+    {
+     "at": 2.2,
+     "kind": "click",
+     "label": "[click 11] · Stop · TV off",
+     "device": "TV",
+     "t": 163.9
+    }
+   ],
+   "bed": true,
+   "bed_off_at": 2.2,
+   "post": [
+    "The split frame ends on Stop; nothing from the morning yet",
+    "Sound: the TV mutes on the click; room tone"
+   ],
+   "proves": "The evening is over. Nothing has been typed.",
+   "choices": [
+    "Stop is silent (SCRIPT.md's 'That's it. I go home.' is dropped). Alternative: keep the line."
+   ],
+   "start": 161.7,
+   "end": 164.5
+  },
+  {
+   "id": 20,
+   "key": "invite",
+   "name": "The invite, on his sofa",
+   "part": "resolution",
+   "temp": "cold",
+   "duration": 5.0,
+   "eric": {
+    "mark": "7 → 8 · his door → his sofa",
+    "markId": "ericDoor",
+    "toMarkId": "ericSofa",
+    "t0": 0.0,
+    "t1": 2.0,
+    "face": "E",
+    "pose": "lie",
+    "action": "Drops onto his sofa on his back and holds the phone over his face: the hook's pose. The first thing on screen is the call he promised, already in his calendar."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Off camera."
+   },
+   "camera": {
+    "spot": "K6 → K7: K7 · top-down over Eric's sofa (K1's framing)",
+    "spotId": "K6",
+    "toSpotId": "K7",
+    "t0": 0.0,
+    "t1": 2.0,
+    "framing": "Then locked top-down over the sofa, the same height and framing as K1.",
+    "lookAt": "Eric's face and the phone"
+   },
+   "lines": [],
+   "plays": [],
+   "events": [
+    {
+     "at": 2.3,
+     "kind": "buzz",
+     "label": "the invite: Call with Margaux and Chloé · Tue Nov 3, 11:00–11:30 · avoids your board call, Wed Nov 4 14:00–15:30",
+     "device": "badge",
+     "t": 166.8
+    }
+   ],
+   "bed": false,
+   "post": [
+    "Insert (the real rehearsal draft, shown on cue): a 30-minute call · Margaux Lefèvre and Chloé Martin (Corvane) · Tue Nov 3, 11:00–11:30 · reason: avoids Wed busy window and is in free time · avoids your board call, Wed Nov 4 14:00–15:30",
+    "Draft: 'Margaux, lovely to join you tonight. As Chloé told me you'd want to see this, I'll send an invite for a call next week with you and Chloé. Would Tuesday at 11:00 work? / Eric'",
+    "He taps Send [CHOICE]"
+   ],
+   "proves": "'I'll send an invite' is already drafted, on a Tuesday slot that dodges the board call he forgot he had.",
+   "choices": [
+    "Whether Eric taps Send on camera. The slot and the text are the real rehearsal draft (Tue Nov 3, 11:00–11:30).",
+    "The invite comes before the connector so the connector stays the ending."
+   ],
+   "start": 164.5,
+   "end": 169.5
+  },
+  {
+   "id": 21,
+   "key": "connector",
+   "name": "The connector",
+   "part": "resolution",
+   "temp": "cold",
+   "duration": 8.5,
+   "eric": {
+    "mark": "8 · his sofa",
+    "markId": "ericSofa",
+    "face": "E",
+    "pose": "lie",
+    "action": "Still on his back, the phone over his face. The connector's proposal, made beforehand from the rehearsal recording, is shown on cue. He taps Introduce; the grip slackens; he catches the phone an inch from his face."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Off camera."
+   },
+   "camera": {
+    "spot": "K7 · top-down over Eric's sofa (K1's framing)",
+    "spotId": "K7",
+    "framing": "Locked top-down over the sofa.",
+    "lookAt": "Eric's face and the phone"
+   },
+   "lines": [
+    {
+     "at": 7.2,
+     "end": 7.94,
+     "who": "Eric",
+     "device": "live",
+     "text": "Progress.",
+     "lang": "en",
+     "audio": "say/eric-progress.wav",
+     "note": "deadpan [CHOICE: closing line]",
+     "choice": true,
+     "t": 176.7,
+     "tEnd": 177.44
+    }
+   ],
+   "plays": [],
+   "events": [
+    {
+     "at": 0.4,
+     "kind": "buzz",
+     "label": "the connector: Kenji ↔ Ben Walker, made beforehand, shown on cue",
+     "device": "badge",
+     "t": 169.9
+    }
+   ],
+   "bed": false,
+   "post": [
+    "Insert: Introduce Kenji to Ben? · Ben Walker (Stride Mobility · Founder dinner, Oct 24) wants a small robot arm to pilot on his Taoyuan frame line · Kenji Watanabe (Hoshizora Robotics) builds them · Both at the Nangang hardware meetup, Thu Nov 5",
+    "He taps Introduce. Callback: the blank reply's three blanks, now filled",
+    "The near-drop and the catch"
+   ],
+   "proves": "Everything after the conversation: an introduction toward a concrete collaboration, and next week's event, where the right person will be.",
+   "choices": [
+    "Closing line: 'Progress.' (hook #1's callback), or no line.",
+    "The connector card's wording is a placeholder; the film shows the real proposal from the run (Ben's robot-arm line is in rig-v5/ben-walker-01.wav)."
+   ],
+   "start": 169.5,
+   "end": 178.0
+  },
+  {
+   "id": 22,
+   "key": "end",
+   "name": "End card",
+   "part": "resolution",
+   "temp": "cold",
+   "duration": 2.0,
+   "eric": {
+    "mark": "8 · his sofa",
+    "markId": "ericSofa",
+    "face": "E",
+    "pose": "lie",
+    "action": "Holds."
+   },
+   "friend": {
+    "spot": "to Eric's right at the sofa, a step back",
+    "spotId": "sofaRight",
+    "face": "NE",
+    "action": "Off camera."
+   },
+   "camera": {
+    "spot": "K7 · top-down over Eric's sofa (K1's framing)",
+    "spotId": "K7",
+    "framing": "Cut to black on the buzz.",
+    "lookAt": "the end card"
+   },
+   "lines": [],
+   "plays": [],
+   "bed": false,
+   "post": [
+    "Hallwise · A name badge that remembers the room",
+    "Built with Muse Voice Transcribe · Muse Spark · SAM 3.1 · Muse Spark Open on Baseten. Open source, AGPL-3.0"
+   ],
+   "proves": "",
+   "start": 178.0,
+   "end": 180.0
+  }
+ ],
+ "keyframes": {
+  "eric": [
+   {
+    "t": 0.0,
+    "x": 1.5,
+    "y": 1.25,
+    "move": false,
+    "face": 0,
+    "pose": "lie"
+   },
+   {
+    "t": 6.8,
+    "x": 1.5,
+    "y": 1.25,
+    "move": false,
+    "face": 0,
+    "pose": "lie"
+   },
+   {
+    "t": 7.8,
+    "x": 1.5,
+    "y": 2.35,
+    "move": true,
+    "face": 90,
+    "pose": "sit"
+   },
+   {
+    "t": 8.7,
+    "x": 1.5,
+    "y": 2.35,
+    "move": false,
+    "face": 90,
+    "pose": "sit"
+   },
+   {
+    "t": 11.1,
+    "x": 3.4,
+    "y": 3.3,
+    "move": true,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 12.5,
+    "x": 4.7,
+    "y": 3.1,
+    "move": true,
+    "face": 45,
+    "pose": "stand"
+   },
+   {
+    "t": 35.8,
+    "x": 4.7,
+    "y": 3.1,
+    "move": false,
+    "face": 45,
+    "pose": "stand"
+   },
+   {
+    "t": 36.1,
+    "x": 4.7,
+    "y": 3.1,
+    "move": false,
+    "face": 45,
+    "pose": "stand"
+   },
+   {
+    "t": 38.9,
+    "x": 5.0,
+    "y": 1.5,
+    "move": true,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 39.1,
+    "x": 5.0,
+    "y": 1.5,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 55.1,
+    "x": 5.0,
+    "y": 1.5,
+    "move": false,
+    "face": 45,
+    "pose": "stand"
+   },
+   {
+    "t": 58.1,
+    "x": 5.0,
+    "y": 1.5,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 62.0,
+    "x": 5.0,
+    "y": 1.5,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 75.7,
+    "x": 5.0,
+    "y": 1.5,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 101.7,
+    "x": 5.0,
+    "y": 1.5,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 101.9,
+    "x": 5.0,
+    "y": 1.5,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 105.7,
+    "x": 5.5,
+    "y": 4.8,
+    "move": true,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 106.0,
+    "x": 5.5,
+    "y": 4.8,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 108.0,
+    "x": 5.5,
+    "y": 4.8,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 116.0,
+    "x": 5.5,
+    "y": 4.8,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 124.6,
+    "x": 5.5,
+    "y": 4.8,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 125.8,
+    "x": 5.5,
+    "y": 4.8,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 138.9,
+    "x": 5.5,
+    "y": 4.8,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 143.1,
+    "x": 5.5,
+    "y": 4.8,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 149.5,
+    "x": 5.5,
+    "y": 4.8,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 161.7,
+    "x": 5.5,
+    "y": 4.8,
+    "move": false,
+    "face": 0,
+    "pose": "stand"
+   },
+   {
+    "t": 163.9,
+    "x": 4.3,
+    "y": 6.4,
+    "move": true,
+    "face": 180,
+    "pose": "stand"
+   },
+   {
+    "t": 164.5,
+    "x": 4.3,
+    "y": 6.4,
+    "move": false,
+    "face": 180,
+    "pose": "stand"
+   },
+   {
+    "t": 166.5,
+    "x": 1.6,
+    "y": 5.45,
+    "move": true,
+    "face": 0,
+    "pose": "lie"
+   },
+   {
+    "t": 169.5,
+    "x": 1.6,
+    "y": 5.45,
+    "move": false,
+    "face": 0,
+    "pose": "lie"
+   },
+   {
+    "t": 178.0,
+    "x": 1.6,
+    "y": 5.45,
+    "move": false,
+    "face": 0,
+    "pose": "lie"
+   }
+  ],
+  "friend": [
+   {
+    "t": 0.0,
+    "x": 4.5,
+    "y": 3.7,
+    "move": false,
+    "face": 180
+   },
+   {
+    "t": 6.5,
+    "x": 4.5,
+    "y": 3.7,
+    "move": false,
+    "face": 180
+   },
+   {
+    "t": 8.5,
+    "x": 4.6,
+    "y": 2.3,
+    "move": true,
+    "face": 135
+   },
+   {
+    "t": 12.5,
+    "x": 4.6,
+    "y": 2.3,
+    "move": false,
+    "face": 135
+   },
+   {
+    "t": 35.8,
+    "x": 4.6,
+    "y": 2.3,
+    "move": false,
+    "face": 135
+   },
+   {
+    "t": 38.8,
+    "x": 5.3,
+    "y": 2.6,
+    "move": true,
+    "face": 315
+   },
+   {
+    "t": 39.1,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 55.1,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 58.1,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 62.0,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 75.7,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 101.7,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 106.0,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 108.0,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 116.0,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 124.6,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 125.8,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 138.9,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 143.1,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 149.5,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 161.7,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 164.5,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 169.5,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   },
+   {
+    "t": 178.0,
+    "x": 5.3,
+    "y": 2.6,
+    "move": false,
+    "face": 315
+   }
+  ],
+  "camera": [
+   {
+    "t": 0.0,
+    "x": 2.9,
+    "y": 1.25,
+    "move": false,
+    "look": {
+     "x": 1.5,
+     "y": 1.25
+    },
+    "topDown": true,
+    "spot": "K1"
+   },
+   {
+    "t": 6.5,
+    "x": 2.9,
+    "y": 1.25,
+    "move": false,
+    "look": {
+     "x": 1.5,
+     "y": 1.25
+    },
+    "topDown": true,
+    "spot": "K1"
+   },
+   {
+    "t": 8.7,
+    "x": 1.5,
+    "y": 3.6,
+    "move": true,
+    "look": {
+     "x": 1.5,
+     "y": 2.35
+    },
+    "topDown": false,
+    "spot": "K2"
+   },
+   {
+    "t": 11.1,
+    "x": 2.6,
+    "y": 3.0,
+    "move": true,
+    "look": {
+     "x": 4.4,
+     "y": 3.3
+    },
+    "topDown": false,
+    "spot": "K2b"
+   },
+   {
+    "t": 12.5,
+    "x": 6.3,
+    "y": 3.7,
+    "move": true,
+    "look": {
+     "x": 4.7,
+     "y": 3.1
+    },
+    "topDown": false,
+    "spot": "K3"
+   },
+   {
+    "t": 35.8,
+    "x": 6.3,
+    "y": 3.7,
+    "move": false,
+    "look": {
+     "x": 4.7,
+     "y": 3.1
+    },
+    "topDown": false,
+    "spot": "K3"
+   },
+   {
+    "t": 39.1,
+    "x": 9.3,
+    "y": 2.5,
+    "move": true,
+    "look": {
+     "x": 5.0,
+     "y": 1.5
+    },
+    "topDown": false,
+    "spot": "K4"
+   },
+   {
+    "t": 55.1,
+    "x": 9.3,
+    "y": 2.5,
+    "move": false,
+    "look": {
+     "x": 5.0,
+     "y": 1.5
+    },
+    "topDown": false,
+    "spot": "K4"
+   },
+   {
+    "t": 58.1,
+    "x": 9.3,
+    "y": 2.5,
+    "move": false,
+    "look": {
+     "x": 5.0,
+     "y": 1.5
+    },
+    "topDown": false,
+    "spot": "K4"
+   },
+   {
+    "t": 62.0,
+    "x": 9.3,
+    "y": 2.5,
+    "move": false,
+    "look": {
+     "x": 5.0,
+     "y": 1.5
+    },
+    "topDown": false,
+    "spot": "K4"
+   },
+   {
+    "t": 75.7,
+    "x": 9.3,
+    "y": 2.5,
+    "move": false,
+    "look": {
+     "x": 5.0,
+     "y": 1.5
+    },
+    "topDown": false,
+    "spot": "K4"
+   },
+   {
+    "t": 101.7,
+    "x": 9.3,
+    "y": 2.5,
+    "move": false,
+    "look": {
+     "x": 5.0,
+     "y": 1.5
+    },
+    "topDown": false,
+    "spot": "K4"
+   },
+   {
+    "t": 106.0,
+    "x": 9.4,
+    "y": 4.2,
+    "move": true,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    },
+    "topDown": false,
+    "spot": "K5"
+   },
+   {
+    "t": 108.0,
+    "x": 9.4,
+    "y": 4.2,
+    "move": false,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    },
+    "topDown": false,
+    "spot": "K5"
+   },
+   {
+    "t": 116.0,
+    "x": 9.4,
+    "y": 4.2,
+    "move": false,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    },
+    "topDown": false,
+    "spot": "K5"
+   },
+   {
+    "t": 124.6,
+    "x": 9.4,
+    "y": 4.2,
+    "move": false,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    },
+    "topDown": false,
+    "spot": "K5"
+   },
+   {
+    "t": 125.8,
+    "x": 9.4,
+    "y": 4.2,
+    "move": false,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    },
+    "topDown": false,
+    "spot": "K5"
+   },
+   {
+    "t": 138.9,
+    "x": 9.4,
+    "y": 4.2,
+    "move": false,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    },
+    "topDown": false,
+    "spot": "K5"
+   },
+   {
+    "t": 143.1,
+    "x": 9.4,
+    "y": 4.2,
+    "move": false,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    },
+    "topDown": false,
+    "spot": "K5"
+   },
+   {
+    "t": 149.5,
+    "x": 9.4,
+    "y": 4.2,
+    "move": false,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    },
+    "topDown": false,
+    "spot": "K5"
+   },
+   {
+    "t": 161.7,
+    "x": 9.4,
+    "y": 4.2,
+    "move": false,
+    "look": {
+     "x": 5.5,
+     "y": 4.8
+    },
+    "topDown": false,
+    "spot": "K5"
+   },
+   {
+    "t": 163.9,
+    "x": 3.0,
+    "y": 6.4,
+    "move": true,
+    "look": {
+     "x": 4.3,
+     "y": 6.4
+    },
+    "topDown": false,
+    "spot": "K6"
+   },
+   {
+    "t": 164.5,
+    "x": 3.0,
+    "y": 6.4,
+    "move": false,
+    "look": {
+     "x": 4.3,
+     "y": 6.4
+    },
+    "topDown": false,
+    "spot": "K6"
+   },
+   {
+    "t": 166.5,
+    "x": 1.6,
+    "y": 6.6,
+    "move": true,
+    "look": {
+     "x": 1.6,
+     "y": 5.45
+    },
+    "topDown": true,
+    "spot": "K7"
+   },
+   {
+    "t": 169.5,
+    "x": 1.6,
+    "y": 6.6,
+    "move": false,
+    "look": {
+     "x": 1.6,
+     "y": 5.45
+    },
+    "topDown": true,
+    "spot": "K7"
+   },
+   {
+    "t": 178.0,
+    "x": 1.6,
+    "y": 6.6,
+    "move": false,
+    "look": {
+     "x": 1.6,
+     "y": 5.45
+    },
+    "topDown": true,
+    "spot": "K7"
+   }
+  ]
+ },
+ "audio": [
+  {
+   "src": "say/eric-bed-1.wav",
+   "at": 1.6,
+   "duration": 1.66,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "say/eric-bed-2.wav",
+   "at": 3.6,
+   "duration": 0.79,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "say/friend-knock.wav",
+   "at": 4.9,
+   "duration": 1.48,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "say/eric-wear.wav",
+   "at": 7.0,
+   "duration": 3.33,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "phoneL-leo-01.wav",
+   "at": 12.5,
+   "duration": 11.27,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Phone-L"
+  },
+  {
+   "src": "phoneL-leo-02.wav",
+   "at": 30.66,
+   "duration": 5.11,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Phone-L"
+  },
+  {
+   "src": "eric-03.wav",
+   "at": 24.17,
+   "duration": 6.14,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "say/friend-come.wav",
+   "at": 35.8,
+   "duration": 3.04,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "mac1-margaux-01.wav",
+   "at": 39.1,
+   "duration": 15.99,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Mac-1"
+  },
+  {
+   "src": "mac2-julien-01.wav",
+   "at": 39.1,
+   "duration": 15.99,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Mac-2"
+  },
+  {
+   "src": "say/eric-whisper.wav",
+   "at": 55.4,
+   "duration": 2.54,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "say/friend-intro.wav",
+   "at": 58.2,
+   "duration": 3.48,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "mac1-margaux-02.wav",
+   "at": 62.0,
+   "duration": 13.66,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Mac-1"
+  },
+  {
+   "src": "mac2-julien-02.wav",
+   "at": 62.0,
+   "duration": 13.66,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Mac-2"
+  },
+  {
+   "src": "buzz.wav",
+   "at": 68.3,
+   "duration": 0.46,
+   "volume": 0.6,
+   "kind": "sfx",
+   "device": "badge"
+  },
+  {
+   "src": "mac1-margaux-02a.wav",
+   "at": 79.83,
+   "duration": 5.99,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Mac-1"
+  },
+  {
+   "src": "mac1-margaux-02b.wav",
+   "at": 91.45,
+   "duration": 5.91,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Mac-1"
+  },
+  {
+   "src": "standin-eric-chloe-1.wav",
+   "at": 75.7,
+   "duration": 3.83,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "standin-eric-chloe-2.wav",
+   "at": 86.12,
+   "duration": 5.03,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "standin-eric-chloe-3.wav",
+   "at": 97.66,
+   "duration": 2.47,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "mac3-01-waiter.wav",
+   "at": 102.0,
+   "duration": 2.31,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Mac-3"
+  },
+  {
+   "src": "eric-08.wav",
+   "at": 104.4,
+   "duration": 1.39,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "buzz.wav",
+   "at": 104.7,
+   "duration": 0.46,
+   "volume": 0.6,
+   "kind": "sfx",
+   "device": "badge"
+  },
+  {
+   "src": "say/eric-itdoes.wav",
+   "at": 106.3,
+   "duration": 0.91,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "iphoneK-kenji-00.wav",
+   "at": 116.0,
+   "duration": 8.55,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "iPhone-K"
+  },
+  {
+   "src": "say/eric-japanese.wav",
+   "at": 124.6,
+   "duration": 1.22,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "mac3-02-siddharth.wav",
+   "at": 125.8,
+   "duration": 13.1,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "Mac-3"
+  },
+  {
+   "src": "iphoneK-kenji-01.wav",
+   "at": 125.8,
+   "duration": 13.1,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "iPhone-K"
+  },
+  {
+   "src": "eric-09.wav",
+   "at": 139.0,
+   "duration": 3.9,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "iphoneK-kenji-02.wav",
+   "at": 143.1,
+   "duration": 6.31,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "iPhone-K"
+  },
+  {
+   "src": "iphoneK-kenji-03.wav",
+   "at": 155.2,
+   "duration": 6.5,
+   "volume": 1.0,
+   "kind": "guest",
+   "device": "iPhone-K"
+  },
+  {
+   "src": "eric-11.wav",
+   "at": 149.5,
+   "duration": 5.46,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "buzz.wav",
+   "at": 166.8,
+   "duration": 0.46,
+   "volume": 0.6,
+   "kind": "sfx",
+   "device": "badge"
+  },
+  {
+   "src": "say/eric-progress.wav",
+   "at": 176.7,
+   "duration": 0.74,
+   "volume": 0.75,
+   "kind": "standin",
+   "device": "live"
+  },
+  {
+   "src": "buzz.wav",
+   "at": 169.9,
+   "duration": 0.46,
+   "volume": 0.6,
+   "kind": "sfx",
+   "device": "badge"
+  }
+ ],
+ "hallBed": {
+  "src": "tv-hall-bed.wav",
+  "on": 11.3,
+  "off": 163.9,
+  "volume": 0.16,
+  "silences": [
+   {
+    "start": 55.1,
+    "end": 58.1
+   },
+   {
+    "start": 108.0,
+    "end": 116.0
+   },
+   {
+    "start": 124.6,
+    "end": 125.8
+   }
+  ]
+ },
+ "fileLengths": {
+  "phoneL-leo-01.wav": 11.27,
+  "phoneL-leo-02.wav": 5.11,
+  "mac1-margaux-01.wav": 15.99,
+  "mac2-julien-01.wav": 15.99,
+  "mac1-margaux-02.wav": 13.66,
+  "mac2-julien-02.wav": 13.66,
+  "mac1-margaux-03.wav": 10.95,
+  "mac2-julien-03.wav": 5.67,
+  "mac3-01-waiter.wav": 2.31,
+  "mac3-02-siddharth.wav": 13.1,
+  "iphoneK-kenji-00.wav": 8.55,
+  "iphoneK-kenji-01.wav": 13.1,
+  "iphoneK-kenji-02.wav": 6.31,
+  "iphoneK-kenji-03.wav": 6.5,
+  "tv-hall-bed.wav": 185.0,
+  "mac1-margaux-02a.wav": 5.99,
+  "mac1-margaux-02b.wav": 5.91
+ },
+ "cut": [
+  {
+   "what": "The English one-pager ask: ERIC 'Margaux, are you investing this quarter?' + Mac-1 mac1-margaux-03.wav 'Pre-seed, yes... send me your one-pager? One page, with numbers. Please.' + ERIC 'One page, with numbers. Tomorrow.'",
+   "seconds": 16.6,
+   "why": "Pays for the Chloé exchange (+22.0 s). Not one of DIRECTION.md's surprises: the French complaint already carries 'une page, avec des chiffres', and the deck buzz works off it. Kept in the take as a safety, after the exchange's pause, so the morning draft keeps the explicit ask [CHOICE]."
+  },
+  {
+   "what": "ERIC 'Hi. Eric, from Hallwise. May I join you?' (after the friend's introduction)",
+   "seconds": 3.1,
+   "why": "Texture; the friend's 'this is Eric. He makes the badge.' leads straight into 'Oh, of course! Margaux...'. Still said in the take."
+  },
+  {
+   "what": "Trims: the bed −1.0, out of the room −0.5, the walk to the sofa −0.2, the whisper −0.5, past the waiter −0.7, Stop −0.2, end card −0.5, the aftermath re-cut (invite 5.0 + connector 8.5 for the old 12.3)",
+   "seconds": 3.6,
+   "why": "Gaps and walks, no line lost."
+  },
+  {
+   "what": "Julien's demo invite: mac2-julien-03.wav 'And, euh... come by our office? Show us the demo. Wednesday afternoon?' + Eric's 'Wednesday works.'",
+   "seconds": 6.9,
+   "why": "Already out in the first cut: its payoff (Wednesday 16:00) is not a DIRECTION.md surprise; the Julien-unverified flag rides the one-pager. Keep it in the take as a safety."
+  },
+  {
+   "what": "Eric's 'It remembered him before I did.' (LINES.md #27)",
+   "seconds": 2.3,
+   "why": "Dropped by DIRECTION.md; the connector carries it."
+  },
+  {
+   "what": "Kenji's Japanese murmur at the end of iphoneK-kenji-03.wav",
+   "seconds": 3.5,
+   "why": "Cut by DIRECTION.md; the file is trimmed at 6.5 s."
+  },
+  {
+   "what": "SCRIPT.md's glasses opening, the wall of 'Speaker 2', Lena's text, the morning report, the map, the why-me talking head",
+   "seconds": 0,
+   "why": "Replaced by hook #1 (the blank reply), the live surprises, the invite and the connector; the four parts land by showing, not saying (DIRECTION.md)."
+  }
+ ],
+ "choices": [
+  "DECIDED: a third person operates the gimbal; [FRIEND] stays on camera and freezes for the whisper gag.",
+  "DECIDED: the Chloé link is a full exchange (beat 9, 26.0 s): Eric asks, Margaux answers (mac1-margaux-02a.wav), Eric says where they met, Margaux proposes the call (mac1-margaux-02b.wav), Eric: 'Perfect. I'll send an invite.', 1.5 s pause.",
+  "[CHOICE] To pay for it, the English one-pager ask (margaux-03 + Eric's two lines, 16.6 s) is cut from the film and kept in the take after the pause. Alternative: keep it and instead cut Leo's 'I'm holding you to that' (5.5 s), trim Eric's reply to Leo (−2.6 s) and shave the aftermath, which loses a laugh and cramps every beat.",
+  "DECIDED: the invite is the real rehearsal draft: a 30-minute call, Tue Nov 3, 11:00–11:30 (reason: avoids Wed busy window and is in free time; the board call is Wed Nov 4 14:00–15:30). [CHOICE] whether Eric taps Send on camera.",
+  "[CHOICE] The invite (beat 20, 5.0 s) comes before the connector (beat 21, 8.5 s), so the connector stays the ending. Alternative: connector first, invite as the last card.",
+  "[CHOICE] The deck buzz now lands 49.6 s after the French ends (65.6 s after it starts) because the exchange sits between; DIRECTION.md asks for 40 to 60 s after the French.",
+  "[CHOICE] The connector card's wording now uses Ben's dinner line (a small robot arm for the Taoyuan frame line, rig-v5/ben-walker-01.wav); the real proposal from the run replaces it. The meetup is Thu Nov 5 (Nov 5, 2026 is a Thursday).",
+  "[CHOICE] Julien-unverified appears under the one-pager as the buzz lands (beat 10), not on the sofa at the end.",
+  "[CHOICE] The waiter's line stays in the film as texture under the walk (SCRIPT.md cut it in the edit).",
+  "[CHOICE] Stop is silent; 'That's it. I go home.' is dropped (beat 19).",
+  "[CHOICE] Closing line 'Progress.' (hook #1's callback) on the catch (beat 21).",
+  "[CHOICE] Kenji's ring comes 3.6 s into kenji-02, about a second after his name; the 'met before' for Siddharth 9 s into the table pair.",
+  "[CHOICE] Cue numbers: [click 5b] and [click 5c] for the exchange (CUES-additions.md); [click 7]..[click 11] renumbered for v5 (Kenji's call added, Julien's invite out); the old cue 5 (margaux-03) becomes the safety cue after the pause. CUES.md still carries v4's numbers.",
+  "[CHOICE] Previz soundtrack: real v5 guest files; Eric's unchanged lines use the rehearsal stand-in voice, the Chloé lines use rig-v5's stand-ins; new lines (bed, whisper, 'It does', 'Or Japanese', 'Progress.', the friend) use a macOS voice for timing only.",
+  "[CHOICE] The friend stays at his sofa spot from beat 4 to the end; he has no further lines."
+ ]
+}
